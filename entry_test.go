@@ -42,6 +42,18 @@ func TestParseEntryMalformed(t *testing.T) {
 	}
 }
 
+func TestStates(t *testing.T) {
+	want := []string{"inbox", "todo", "waiting", "archive"}
+	if len(states) != len(want) {
+		t.Fatalf("states = %v, want %v", states, want)
+	}
+	for i, s := range want {
+		if states[i] != s {
+			t.Errorf("states[%d] = %q, want %q", i, states[i], s)
+		}
+	}
+}
+
 func TestMoveEntry(t *testing.T) {
 	root := t.TempDir()
 	for _, s := range states {
@@ -71,6 +83,21 @@ func TestMoveEntry(t *testing.T) {
 
 	if err := moveEntry(root, name, "inbox", "todo"); err == nil {
 		t.Error("moveEntry of a missing file succeeded, want error")
+	}
+
+	for _, step := range []struct{ from, to string }{
+		{"todo", "waiting"},
+		{"waiting", "archive"},
+		{"archive", "waiting"},
+		{"waiting", "todo"},
+		{"todo", "inbox"},
+	} {
+		if err := moveEntry(root, name, step.from, step.to); err != nil {
+			t.Fatalf("moveEntry %s -> %s: %v", step.from, step.to, err)
+		}
+		if _, err := os.Stat(filepath.Join(root, step.to, name)); err != nil {
+			t.Fatalf("entry not in %s after move: %v", step.to, err)
+		}
 	}
 }
 

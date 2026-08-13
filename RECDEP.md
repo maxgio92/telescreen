@@ -22,10 +22,11 @@ State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
   through. Producer-owned. The consumer never reads or writes it.
 - `inbox/`: unread entries. Presence means unread.
 - `todo/`: read, still needs action.
-- `archive/`: acted on.
+- `waiting/`: acted on, the other side's move is pending.
+- `archive/`: closed, nothing more expected.
 
 The producer writes only into `inbox/` and creates missing directories at
-startup. The consumer moves files between the three directories with plain
+startup. The consumer moves files between the four directories with plain
 renames and creates missing directories at startup. Files, not sockets or
 databases, are the whole interface.
 

@@ -1,5 +1,5 @@
 // Command telescreen is a dashboard for the recdep file
-// queue: three states (inbox, todo, archive), one markdown file per entry.
+// queue: four states (inbox, todo, waiting, done), one markdown file per entry.
 // It only reads and renames files under the state dir; the producer is a
 // separate process.
 package main
@@ -24,8 +24,8 @@ type model struct {
 	root    string
 	watcher *fsnotify.Watcher
 	view    int
-	cursor  [3]int
-	lists   [3][]entry
+	cursor  [4]int
+	lists   [4][]entry
 	width   int
 	height  int
 	status  string
@@ -112,7 +112,7 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "tab":
 		m.view = (m.view + 1) % len(states)
-	case "1", "2", "3":
+	case "1", "2", "3", "4":
 		m.view = int(msg.String()[0] - '1')
 	case "j", "down":
 		if m.cursor[m.view] < len(m.lists[m.view])-1 {
@@ -138,10 +138,15 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "r":
 		m.move("inbox", "todo")
-	case "d":
+	case "w":
+		m.move("todo", "waiting")
+	case "a":
 		m.move("todo", "archive")
+		m.move("waiting", "archive")
 	case "u":
-		m.move("archive", "todo")
+		m.move("archive", "waiting")
+		m.move("waiting", "todo")
+		m.move("todo", "inbox")
 	}
 	return m, nil
 }
@@ -220,7 +225,7 @@ func (m model) View() string {
 	if m.status != "" {
 		b.WriteString(m.status + "\n")
 	}
-	b.WriteString(helpStyle.Render("j/k move  tab/1-3 view  o open  y yank url  r read  d done  u undo  q quit"))
+	b.WriteString(helpStyle.Render("j/k move  tab/1-4 view  o open  y yank url  r read  w waiting  a archive  u undo  q quit"))
 	return b.String()
 }
 

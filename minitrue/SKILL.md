@@ -1,6 +1,6 @@
 ---
 name: minitrue
-description: Watch one person's Slack threads, GitHub PRs (opened, mentioned, and review-requested), and assigned Linear tickets. Producer/consumer over a file queue with a todo state for read-but-unactioned items. Use when asked to watch my notifications, set up a personal inbox or notification loop, drain the watch inbox, mark a watch item done, or keep an eye on replies, reviews, mentions, or ticket activity. minitrue produces headless on a timer; the telescreen TUI (pw) is the consumer.
+description: Watch one person's Slack threads, GitHub PRs (opened, mentioned, and review-requested), and assigned Linear tickets. Producer/consumer over a file queue with a todo state for read-but-unactioned items. Use when asked to watch my notifications, set up a personal inbox or notification loop, drain the watch inbox, mark a watch item archived, or keep an eye on replies, reviews, mentions, or ticket activity. minitrue produces headless on a timer; the telescreen TUI (pw) is the consumer.
 ---
 
 # minitrue
@@ -25,7 +25,9 @@ State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
   it; consumer never touches it.
 - `inbox/`: one file per unread hit. Presence means unread.
 - `todo/`: read but not yet acted on. The dashboard's `r` key moves entries here.
-- `archive/`: done. Entries land here via the dashboard's `d` key.
+- `waiting/`: acted on, the other side's move is pending. The dashboard's `w`
+  key moves todo entries here.
+- `archive/`: closed, nothing more expected. Entries land here via the dashboard's `a` key.
 
 ## Identity (config)
 
@@ -43,8 +45,8 @@ BOT_LOGINS=                 # space-separated bot logins to skip, besides [bot] 
 
 ## produce (headless, the only API caller)
 
-1. Read `since`. If absent, write `now`, create `inbox/`, `todo/`, and
-   `archive/`, and stop (baseline; no history replayed).
+1. Read `since`. If absent, write `now`, create `inbox/`, `todo/`,
+   `waiting/`, and `archive/`, and stop (baseline; no history replayed).
 2. Run the four watches for activity strictly after `since`, from someone other
    than the watched person. For each hit, write
    `inbox/<UTC>-<source>-<slug>.md` with this body:
@@ -101,18 +103,22 @@ rather than failing silently.
 
 The TUI at `~/src/github.com/maxgio92/telescreen/` (private repo
 github.com/maxgio92/telescreen) is the consumer. `pw`
-launches it (building `~/.local/bin/telescreen` on first use; `pw` stays as a short alias). Three views (inbox,
-todo, archive) switch with tab or 1/2/3; `r` moves inbox to todo (read), `d`
-moves todo to archive (done), `u` moves archive back to todo (undo). `o` opens
-the entry's URL, `y` copies it, `q` quits. It watches the state dirs with
+launches it (building `~/.local/bin/telescreen` on first use; `pw` stays as a
+short alias). Four views (inbox, todo, waiting, archive) switch with tab or
+1/2/3/4; `r` moves inbox to todo (read), `w` moves todo to waiting (waiting
+on the other side), `a` moves todo or waiting to archive, `u` moves one state
+back (archive to waiting, waiting to todo, todo to inbox). `o` opens the
+entry's URL, `y` copies it, `q` quits. It watches the state dirs with
 fsnotify, so new producer entries appear live. `pw -once` prints per-state
 counts and exits.
 
 The dashboard only reads, shows, and renames files between the state dirs. It
 never calls Slack, GitHub, or Linear, and never advances `since`. Archive means
-acted on; `todo/` is the live to-do list. When an agent performs an entry's
+closed, nothing more expected; `waiting/` holds entries where the other side owes the
+next move; `todo/` is the live to-do list. When an agent performs an entry's
 action in-session (posts the review, sends the reply), it moves that entry's
-file from `todo/` to `archive/` in the same turn.
+file from `todo/` to `archive/` (or `waiting/` when a reply is expected) in the
+same turn.
 
 ## Driving it
 

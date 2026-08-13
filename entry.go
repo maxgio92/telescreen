@@ -10,7 +10,7 @@ import (
 )
 
 // states are the queue subdirectories, in view order.
-var states = []string{"inbox", "todo", "archive"}
+var states = []string{"inbox", "todo", "waiting", "archive"}
 
 type entry struct {
 	name    string // filename, e.g. 20260811T142145Z-slack-wes-topic.md
@@ -55,7 +55,7 @@ func parseEntry(name, body string) entry {
 	return e
 }
 
-// stateRoot returns the queue root and creates the three state dirs.
+// stateRoot returns the queue root and creates the four state dirs.
 func stateRoot() (string, error) {
 	base := os.Getenv("XDG_STATE_HOME")
 	if base == "" {

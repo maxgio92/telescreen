@@ -25,7 +25,8 @@ State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
 
 - `inbox/`: unread hits
 - `todo/`: read, still needs action
-- `archive/`: acted on
+- `waiting/`: acted on, the other side's move is pending
+- `archive/`: closed, nothing more expected
 
 Entry format (`<UTC>-<source>-<slug>.md`, sorts by time):
 
@@ -47,7 +48,9 @@ make install
 `make minitrue` installs the reference producer from [minitrue/](minitrue/):
 the wrapper script to `~/.local/bin/minitrue`, the skill directory symlinked
 into `~/.claude/skills/minitrue`, and the systemd user units linked and
-enabled (`minitrue.timer`, every 10 minutes). Identity lives in
+enabled (`minitrue.timer`, every 10 minutes). It also creates the four state
+directories (`inbox/`, `todo/`, `waiting/`, `archive/`) under the state root.
+Identity lives in
 `~/.config/minitrue.env` (SLACK_USER_ID, GH_LOGIN, LINEAR_ASSIGNEE, REPO).
 
 ## Usage
@@ -59,12 +62,13 @@ telescreen -once    # print per-state counts and exit
 
 Keys:
 
-- `tab`, `1`/`2`/`3`: switch view (inbox, todo, archive)
+- `tab`, `1`/`2`/`3`/`4`: switch view (inbox, todo, waiting, archive)
 - `j`/`k`, arrows: navigate
 - `o`, `enter`: open the entry's URL
 - `r`: mark read (inbox to todo)
-- `d`: mark done (todo to archive)
-- `u`: undo (archive back to todo)
+- `w`: mark waiting (todo to waiting)
+- `a`: archive (todo or waiting to archive)
+- `u`: undo, one state back (archive to waiting, waiting to todo, todo to inbox)
 - `y`: copy the URL (wl-copy, fallback xclip)
 - `q`: quit
 
