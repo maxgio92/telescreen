@@ -102,9 +102,9 @@ func TestDetail(t *testing.T) {
 	e := parseEntry("20260811T142302Z-slack-wes-go-for-it.md", body)
 	got := e.detail("/state/recdep/todo/20260811T142302Z-slack-wes-go-for-it.md")
 	want := "[slack] wes: go for it\n" +
-		"https://example.com/thread/123\n" +
-		"/state/recdep/todo/20260811T142302Z-slack-wes-go-for-it.md\n" +
 		"\nfirst preview line\nsecond preview line\n" +
+		"/state/recdep/todo/20260811T142302Z-slack-wes-go-for-it.md\n" +
+		"https://example.com/thread/123\n" +
 		"seen 2026-08-11T14:23:02Z"
 	if got != want {
 		t.Errorf("detail =\n%q\nwant\n%q", got, want)

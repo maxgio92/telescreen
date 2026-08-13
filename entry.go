@@ -56,16 +56,16 @@ func parseEntry(name, body string) entry {
 }
 
 // detail renders the pane body for an entry stored at path: the content
-// line, the URL, the entry's file path (so the full file is one cat or one
-// agent handle away), the preview, and the seen line last.
+// line, the preview, then the entry's file path (so the full file is one
+// cat or one agent handle away), the URL, and the seen line last.
 func (e entry) detail(path string) string {
 	lines := strings.Split(e.body, "\n")
 	if len(lines) < 3 || !strings.HasPrefix(lines[2], "seen ") {
 		return e.body + "\n" + path
 	}
-	out := []string{lines[0], lines[1], path}
+	out := []string{lines[0]}
 	out = append(out, lines[3:]...)
-	out = append(out, lines[2])
+	out = append(out, path, lines[1], lines[2])
 	return strings.Join(out, "\n")
 }
 
