@@ -286,6 +286,11 @@ func (m model) View() string {
 		if e.stale != "" {
 			tag = "  [stale: " + e.stale + "]"
 		}
+		// Drop the tag entirely when it alone would overflow the width, so a
+		// narrow terminal never wraps a row and breaks the click mapping.
+		if m.width > 14 && len([]rune(tag)) > m.width-14 {
+			tag = ""
+		}
 		summary := e.summary
 		if budget := m.width - 14 - len([]rune(tag)); m.width > 14 {
 			if r := []rune(summary); len(r) > budget {

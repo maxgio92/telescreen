@@ -54,14 +54,16 @@ func parseEntry(name, body string) entry {
 			e.summary = head
 		}
 	}
-	if len(lines) > 1 {
-		e.url = strings.TrimSpace(lines[1])
-	}
 	if last := lines[len(lines)-1]; len(lines) > 1 && strings.HasPrefix(last, "stale ") {
 		e.staleLine = last
 		if f := strings.Fields(last); len(f) >= 2 {
 			e.stale = f[1]
 		}
+	}
+	// The URL line and the stale marker can collide on a minimal two-line
+	// entry; the marker wins and the entry has no URL.
+	if len(lines) > 1 && lines[1] != e.staleLine {
+		e.url = strings.TrimSpace(lines[1])
 	}
 	return e
 }

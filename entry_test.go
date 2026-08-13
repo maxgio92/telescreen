@@ -57,6 +57,16 @@ func TestParseEntryStale(t *testing.T) {
 	}
 }
 
+func TestParseEntryStaleWithoutURL(t *testing.T) {
+	e := parseEntry("bogus.md", "[x] y: z\nstale merged 2026-08-14T09:00:00Z")
+	if e.stale != "merged" {
+		t.Errorf("stale = %q, want merged", e.stale)
+	}
+	if e.url != "" {
+		t.Errorf("url = %q, want empty (marker is not a URL)", e.url)
+	}
+}
+
 func TestParseEntryMalformed(t *testing.T) {
 	e := parseEntry("bogus.md", "just one line, no header")
 	if !e.ts.IsZero() {

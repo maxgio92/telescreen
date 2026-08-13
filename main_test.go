@@ -132,6 +132,55 @@ func TestViewRowsFitWidth(t *testing.T) {
 	}
 }
 
+func TestViewRendersStaleTagDimmed(t *testing.T) {
+	m := model{width: 80, height: 24}
+	m.lists[0] = []entry{
+		{name: "a.md", source: "github", summary: "please review", stale: ""},
+		{name: "b.md", source: "github", summary: "old ask", stale: "merged"},
+	}
+	view := m.View()
+	if !strings.Contains(view, "[stale: merged]") {
+		t.Errorf("view lacks the stale tag:\n%s", view)
+	}
+	staleRow := strings.Split(view, "\n")[headerLines+1]
+	if staleRow != tabInactive.Render(stripANSI(staleRow)) {
+		t.Errorf("stale row is not rendered with the muted style: %q", staleRow)
+	}
+}
+
+// TestViewDropsTagOnNarrowWidth pins that a tag wider than the row budget
+// disappears instead of wrapping the row.
+func TestViewDropsTagOnNarrowWidth(t *testing.T) {
+	m := model{width: 30, height: 24}
+	m.lists[0] = []entry{{name: "a.md", source: "github", summary: "x", stale: "already-reviewed"}}
+	lines := strings.Split(m.View(), "\n")
+	row := lines[headerLines]
+	if strings.Contains(row, "[stale:") {
+		t.Errorf("narrow row still carries the tag: %q", row)
+	}
+	if w := lipgloss.Width(row); w > m.width {
+		t.Errorf("row width = %d, want <= %d", w, m.width)
+	}
+}
+
+func stripANSI(s string) string {
+	var b strings.Builder
+	inEsc := false
+	for _, r := range s {
+		switch {
+		case inEsc:
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+				inEsc = false
+			}
+		case r == '\x1b':
+			inEsc = true
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
 func TestHandleKeyMovesOnce(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
 	tests := []struct {

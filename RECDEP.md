@@ -73,7 +73,9 @@ minimal producer can emit only line 1 and still render.
    revalidation pass may append a single marker line
    `stale <reason> <ISO-8601 time>` (kebab-case reason, e.g. `merged`,
    `closed`, `already-reviewed`) to entries in `inbox/`, `todo/`, or
-   `waiting/`. Never mark an entry twice; never touch `archive/`. Never
+   `waiting/`. The marker must start on its own line: prepend a newline
+   when the file lacks a trailing one. Never mark an entry twice; never
+   touch `archive/`. Never
    delete entries; states beyond `inbox/` belong to the consumer. The
    producer marks, the human archives.
 

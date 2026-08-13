@@ -101,7 +101,10 @@ body does not already contain a `stale` line, check the PR with `gh`:
 - PR merged: append `stale merged <now>`. PR closed without merging: append
   `stale closed <now>`.
 - Review-requested entry with a review by `$GH_LOGIN` submitted after the
-  entry's `seen` time: append `stale already-reviewed <now>`.
+  entry's `seen` time: append `stale already-reviewed <now>`. An entry is
+  review-requested when its PR number appears in
+  `$STATE/seen-review-requests`; use that file as the discriminator, not
+  the summary text.
 
 `<now>` is the produce run time, ISO-8601 UTC. Keep it cheap: one
 `gh pr view <n> --json state,mergedAt,reviews` per distinct PR, reused across
