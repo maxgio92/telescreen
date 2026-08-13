@@ -101,6 +101,29 @@ func TestMoveEntry(t *testing.T) {
 	}
 }
 
+func TestDetail(t *testing.T) {
+	body := "[slack] wes: go for it\nhttps://example.com/thread/123\nseen 2026-08-11T14:23:02Z\n\nfirst preview line\nsecond preview line\n"
+	e := parseEntry("20260811T142302Z-slack-wes-go-for-it.md", body)
+	got := e.detail("/state/recdep/todo/20260811T142302Z-slack-wes-go-for-it.md")
+	want := "[slack] wes: go for it\n" +
+		"https://example.com/thread/123\n" +
+		"/state/recdep/todo/20260811T142302Z-slack-wes-go-for-it.md\n" +
+		"\nfirst preview line\nsecond preview line\n" +
+		"seen 2026-08-11T14:23:02Z"
+	if got != want {
+		t.Errorf("detail =\n%q\nwant\n%q", got, want)
+	}
+}
+
+func TestDetailMalformed(t *testing.T) {
+	e := parseEntry("bogus.md", "just one line, no header")
+	got := e.detail("/state/recdep/inbox/bogus.md")
+	want := "just one line, no header\n/state/recdep/inbox/bogus.md"
+	if got != want {
+		t.Errorf("detail = %q, want %q", got, want)
+	}
+}
+
 func TestLoadStateSortsNewestFirst(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(root, "inbox")

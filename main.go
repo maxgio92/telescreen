@@ -220,7 +220,8 @@ func (m model) View() string {
 
 	b.WriteString("\n")
 	if e, ok := m.selected(); ok {
-		b.WriteString(detailStyle.Width(max(20, m.width)).Render(e.name+"\n"+e.body) + "\n")
+		path := filepath.Join(m.root, states[m.view], e.name)
+		b.WriteString(detailStyle.Width(max(20, m.width)).Render(e.detail(path)) + "\n")
 	}
 	if m.status != "" {
 		b.WriteString(m.status + "\n")
