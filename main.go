@@ -20,6 +20,13 @@ import (
 
 type fsEventMsg struct{}
 
+// Layout constants shared by View and the mouse hit tests: the header is
+// the tab line plus a blank line, and the detail pane is fixed height.
+const (
+	headerLines = 2
+	detailLines = 6
+)
+
 type model struct {
 	root    string
 	watcher *fsnotify.Watcher
@@ -101,6 +108,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, watchCmd(m.watcher)
 	case tea.KeyMsg:
 		return m.handleKey(msg)
+	case tea.MouseMsg:
+		return m.handleMouse(msg)
 	}
 	return m, nil
 }
@@ -112,6 +121,8 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "tab":
 		m.view = (m.view + 1) % len(states)
+	case "shift+tab":
+		m.view = (m.view + len(states) - 1) % len(states)
 	case "1", "2", "3", "4":
 		m.view = int(msg.String()[0] - '1')
 	case "j", "down":
@@ -151,6 +162,80 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	m.status = ""
+	switch {
+	case msg.Button == tea.MouseButtonWheelUp:
+		if m.cursor[m.view] > 0 {
+			m.cursor[m.view]--
+		}
+	case msg.Button == tea.MouseButtonWheelDown:
+		if m.cursor[m.view] < len(m.lists[m.view])-1 {
+			m.cursor[m.view]++
+		}
+	case msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft:
+		if msg.Y == 0 {
+			if v := viewAtX(msg.X, m.tabLabels()); v >= 0 {
+				m.view = v
+			}
+			return m, nil
+		}
+		start, rows := m.listViewport()
+		if i := rowAtY(msg.Y, headerLines, start, len(m.lists[m.view]), rows); i >= 0 {
+			m.cursor[m.view] = i
+		}
+	}
+	return m, nil
+}
+
+// tabLabels returns the header labels before styling. Styling does not
+// change their width, so hit tests on these match the rendered header.
+func (m model) tabLabels() []string {
+	labels := make([]string, len(states))
+	for i, s := range states {
+		labels[i] = fmt.Sprintf("%d %s (%d)", i+1, s, len(m.lists[i]))
+	}
+	return labels
+}
+
+// listViewport returns the scroll offset and row count of the list area,
+// matching what View renders.
+func (m model) listViewport() (start, rows int) {
+	rows = max(3, m.height-detailLines-5)
+	if m.cursor[m.view] >= rows {
+		start = m.cursor[m.view] - rows + 1
+	}
+	return start, rows
+}
+
+// rowAtY maps a click at line y to a list index, or -1 when the click is
+// above the list, past its end, or below the visible rows.
+func rowAtY(y, header, start, listLen, listRows int) int {
+	if y < header || y >= header+listRows {
+		return -1
+	}
+	i := start + y - header
+	if i >= listLen {
+		return -1
+	}
+	return i
+}
+
+// viewAtX maps a click at column x on the header to a tab index, or -1
+// when x falls on a separator or past the last tab. Labels are joined with
+// two spaces; lipgloss.Width ignores styling escapes.
+func viewAtX(x int, labels []string) int {
+	pos := 0
+	for i, l := range labels {
+		w := lipgloss.Width(l)
+		if x >= pos && x < pos+w {
+			return i
+		}
+		pos += w + 2
+	}
+	return -1
+}
+
 // move renames the selected entry when the active view matches from.
 func (m *model) move(from, to string) {
 	if states[m.view] != from {
@@ -180,8 +265,7 @@ func (m model) View() string {
 	var b strings.Builder
 
 	var tabs []string
-	for i, s := range states {
-		label := fmt.Sprintf("%d %s (%d)", i+1, s, len(m.lists[i]))
+	for i, label := range m.tabLabels() {
 		if i == m.view {
 			tabs = append(tabs, tabActive.Render(label))
 		} else {
@@ -191,16 +275,11 @@ func (m model) View() string {
 	b.WriteString(strings.Join(tabs, "  ") + "\n\n")
 
 	list := m.lists[m.view]
-	detailLines := 6
-	listRows := max(3, m.height-detailLines-5)
 	now := time.Now().UTC()
 	if len(list) == 0 {
 		b.WriteString(tabInactive.Render("  (empty)") + "\n")
 	}
-	start := 0
-	if m.cursor[m.view] >= listRows {
-		start = m.cursor[m.view] - listRows + 1
-	}
+	start, listRows := m.listViewport()
 	for i := start; i < len(list) && i < start+listRows; i++ {
 		e := list[i]
 		summary := e.summary
@@ -226,7 +305,7 @@ func (m model) View() string {
 	if m.status != "" {
 		b.WriteString(m.status + "\n")
 	}
-	b.WriteString(helpStyle.Render("j/k move  tab/1-4 view  o open  y yank url  r read  w waiting  a archive  u undo  q quit"))
+	b.WriteString(helpStyle.Render("j/k/wheel move  click select  tab/shift+tab/1-4/click view  o open  y yank url  r read  w waiting  a archive  u undo  q quit"))
 	return b.String()
 }
 
@@ -265,7 +344,7 @@ func main() {
 		}
 	}
 
-	if _, err := tea.NewProgram(newModel(root, w), tea.WithAltScreen()).Run(); err != nil {
+	if _, err := tea.NewProgram(newModel(root, w), tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

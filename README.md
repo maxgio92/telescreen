@@ -62,8 +62,9 @@ telescreen -once    # print per-state counts and exit
 
 Keys:
 
-- `tab`, `1`/`2`/`3`/`4`: switch view (inbox, todo, waiting, archive)
+- `tab`/`shift+tab`, `1`/`2`/`3`/`4`: switch view (inbox, todo, waiting, archive)
 - `j`/`k`, arrows: navigate
+- mouse: wheel scrolls the list, click selects a row, click a tab switches view
 - `o`, `enter`: open the entry's URL
 - `r`: mark read (inbox to todo)
 - `w`: mark waiting (todo to waiting)
