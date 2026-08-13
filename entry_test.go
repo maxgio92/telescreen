@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 )
@@ -44,13 +45,8 @@ func TestParseEntryMalformed(t *testing.T) {
 
 func TestStates(t *testing.T) {
 	want := []string{"inbox", "todo", "waiting", "archive"}
-	if len(states) != len(want) {
-		t.Fatalf("states = %v, want %v", states, want)
-	}
-	for i, s := range want {
-		if states[i] != s {
-			t.Errorf("states[%d] = %q, want %q", i, states[i], s)
-		}
+	if !slices.Equal(states, want) {
+		t.Errorf("states = %v, want %v", states, want)
 	}
 }
 
