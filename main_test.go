@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -100,6 +101,34 @@ func TestViewAtXStyledLabels(t *testing.T) {
 	}
 	if got := viewAtX(9, styled); got != 1 {
 		t.Errorf("viewAtX(9, styled) = %d, want 1", got)
+	}
+}
+
+func TestViewRowsFitWidth(t *testing.T) {
+	long := strings.Repeat("x", 100)
+	tests := []struct {
+		name  string
+		stale string
+	}{
+		{"fresh long summary", ""},
+		{"stale long summary", "already-reviewed"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := model{width: 80, height: 24}
+			m.lists[0] = []entry{
+				{name: "a.md", source: "slack", summary: long, stale: tt.stale},
+				{name: "b.md", source: "github", summary: long, stale: tt.stale},
+			}
+			// The cursor stays on index 0, so both the selected and the
+			// plain row style are covered. List rows start after the header.
+			lines := strings.Split(m.View(), "\n")
+			for i := headerLines; i < headerLines+len(m.lists[0]); i++ {
+				if w := lipgloss.Width(lines[i]); w > m.width {
+					t.Errorf("row %d width = %d, want <= %d: %q", i-headerLines, w, m.width, lines[i])
+				}
+			}
+		})
 	}
 }
 

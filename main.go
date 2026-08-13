@@ -282,15 +282,22 @@ func (m model) View() string {
 	start, listRows := m.listViewport()
 	for i := start; i < len(list) && i < start+listRows; i++ {
 		e := list[i]
+		tag := ""
+		if e.stale != "" {
+			tag = "  [stale: " + e.stale + "]"
+		}
 		summary := e.summary
-		if m.width > 14 {
-			if r := []rune(summary); len(r) > m.width-14 {
-				summary = string(r[:m.width-14])
+		if budget := m.width - 14 - len([]rune(tag)); m.width > 14 {
+			if r := []rune(summary); len(r) > budget {
+				summary = string(r[:max(0, budget)])
 			}
 		}
-		if i == m.cursor[m.view] {
-			b.WriteString(rowSelected.Render(fmt.Sprintf("%4s  %-7s %s", age(e.ts, now), e.source, summary)))
-		} else {
+		switch {
+		case i == m.cursor[m.view]:
+			b.WriteString(rowSelected.Render(fmt.Sprintf("%4s  %-7s %s%s", age(e.ts, now), e.source, summary, tag)))
+		case e.stale != "":
+			b.WriteString(tabInactive.Render(fmt.Sprintf("%4s  %-7s %s%s", age(e.ts, now), e.source, summary, tag)))
+		default:
 			b.WriteString(ageStyle.Render(fmt.Sprintf("%4s", age(e.ts, now))) + "  " +
 				sourceStyle.Render(fmt.Sprintf("%-7s", e.source)) + " " + summary)
 		}

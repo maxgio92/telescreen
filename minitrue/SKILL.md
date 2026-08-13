@@ -94,6 +94,20 @@ Watches:
   `since` (`list_comments issueId=...` per assigned ticket updated after
   `since`) by someone other than the watched person.
 
+Revalidate (after the watches, same run): for each entry in `inbox/`,
+`todo/`, and `waiting/` whose URL points at a GitHub PR in `$REPO` and whose
+body does not already contain a `stale` line, check the PR with `gh`:
+
+- PR merged: append `stale merged <now>`. PR closed without merging: append
+  `stale closed <now>`.
+- Review-requested entry with a review by `$GH_LOGIN` submitted after the
+  entry's `seen` time: append `stale already-reviewed <now>`.
+
+`<now>` is the produce run time, ISO-8601 UTC. Keep it cheap: one
+`gh pr view <n> --json state,mergedAt,reviews` per distinct PR, reused across
+entries for the same PR. One marker per entry, ever; never touch `archive/`.
+Slack and Linear entries are out of scope for now.
+
 Headless caveat: GitHub uses the `gh` CLI (token auth, always works). Slack and
 Linear are MCP servers; if a headless run lacks their auth, run those watches
 best-effort and enqueue a `[minitrue] degraded` entry naming the gap

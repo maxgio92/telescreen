@@ -20,6 +20,11 @@ type entry struct {
 	url     string
 	body    string
 	ts      time.Time
+	// stale is the reason from a trailing "stale <reason> <time>" marker
+	// appended by the producer's revalidation pass; empty when fresh.
+	// staleLine keeps the raw marker line for the detail pane.
+	stale     string
+	staleLine string
 }
 
 const stampLayout = "20060102T150405Z"
@@ -51,6 +56,12 @@ func parseEntry(name, body string) entry {
 	}
 	if len(lines) > 1 {
 		e.url = strings.TrimSpace(lines[1])
+	}
+	if last := lines[len(lines)-1]; len(lines) > 1 && strings.HasPrefix(last, "stale ") {
+		e.staleLine = last
+		if f := strings.Fields(last); len(f) >= 2 {
+			e.stale = f[1]
+		}
 	}
 	return e
 }
@@ -106,7 +117,13 @@ func loadState(root, state string) ([]entry, error) {
 		}
 		out = append(out, parseEntry(d.Name(), string(body)))
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].name > out[j].name })
+	// Fresh entries before stale ones, newest first within each group.
+	sort.Slice(out, func(i, j int) bool {
+		if si, sj := out[i].stale != "", out[j].stale != ""; si != sj {
+			return sj
+		}
+		return out[i].name > out[j].name
+	})
 	return out, nil
 }
 

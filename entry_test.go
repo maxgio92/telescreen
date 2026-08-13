@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -27,6 +28,32 @@ func TestParseEntry(t *testing.T) {
 	}
 	if e.url != "https://example.com/thread/123" {
 		t.Errorf("url = %q", e.url)
+	}
+	if e.stale != "" || e.staleLine != "" {
+		t.Errorf("stale = %q, staleLine = %q, want empty", e.stale, e.staleLine)
+	}
+}
+
+func TestParseEntryStale(t *testing.T) {
+	body := "[github] alice: please review\nhttps://github.com/o/r/pull/7\nseen 2026-08-12T10:00:00Z\n\nreview requested\nstale merged 2026-08-14T09:00:00Z\n"
+	e := parseEntry("20260812T100000Z-github-alice-please-review.md", body)
+	if e.stale != "merged" {
+		t.Errorf("stale = %q, want merged", e.stale)
+	}
+	if e.staleLine != "stale merged 2026-08-14T09:00:00Z" {
+		t.Errorf("staleLine = %q", e.staleLine)
+	}
+	// The marker is parsed out; the preview shown in the list stays the
+	// summary line and never picks up the stale line.
+	if e.summary != "please review" {
+		t.Errorf("summary = %q, want %q", e.summary, "please review")
+	}
+	if e.url != "https://github.com/o/r/pull/7" {
+		t.Errorf("url = %q", e.url)
+	}
+	// The detail pane composes from the body, so the marker still shows.
+	if !strings.Contains(e.detail("/p"), "stale merged 2026-08-14T09:00:00Z") {
+		t.Errorf("detail lost the stale line:\n%s", e.detail("/p"))
 	}
 }
 
@@ -143,5 +170,43 @@ func TestLoadStateSortsNewestFirst(t *testing.T) {
 	}
 	if list[0].name != "20260812T100000Z-github-b-new.md" {
 		t.Errorf("first = %q, want the newest entry", list[0].name)
+	}
+}
+
+func TestLoadStateSortsFreshBeforeStale(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "inbox")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	fresh := "[x] y: z\nhttp://u\nseen t\n"
+	stale := "[x] y: z\nhttp://u\nseen t\nstale merged 2026-08-14T09:00:00Z\n"
+	files := map[string]string{
+		"20260811T100000Z-github-a-old-fresh.md": fresh,
+		"20260813T100000Z-github-c-new-stale.md": stale,
+		"20260812T100000Z-github-b-old-stale.md": stale,
+		"20260814T100000Z-github-d-new-fresh.md": fresh,
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	list, err := loadState(root, "inbox")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, e := range list {
+		got = append(got, e.name)
+	}
+	want := []string{
+		"20260814T100000Z-github-d-new-fresh.md",
+		"20260811T100000Z-github-a-old-fresh.md",
+		"20260813T100000Z-github-c-new-stale.md",
+		"20260812T100000Z-github-b-old-stale.md",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("order = %v, want %v", got, want)
 	}
 }

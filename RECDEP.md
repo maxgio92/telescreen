@@ -69,12 +69,18 @@ minimal producer can emit only line 1 and still render.
    others did.
 4. On a partial outage (an auth-less source, a failed poll), enqueue a
    degraded entry naming the gap rather than failing silently.
-5. Never modify or delete entries once written; states beyond `inbox/`
-   belong to the consumer.
+5. Entries are append-only once written, with one sanctioned addition: a
+   revalidation pass may append a single marker line
+   `stale <reason> <ISO-8601 time>` (kebab-case reason, e.g. `merged`,
+   `closed`, `already-reviewed`) to entries in `inbox/`, `todo/`, or
+   `waiting/`. Never mark an entry twice; never touch `archive/`. Never
+   delete entries; states beyond `inbox/` belong to the consumer. The
+   producer marks, the human archives.
 
 ## Consumer obligations
 
-1. Read and rename only; never edit entry content.
+1. Read and rename only; never edit entry content. Stale markers are
+   rendered, not written, by the consumer.
 2. Never call the upstream sources; the queue is the only input.
 3. Treat a failed read as a race with a concurrent move and retry on the
    next refresh.
