@@ -62,7 +62,9 @@ telescreen -once    # print per-state counts and exit
 
 Keys:
 
-- `tab`/`shift+tab`, `1`/`2`/`3`/`4`: switch view (inbox, todo, waiting, archive)
+- `tab`/`shift+tab`, `1`-`5`: switch view (inbox, todo, waiting, archive,
+  memoryhole). The fifth view is virtual: no directory, always empty, only
+  an epitaph.
 - `j`/`k`, arrows: navigate
 - mouse: wheel scrolls the list, click selects a row, click a tab switches view
 - `o`, `enter`: open the entry's URL
@@ -70,6 +72,8 @@ Keys:
 - `w`: mark waiting (todo to waiting)
 - `a`: archive (todo or waiting to archive)
 - `u`: undo, one state back (archive to waiting, waiting to todo, todo to inbox)
+- `x`: incinerate (archive only): the first press arms the selected entry, a
+  second consecutive `x` deletes its file permanently; any other key disarms
 - `y`: copy the URL (wl-copy, fallback xclip)
 - `q`: quit
 

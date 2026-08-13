@@ -1,7 +1,7 @@
 // Command telescreen is a dashboard for the recdep file
-// queue: four states (inbox, todo, waiting, done), one markdown file per entry.
-// It only reads and renames files under the state dir; the producer is a
-// separate process.
+// queue: four states (inbox, todo, waiting, archive), one markdown file per entry.
+// It reads and renames files under the state dir, and removes one file per
+// incinerate keypress pair; the producer is a separate process.
 package main
 
 import (
@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -27,6 +28,15 @@ const (
 	detailLines = 6
 )
 
+// views are the tabs in order: the four state directories plus the
+// memory hole, a virtual view with no directory that is always empty.
+var views = append(slices.Clone(states), "memoryhole")
+
+// memoryHoleView is the index of the virtual fifth view.
+var memoryHoleView = len(states)
+
+const epitaph = "The past was erased, the erasure was forgotten."
+
 type model struct {
 	root    string
 	watcher *fsnotify.Watcher
@@ -36,6 +46,9 @@ type model struct {
 	width   int
 	height  int
 	status  string
+	// armed holds the entry name the last x keypress selected for
+	// incineration; any other key or mouse press clears it.
+	armed string
 }
 
 var (
@@ -69,6 +82,9 @@ func (m *model) reload() {
 }
 
 func (m model) selected() (entry, bool) {
+	if m.view >= len(states) {
+		return entry{}, false
+	}
 	list := m.lists[m.view]
 	if len(list) == 0 {
 		return entry{}, false
@@ -115,22 +131,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	armed := m.armed
+	m.armed = ""
 	m.status = ""
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	case "tab":
-		m.view = (m.view + 1) % len(states)
+		m.view = (m.view + 1) % len(views)
 	case "shift+tab":
-		m.view = (m.view + len(states) - 1) % len(states)
-	case "1", "2", "3", "4":
+		m.view = (m.view + len(views) - 1) % len(views)
+	case "1", "2", "3", "4", "5":
 		m.view = int(msg.String()[0] - '1')
 	case "j", "down":
-		if m.cursor[m.view] < len(m.lists[m.view])-1 {
+		if m.view < len(states) && m.cursor[m.view] < len(m.lists[m.view])-1 {
 			m.cursor[m.view]++
 		}
 	case "k", "up":
-		if m.cursor[m.view] > 0 {
+		if m.view < len(states) && m.cursor[m.view] > 0 {
 			m.cursor[m.view]--
 		}
 	case "o", "enter":
@@ -158,19 +176,46 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.move("archive", "waiting")
 		m.move("waiting", "todo")
 		m.move("todo", "inbox")
+	case "x":
+		m.incinerate(armed)
 	}
 	return m, nil
 }
 
+// incinerate is the one destructive action: in the archive view, the first
+// x on an entry arms it and a second consecutive x removes the file. In the
+// book the memory hole rides to the incinerators; nothing returns.
+func (m *model) incinerate(armed string) {
+	if m.view >= len(states) || states[m.view] != "archive" {
+		return
+	}
+	e, ok := m.selected()
+	if !ok {
+		return
+	}
+	if armed != e.name {
+		m.armed = e.name
+		m.status = "6079 Smith W.! Yes, you! Press x again to incinerate."
+		return
+	}
+	if err := os.Remove(filepath.Join(m.root, "archive", e.name)); err != nil {
+		m.status = err.Error()
+		return
+	}
+	m.reload()
+	m.status = "incinerated " + e.name
+}
+
 func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	m.status = ""
+	m.armed = ""
 	switch {
 	case msg.Button == tea.MouseButtonWheelUp:
-		if m.cursor[m.view] > 0 {
+		if m.view < len(states) && m.cursor[m.view] > 0 {
 			m.cursor[m.view]--
 		}
 	case msg.Button == tea.MouseButtonWheelDown:
-		if m.cursor[m.view] < len(m.lists[m.view])-1 {
+		if m.view < len(states) && m.cursor[m.view] < len(m.lists[m.view])-1 {
 			m.cursor[m.view]++
 		}
 	case msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft:
@@ -178,6 +223,9 @@ func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			if v := viewAtX(msg.X, m.tabLabels()); v >= 0 {
 				m.view = v
 			}
+			return m, nil
+		}
+		if m.view >= len(states) {
 			return m, nil
 		}
 		start, rows := m.listViewport()
@@ -191,9 +239,13 @@ func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 // tabLabels returns the header labels before styling. Styling does not
 // change their width, so hit tests on these match the rendered header.
 func (m model) tabLabels() []string {
-	labels := make([]string, len(states))
-	for i, s := range states {
-		labels[i] = fmt.Sprintf("%d %s (%d)", i+1, s, len(m.lists[i]))
+	labels := make([]string, len(views))
+	for i, s := range views {
+		if i < len(states) {
+			labels[i] = fmt.Sprintf("%d %s (%d)", i+1, s, len(m.lists[i]))
+		} else {
+			labels[i] = fmt.Sprintf("%d %s", i+1, s)
+		}
 	}
 	return labels
 }
@@ -238,7 +290,7 @@ func viewAtX(x int, labels []string) int {
 
 // move renames the selected entry when the active view matches from.
 func (m *model) move(from, to string) {
-	if states[m.view] != from {
+	if m.view >= len(states) || states[m.view] != from {
 		return
 	}
 	e, ok := m.selected()
@@ -273,6 +325,15 @@ func (m model) View() string {
 		}
 	}
 	b.WriteString(strings.Join(tabs, "  ") + "\n\n")
+
+	if m.view == memoryHoleView {
+		b.WriteString(tabInactive.Render("  "+epitaph) + "\n")
+		if m.status != "" {
+			b.WriteString(m.status + "\n")
+		}
+		b.WriteString(helpStyle.Render(helpLine))
+		return b.String()
+	}
 
 	list := m.lists[m.view]
 	now := time.Now().UTC()
@@ -317,8 +378,24 @@ func (m model) View() string {
 	if m.status != "" {
 		b.WriteString(m.status + "\n")
 	}
-	b.WriteString(helpStyle.Render("j/k/wheel move  click select  tab/shift+tab/1-4/click view  o open  y yank url  r read  w waiting  a archive  u undo  q quit"))
+	b.WriteString(helpStyle.Render(helpLine))
 	return b.String()
+}
+
+const helpLine = "j/k/wheel move  click select  tab/shift+tab/1-5/click view  o open  y yank url  r read  w waiting  a archive  u undo  x incinerate  q quit"
+
+// onceCounts renders one "<state> <count>" line per real state directory;
+// the virtual memory hole never appears here.
+func onceCounts(root string) (string, error) {
+	var b strings.Builder
+	for _, s := range states {
+		list, err := loadState(root, s)
+		if err != nil {
+			return "", err
+		}
+		fmt.Fprintf(&b, "%s %d\n", s, len(list))
+	}
+	return b.String(), nil
 }
 
 func main() {
@@ -332,14 +409,12 @@ func main() {
 	}
 
 	if *once {
-		for _, s := range states {
-			list, err := loadState(root, s)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			fmt.Printf("%s %d\n", s, len(list))
+		out, err := onceCounts(root)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
 		}
+		fmt.Print(out)
 		return
 	}
 

@@ -121,10 +121,12 @@ rather than failing silently.
 The TUI at `~/src/github.com/maxgio92/telescreen/` (private repo
 github.com/maxgio92/telescreen) is the consumer. `pw`
 launches it (building `~/.local/bin/telescreen` on first use; `pw` stays as a
-short alias). Four views (inbox, todo, waiting, archive) switch with tab or
-1/2/3/4; `r` moves inbox to todo (read), `w` moves todo to waiting (waiting
+short alias). Five views (inbox, todo, waiting, archive, memoryhole) switch with tab or
+1-5; `r` moves inbox to todo (read), `w` moves todo to waiting (waiting
 on the other side), `a` moves todo or waiting to archive, `u` moves one state
-back (archive to waiting, waiting to todo, todo to inbox). `o` opens the
+back (archive to waiting, waiting to todo, todo to inbox). A fifth virtual
+view, memoryhole (key 5), is always empty, and `x` in archive, pressed twice
+on the same entry, permanently deletes its file. `o` opens the
 entry's URL, `y` copies it, `q` quits. It watches the state dirs with
 fsnotify, so new producer entries appear live. `pw -once` prints per-state
 counts and exits.

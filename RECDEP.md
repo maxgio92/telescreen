@@ -81,8 +81,11 @@ minimal producer can emit only line 1 and still render.
 
 ## Consumer obligations
 
-1. Read and rename only; never edit entry content. Stale markers are
-   rendered, not written, by the consumer.
+1. Read and rename only, with the single exception in point 4; never edit
+   entry content. Stale markers are rendered, not written, by the consumer.
 2. Never call the upstream sources; the queue is the only input.
 3. Treat a failed read as a race with a concurrent move and retry on the
    next refresh.
+4. One destructive action exists: incinerate, which removes an entry file
+   from `archive/` only, behind a double keypress on the same entry. The
+   removal is permanent; nothing returns from the memory hole.

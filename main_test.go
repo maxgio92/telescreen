@@ -181,6 +181,135 @@ func stripANSI(s string) string {
 	return b.String()
 }
 
+func key(s string) tea.KeyMsg {
+	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+}
+
+func press(t *testing.T, m model, msg tea.Msg) model {
+	t.Helper()
+	nm, _ := m.Update(msg)
+	return nm.(model)
+}
+
+func TestIncinerateArmsThenDeletes(t *testing.T) {
+	name := "20260811T142302Z-slack-wes-go-for-it.md"
+	m, root := seedModel(t, "archive", name)
+
+	m = press(t, m, key("x"))
+	if got := inState(t, root, name); !slices.Equal(got, []string{"archive"}) {
+		t.Fatalf("after first x: entry in %v, want [archive]", got)
+	}
+	if want := "6079 Smith W.! Yes, you! Press x again to incinerate."; m.status != want {
+		t.Errorf("status = %q, want %q", m.status, want)
+	}
+
+	m = press(t, m, key("x"))
+	if got := inState(t, root, name); got != nil {
+		t.Errorf("after second x: entry in %v, want gone", got)
+	}
+	if want := "incinerated " + name; m.status != want {
+		t.Errorf("status = %q, want %q", m.status, want)
+	}
+}
+
+func TestIncinerateDisarmsOnOtherKey(t *testing.T) {
+	name := "20260811T142302Z-slack-wes-go-for-it.md"
+	m, root := seedModel(t, "archive", name)
+
+	m = press(t, m, key("x"))
+	m = press(t, m, key("j"))
+	m = press(t, m, key("x"))
+	if got := inState(t, root, name); !slices.Equal(got, []string{"archive"}) {
+		t.Fatalf("x j x deleted the entry: in %v, want [archive]", got)
+	}
+	if want := "6079 Smith W.! Yes, you! Press x again to incinerate."; m.status != want {
+		t.Errorf("status = %q, want %q (re-armed)", m.status, want)
+	}
+
+	m = press(t, m, key("x"))
+	if got := inState(t, root, name); got != nil {
+		t.Errorf("x after re-arm: entry in %v, want gone", got)
+	}
+}
+
+func TestIncinerateOutsideArchiveDoesNothing(t *testing.T) {
+	name := "20260811T142302Z-slack-wes-go-for-it.md"
+	for _, state := range []string{"inbox", "todo", "waiting"} {
+		t.Run(state, func(t *testing.T) {
+			m, root := seedModel(t, state, name)
+			m = press(t, m, key("x"))
+			m = press(t, m, key("x"))
+			if got := inState(t, root, name); !slices.Equal(got, []string{state}) {
+				t.Errorf("x x in %s: entry in %v, want [%s]", state, got, state)
+			}
+			if m.status != "" || m.armed != "" {
+				t.Errorf("x in %s set status %q, armed %q", state, m.status, m.armed)
+			}
+		})
+	}
+
+	// The memory hole view is where losing the states-bound guard would
+	// panic instead of no-oping: seed archive, press x from view 5.
+	t.Run("memoryhole", func(t *testing.T) {
+		m, root := seedModel(t, "archive", name)
+		m.view = memoryHoleView
+		m = press(t, m, key("x"))
+		m = press(t, m, key("x"))
+		if got := inState(t, root, name); !slices.Equal(got, []string{"archive"}) {
+			t.Errorf("x x in memoryhole: entry in %v, want [archive]", got)
+		}
+		if m.status != "" || m.armed != "" {
+			t.Errorf("x in memoryhole set status %q, armed %q", m.status, m.armed)
+		}
+	})
+}
+
+func TestMemoryHoleRendersEpitaphOnly(t *testing.T) {
+	m := model{width: 80, height: 24, view: memoryHoleView}
+	m.lists[0] = []entry{{name: "a.md", source: "slack", summary: "still visible?"}}
+	view := m.View()
+	if !strings.Contains(view, epitaph) {
+		t.Errorf("memory hole view lacks the epitaph:\n%s", view)
+	}
+	if strings.Contains(view, "still visible?") {
+		t.Errorf("memory hole view renders a list entry:\n%s", view)
+	}
+	if !strings.Contains(view, "5 memoryhole") {
+		t.Errorf("tab row lacks the countless memoryhole label:\n%s", view)
+	}
+}
+
+func TestTabCyclesAcrossFiveViews(t *testing.T) {
+	m := model{view: memoryHoleView}
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyTab})
+	if m.view != 0 {
+		t.Errorf("tab from memoryhole: view = %d, want 0", m.view)
+	}
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyShiftTab})
+	if m.view != memoryHoleView {
+		t.Errorf("shift+tab from inbox: view = %d, want %d", m.view, memoryHoleView)
+	}
+	for range views {
+		m = press(t, m, tea.KeyMsg{Type: tea.KeyTab})
+	}
+	if m.view != memoryHoleView {
+		t.Errorf("five tabs did not return to memoryhole: view = %d", m.view)
+	}
+}
+
+func TestOnceCountsListsRealStatesOnly(t *testing.T) {
+	name := "20260811T142302Z-slack-wes-go-for-it.md"
+	_, root := seedModel(t, "inbox", name)
+	out, err := onceCounts(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "inbox 1\ntodo 0\nwaiting 0\narchive 0\n"
+	if out != want {
+		t.Errorf("onceCounts = %q, want %q", out, want)
+	}
+}
+
 func TestHandleKeyMovesOnce(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
 	tests := []struct {
