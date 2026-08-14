@@ -1,7 +1,6 @@
 <p align="center">
   <a href="https://github.com/maxgio92/telescreen/actions/workflows/ci.yml"><img src="https://github.com/maxgio92/telescreen/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/maxgio92/telescreen/releases/latest"><img src="https://img.shields.io/github/v/release/maxgio92/telescreen" alt="Latest release"></a>
-  <a href="https://goreportcard.com/report/github.com/maxgio92/telescreen"><img src="https://goreportcard.com/badge/github.com/maxgio92/telescreen" alt="Go Report Card"></a>
 </p>
 
 <p align="center"><img src="assets/telescreen.png" alt="telescreen" width="640"></p>
