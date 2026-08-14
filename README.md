@@ -141,6 +141,13 @@ tar xzf telescreen_*_${OS}_${ARCH}.tar.gz -C ~/.local/bin telescreen
 tar xzf thinkpol_*_${OS}_${ARCH}.tar.gz -C ~/.local/bin thinkpol
 ```
 
+Or through Go:
+
+```
+go install github.com/maxgio92/telescreen@latest
+go install github.com/maxgio92/telescreen/cmd/thinkpol@latest
+```
+
 The agents are skills plus systemd units rather than binaries, so
 enrolling minitrue and speakwrite takes the repo:
 
