@@ -118,6 +118,11 @@ markers: a `--- ` line with any other kind is section text (a quoted
 diff, for example), not a marker. Markers accumulate append-only; the
 last marker wins for presentation.
 
+The published marker may carry a section body: the text actually
+posted, required whenever the enrolled actor adapted the draft rather
+than posting it verbatim, so the record never lies about what went
+out. A verbatim actor omits it (the draft is the post).
+
 The published marker records the actor's publish write, the one
 outward-facing action in the whole system: on a `.publish` approval the
 actor (thinkpol) posts the last draft upstream through its publisher
