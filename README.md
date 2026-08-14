@@ -145,45 +145,36 @@ returns. The past was erased, the erasure was forgotten.
 
 ## Install
 
-From a release, no build required: the prebuilt archives carry the two
-binaries, the screen and the actor.
+From a release, no build required: one binary carries the screen, the
+agents, the actor, and the installer.
 
 ```
 OS=$(uname -s | tr '[:upper:]' '[:lower:]'); ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-gh release download --repo maxgio92/telescreen --pattern "*_${OS}_${ARCH}.tar.gz"
+gh release download --repo maxgio92/telescreen --pattern "telescreen_*_${OS}_${ARCH}.tar.gz"
 tar xzf telescreen_*_${OS}_${ARCH}.tar.gz -C ~/.local/bin telescreen
-tar xzf thinkpol_*_${OS}_${ARCH}.tar.gz -C ~/.local/bin thinkpol
 ```
 
 Or through Go:
 
 ```
 go install github.com/maxgio92/telescreen@latest
-go install github.com/maxgio92/telescreen/cmd/thinkpol@latest
 ```
 
-The agents are skills plus systemd units rather than binaries, so
-enrolling minitrue and speakwrite takes the repo:
+Then enroll the whole stack, or one component at a time:
 
 ```
-git clone https://github.com/maxgio92/telescreen
-cd telescreen
-make minitrue speakwrite thinkpol
+telescreen install                 # minitrue, speakwrite, thinkpol
+telescreen install thinkpol        # one component
+telescreen install --dry-run       # print the plan without writing
 ```
 
-From source, for development or by choice, `make install` builds and
-enrolls everything. Per-component targets:
-
-- `make build`: compile both binaries into `~/.local/bin`.
-- `make minitrue`: install the producer (wrapper to
-  `~/.local/bin/minitrue`, skill symlinked into
-  `~/.claude/skills/minitrue`, systemd user timer enabled). Identity
-  lives in `~/.config/minitrue.env` (SLACK_USER_ID, GH_LOGIN,
-  LINEAR_ASSIGNEE, REPO).
-- `make speakwrite`: install the drafting clerk (wrapper to
-  `~/.local/bin/speakwrite`, skill symlinked into
-  `~/.claude/skills/speakwrite`, `speakwrite.path` enabled so a saved
-  dictation or a publish approval wakes the runner).
+The installer carries everything it enrolls: it writes the agent
+skills to `~/.claude/skills/`, the systemd user units to
+`~/.config/systemd/user/` (ExecStart points at the installing binary),
+creates the state dirs, and enables the units. Identity lives in
+`~/.config/minitrue.env` (SLACK_USER_ID, GH_LOGIN, LINEAR_ASSIGNEE,
+REPO). From source, for development or by choice, `make install`
+builds the binary into `~/.local/bin` and runs its installer.
 
 ## Configuration
 
@@ -198,7 +189,7 @@ an implementation is enrollment, not configuration.
 
 ```
 telescreen          # the screen
-telescreen -once    # print per-drawer counts and exit
+telescreen --once   # print per-drawer counts and exit
 ```
 
 ### Keys

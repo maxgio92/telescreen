@@ -8,21 +8,13 @@ builds:
       - CGO_ENABLED=0
     goos: [linux, darwin]
     goarch: [amd64, arm64]
-  - id: thinkpol
-    binary: thinkpol
-    main: ./cmd/thinkpol
-    env:
-      - CGO_ENABLED=0
-    goos: [linux, darwin]
-    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X github.com/maxgio92/telescreen/pkg/cmd/version.version={{ .Version }}
 
 archives:
   - id: telescreen
     ids: [telescreen]
     name_template: "telescreen_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-  - id: thinkpol
-    ids: [thinkpol]
-    name_template: "thinkpol_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: "checksums.txt"

@@ -1,6 +1,7 @@
 # thinkpol: the acting layer
 
-Status: implemented (`cmd/thinkpol`, behind the `thinkpol/` path unit).
+Status: implemented (`telescreen thinkpol`, behind the thinkpol path
+unit).
 
 In the book the Thought Police do not deliberate; they enforce decisions
 already taken. thinkpol is the acting role, defined by the `.publish`
@@ -71,7 +72,7 @@ Environment details live outside the code, split by shape. Env files
 binary, the prompt, and the MCP tool allowlists included.
 `~/.config/recdep/config.yaml` holds structured tables, such as the
 dictation action map. Systemd enrollment chooses implementations:
-swapping a component means enabling a different unit. The wrapper
+swapping a component means enabling a different unit. The subcommand
 defaults reproduce a plain claude setup, so an absent config is a
 working one.
 

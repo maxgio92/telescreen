@@ -6,4 +6,4 @@ Type=oneshot
 TimeoutStartSec=300
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 EnvironmentFile=-%h/.config/thinkpol.env
-ExecStart=%h/.local/bin/thinkpol
+ExecStart={{exec}} thinkpol

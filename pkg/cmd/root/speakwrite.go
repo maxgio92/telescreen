@@ -5,7 +5,7 @@
 // appending the discarded marker. A separate runner consumes the intent
 // and approval files; nothing here calls the network.
 
-package main
+package root
 
 import (
 	"bytes"
