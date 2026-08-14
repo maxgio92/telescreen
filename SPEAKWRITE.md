@@ -17,7 +17,7 @@ thinkpol (THINKPOL.md).
 
 | Decision | Choice | Why |
 |---|---|---|
-| Execution surface | Headless runner (wrapper plus a systemd path unit on `recdep/intents/`, same wrapper pattern as minitrue) | telescreen stays offline and file-only; the runner is swappable like the producer |
+| Execution surface | Headless runner (subcommand plus a systemd path unit on `recdep/intents/`, same pattern as minitrue) | telescreen stays offline and file-only; the runner is swappable like the producer |
 | Action selection | Source-mapped: the entry's source and shape pick the action; the human adds guidance at dictation time | The map knows the verb, only the human knows the stance |
 | Result flow | Draft appended to the entry file, rendered in the detail pane, tagged in the list row | The record stays in recdep; the TUI needs only a tag |
 | Human gate | Draft-then-publish: the runner never posts; publishing requires an explicit, double-keyed approval | Nothing outward-facing happens without live consent |

@@ -1,12 +1,12 @@
-// Command thinkpol executes recorded publish approvals, the acting layer
-// defined in THINKPOL.md. It drains recdep/intents/*.publish oldest
-// first, posts each approved draft through its publisher, appends the
-// published marker, and renames the entry to upsub/. It never composes
-// text and never judges a draft; the human approved, thinkpol acts.
-package main
+// Package thinkpol executes recorded publish approvals, the acting
+// layer defined in THINKPOL.md. It drains recdep/intents/*.publish
+// oldest first, posts each approved draft through its publisher,
+// appends the published marker, and renames the entry to upsub/. It
+// never composes text and never judges a draft; the human approved,
+// thinkpol acts.
+package thinkpol
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,11 +14,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/maxgio92/telescreen/internal/publish"
 	"github.com/maxgio92/telescreen/internal/recdep"
 )
 
-var version = "dev"
+// New returns the thinkpol subcommand.
+func New() *cobra.Command {
+	return &cobra.Command{
+		Use:   "thinkpol",
+		Short: "run the acting layer once (execute publish approvals deterministically)",
+		Args:  cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			root, err := recdep.StateRoot()
+			if err != nil {
+				return err
+			}
+			return drain(root)
+		},
+	}
+}
 
 // logLine appends one line to recdep/publish.log (created when missing)
 // and mirrors it to stdout, so a disappeared approval is always
@@ -147,22 +163,4 @@ func drain(root string) error {
 		}
 	}
 	return nil
-}
-
-func main() {
-	showVersion := flag.Bool("version", false, "print the version and exit")
-	flag.Parse()
-	if *showVersion {
-		fmt.Println("thinkpol " + version)
-		return
-	}
-	root, err := recdep.StateRoot()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	if err := drain(root); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
 }

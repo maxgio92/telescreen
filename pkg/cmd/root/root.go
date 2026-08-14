@@ -1,0 +1,56 @@
+// Package root defines the telescreen root command: a dashboard for the
+// recdep file queue, four states (tube, desk, upsub, files), one markdown
+// file per entry. It reads and renames files under the state dir, and
+// removes one file per incinerate keypress pair; the producer is a
+// separate process enrolled as a subcommand.
+package root
+
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+
+	"github.com/maxgio92/telescreen/internal/recdep"
+	"github.com/maxgio92/telescreen/pkg/cmd/install"
+	"github.com/maxgio92/telescreen/pkg/cmd/minitrue"
+	"github.com/maxgio92/telescreen/pkg/cmd/speakwrite"
+	"github.com/maxgio92/telescreen/pkg/cmd/thinkpol"
+	"github.com/maxgio92/telescreen/pkg/cmd/version"
+)
+
+// New returns the telescreen root command. Bare telescreen opens the
+// dashboard; the subcommands run the other roles of the pipeline.
+func New() *cobra.Command {
+	var once bool
+	cmd := &cobra.Command{
+		Use:           "telescreen",
+		Short:         "a screen for monitoring your daily job, in your terminal",
+		Args:          cobra.NoArgs,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			root, err := recdep.StateRoot()
+			if err != nil {
+				return err
+			}
+			if once {
+				out, err := onceCounts(root)
+				if err != nil {
+					return err
+				}
+				_, _ = fmt.Fprint(cmd.OutOrStdout(), out)
+				return nil
+			}
+			return runTUI(root)
+		},
+	}
+	cmd.Flags().BoolVar(&once, "once", false, "print state counts and exit (no TUI)")
+	cmd.AddCommand(
+		minitrue.New(),
+		speakwrite.New(),
+		thinkpol.New(),
+		install.New(),
+		version.New(),
+	)
+	return cmd
+}

@@ -6,7 +6,7 @@ Three mechanisms, split by what is being decided:
 |---|---|---|
 | env files (`~/.config/*.env`) | parameters and secrets of a chosen implementation | identity handles, tokens, agent binary, tool allowlists, timeouts |
 | YAML (`~/.config/recdep/config.yaml`) | structured, human-edited tables | the dictation action map |
-| systemd enrollment | which implementation runs each role | `make minitrue`, or your own producer's unit |
+| systemd enrollment | which implementation runs each role | `telescreen install minitrue`, or your own producer's unit |
 
 Choosing an implementation is never a config key: you enroll a unit.
 Everything below configures the implementations this repo ships.
@@ -59,10 +59,10 @@ built-ins stand.
 | LINEAR_ASSIGNEE | the Linear assignee to watch | `me` |
 | REPO | the GitHub repo to scope PR watches to | required |
 | BOT_LOGINS | bot logins to skip, besides `[bot]` suffixes | empty |
-| MINITRUE_AGENT | the agent binary the wrapper runs | `claude` |
+| MINITRUE_AGENT | the agent binary the subcommand runs | `claude` |
 | MINITRUE_PROMPT | the headless prompt | `/minitrue produce` |
-| MINITRUE_ALLOWED_TOOLS | the agent's tool allowlist | the wrapper's default |
-| MINITRUE_TIMEOUT | seconds before the wrapper kills the run | `600` |
+| MINITRUE_ALLOWED_TOOLS | the agent's tool allowlist | the subcommand's default |
+| MINITRUE_TIMEOUT | seconds before the subcommand kills the run | `600` |
 
 Swapping the LLM agent is `MINITRUE_AGENT` (an absolute path when it
 is not on the unit's PATH) plus a prompt of your own; the allowlist
@@ -78,8 +78,8 @@ run first.
 |---|---|---|
 | SPEAKWRITE_AGENT | the agent binary | `claude` |
 | SPEAKWRITE_PROMPT | the headless prompt | `/speakwrite draft` |
-| SPEAKWRITE_ALLOWED_TOOLS | the agent's tool allowlist | the wrapper's default |
-| SPEAKWRITE_TIMEOUT | seconds before the wrapper kills the run | `600` |
+| SPEAKWRITE_ALLOWED_TOOLS | the agent's tool allowlist | the subcommand's default |
+| SPEAKWRITE_TIMEOUT | seconds before the subcommand kills the run | `600` |
 
 ## thinkpol.env: the actor's credentials
 
