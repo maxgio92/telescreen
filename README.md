@@ -121,7 +121,7 @@ discard a draft into the record's history instead. The clerk never
 posts without a recorded double-key approval. Design in
 [SPEAKWRITE.md](SPEAKWRITE.md).
 
-### the memory hole
+<p><img src="assets/memoryhole.png" alt="the memory hole" height="170"></p>
 
 The memory hole is the slit in the wall that carries unwanted records
 to the incinerators. No metaphor drift here; it does exactly that.
