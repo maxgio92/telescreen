@@ -3,12 +3,20 @@
 # drafts; publishing is thinkpol's job. Run by the path unit.
 # timeout + </dev/null so the process always exits (claude -p can hang on
 # teardown), which lets the oneshot complete and the path unit re-trigger.
-CLAUDE="$(command -v claude || echo /home/linuxbrew/.linuxbrew/bin/claude)"
+# ~/.config/speakwrite.env sets the parameters (plain KEY=value lines);
+# the defaults below apply without it.
+set -a
+[ -f "$HOME/.config/speakwrite.env" ] && . "$HOME/.config/speakwrite.env"
+set +a
+AGENT="${SPEAKWRITE_AGENT:-claude}"
+PROMPT="${SPEAKWRITE_PROMPT:-/speakwrite draft}"
+ALLOWED_TOOLS="${SPEAKWRITE_ALLOWED_TOOLS:-Bash Read Write Glob Grep mcp__plugin_slack_slack__slack_read_thread mcp__linear-server__get_issue mcp__linear-server__list_comments}"
+TIMEOUT="${SPEAKWRITE_TIMEOUT:-600}"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/recdep"
 mkdir -p "$STATE/intents"
 shopt -s nullglob
 intents=("$STATE/intents/"*.intent)
 [ ${#intents[@]} -eq 0 ] && exit 0
-exec timeout 600 "$CLAUDE" -p "/speakwrite draft" \
-  --allowedTools "Bash Read Write Glob Grep mcp__plugin_slack_slack__slack_read_thread mcp__linear-server__get_issue mcp__linear-server__list_comments" \
+exec timeout "$TIMEOUT" "$AGENT" -p "$PROMPT" \
+  --allowedTools "$ALLOWED_TOOLS" \
   </dev/null >>"$STATE/draft.log" 2>&1

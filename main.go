@@ -18,6 +18,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fsnotify/fsnotify"
 
+	"github.com/maxgio92/telescreen/internal/config"
 	"github.com/maxgio92/telescreen/internal/recdep"
 )
 
@@ -76,6 +77,14 @@ var (
 
 func newModel(root string, w *fsnotify.Watcher) model {
 	m := model{root: root, watcher: w}
+	// A malformed config never kills the dashboard: the built-in action
+	// map stands in and the parse error shows once in the status line.
+	cfg, err := config.Load()
+	if err != nil {
+		m.status = err.Error()
+	} else {
+		applyConfig(cfg)
+	}
 	m.reload()
 	return m
 }

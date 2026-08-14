@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/maxgio92/telescreen/internal/config"
 	"github.com/maxgio92/telescreen/internal/recdep"
 )
 
@@ -40,6 +41,33 @@ func TestActionFor(t *testing.T) {
 				t.Errorf("actionFor(%q, %q) = %q, want %q", tt.e.Source, tt.e.Who, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestActionForCustomTable(t *testing.T) {
+	builtin := actionRules
+	t.Cleanup(func() { actionRules = builtin })
+	applyConfig(config.Config{Actions: []config.Action{
+		{Source: "slack", Action: "respond"},
+		{Source: "github", WhoSuffix: "[bot]", Action: "review"},
+	}})
+	if got := actionFor(recdep.Entry{Source: "slack", Who: "wes"}); got != "respond" {
+		t.Errorf("actionFor(slack) = %q, want %q", got, "respond")
+	}
+	if got := actionFor(recdep.Entry{Source: "github", Who: "dastardly[bot]"}); got != "review" {
+		t.Errorf("actionFor(github bot) = %q, want %q", got, "review")
+	}
+	// The custom table replaces the built-ins entirely: a source only
+	// the built-ins knew falls to the default.
+	if got := actionFor(recdep.Entry{Source: "linear", Who: "chuck"}); got != "respond" {
+		t.Errorf("actionFor(linear) = %q, want %q", got, "respond")
+	}
+	// An empty config keeps the current table: the custom rule must
+	// survive, distinguishing kept-custom from a wiped table (respond)
+	// and from the built-ins (vet-findings).
+	applyConfig(config.Config{})
+	if got := actionFor(recdep.Entry{Source: "github", Who: "dastardly[bot]"}); got != "review" {
+		t.Errorf("actionFor(github bot) after empty config = %q, want %q", got, "review")
 	}
 }
 
@@ -250,6 +278,7 @@ func TestFinishDictationCancels(t *testing.T) {
 // returns a loaded model on that view. url is the entry's link line.
 func seedDraftModel(t *testing.T, name, url string) (model, string) {
 	t.Helper()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	root := t.TempDir()
 	for _, s := range watchedDirs {
 		if err := os.MkdirAll(filepath.Join(root, s), 0o755); err != nil {

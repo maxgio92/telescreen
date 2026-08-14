@@ -57,17 +57,17 @@ Two axes, both resolved at the edges rather than in the core:
   everywhere except drafting. The contract files (RECDEP.md,
   SPEAKWRITE.md, this one) are the only coupling.
 
-### Known impurities
+### Configuration
 
-One place falls short of the principle today, named here so it reads
-as debt rather than design:
-
-1. The two agent wrappers hardcode this machine's MCP tool identifiers
-   in their allowlists. The identifiers are an environment detail, not
-   a contract term; they belong in the identity config next to the
-   Slack and GitHub handles, with the wrapper defaults as fallback.
-   Until then the wrappers are a reference implementation for exactly
-   one setup.
+Environment details live outside the code, split by shape. Env files
+(`~/.config/minitrue.env`, `~/.config/speakwrite.env`,
+`~/.config/thinkpol.env`) hold flat parameters and secrets, the agent
+binary, the prompt, and the MCP tool allowlists included.
+`~/.config/recdep/config.yaml` holds structured tables, such as the
+dictation action map. Systemd enrollment chooses implementations:
+swapping a component means enabling a different unit. The wrapper
+defaults reproduce a plain claude setup, so an absent config is a
+working one.
 
 ## Procedure
 
