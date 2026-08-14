@@ -10,7 +10,9 @@ and asked of you, watched, filed, and displayed.
 
 ## How it works
 
-Four components, one direction of flow:
+Every component is named in Newspeak, after Orwell's 1984: the world
+where the machinery watches the human. Here the direction flips and
+the human runs the ministry. Four components, one direction of flow:
 
 ```
 minitrue  ->  recdep  ->  telescreen
@@ -26,6 +28,8 @@ component reads or writes exactly its own part of it.
 
 ### minitrue, the producer
 
+Minitrue is the Ministry of Truth, the branch that manufactures the
+news and the records. Fitting: this one manufactures your records.
 A headless agent on a systemd user timer (every 10 minutes). It polls
 Slack (channels, private channels, DMs and group DMs), GitHub (your
 PRs, mentions, review requests), and Linear (assigned tickets), and
@@ -38,7 +42,9 @@ you archive.
 
 ### recdep, the queue
 
-A directory of plain files, `~/.local/state/recdep/`, with one drawer
+RecDep is the Records Department, the section of Minitrue where
+Winston Smith files and rewrites the records. Here nothing is ever
+rewritten, only filed. A directory of plain files, `~/.local/state/recdep/`, with one drawer
 per state:
 
 | Drawer | Meaning |
@@ -65,6 +71,8 @@ receiver.
 
 ### telescreen, the dashboard
 
+The telescreen is the two-way screen on every wall, watching and
+broadcasting at once. This one only broadcasts, and only to you.
 This program: a bubbletea TUI that renders the queue and moves records
 between drawers on single keys or mouse clicks. It never touches the
 network; every state change is a file rename, so the queue stays the
@@ -73,6 +81,8 @@ files them (fsnotify).
 
 ### speakwrite, the drafting clerk
 
+The speakwrite is the dictation machine on Winston's desk at RecDep:
+he speaks the correction, the machine writes it into the record.
 A headless agent behind a systemd path unit on `recdep/intents/`.
 Press `s` on a record to dictate your stance in `$EDITOR`; the clerk
 researches the matter read-only, drafts the response into the record,
@@ -85,6 +95,8 @@ posts without a recorded double-key approval. Design in
 
 ### the memory hole
 
+The memory hole is the slit in the wall that carries unwanted records
+to the incinerators. No metaphor drift here; it does exactly that.
 The fifth view, permanently empty, as intended. Press `x` on an
 archived record and the screen will challenge you by name; press it
 again and the record rides the warm draft to the incinerators. Nothing
