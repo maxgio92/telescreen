@@ -25,9 +25,39 @@ type entry struct {
 	// staleLine keeps the raw marker line for the detail pane.
 	stale     string
 	staleLine string
+	// mark is the kind of the last speakwrite marker section, one of
+	// dictated, draft, published, discarded; empty when none. Sections
+	// start with a "--- <kind> <time>" line appended by the drafting
+	// runner (discarded by the consumer). markTime keeps the marker's
+	// time verbatim.
+	mark     string
+	markTime string
 }
 
 const stampLayout = "20060102T150405Z"
+
+// markerKinds are the only speakwrite marker kinds RECDEP.md recognizes.
+// Draft and guidance text is appended verbatim and can contain "--- "
+// lines of its own (unified diffs quote "--- a/file"), so a "--- " line
+// counts as a marker only when its kind is one of these.
+var markerKinds = map[string]bool{
+	"dictated":  true,
+	"draft":     true,
+	"published": true,
+	"discarded": true,
+}
+
+// markerKind returns the marker kind when line is a speakwrite marker
+// line, and "" otherwise.
+func markerKind(line string) string {
+	if !strings.HasPrefix(line, "--- ") {
+		return ""
+	}
+	if f := strings.Fields(line); len(f) >= 2 && markerKinds[f[1]] {
+		return f[1]
+	}
+	return ""
+}
 
 // parseEntry builds an entry from a queue filename and its body.
 // Body format: line 1 "[<source>] <who>: <summary>", line 2 the link URL,
@@ -54,15 +84,25 @@ func parseEntry(name, body string) entry {
 			e.summary = head
 		}
 	}
+	// Everything from the first "--- " line onward is marker sections,
+	// not preview. The last marker wins for presentation.
+	for _, line := range lines {
+		if kind := markerKind(line); kind != "" {
+			e.mark, e.markTime = kind, ""
+			if f := strings.Fields(line); len(f) >= 3 {
+				e.markTime = f[2]
+			}
+		}
+	}
 	if last := lines[len(lines)-1]; len(lines) > 1 && strings.HasPrefix(last, "stale ") {
 		e.staleLine = last
 		if f := strings.Fields(last); len(f) >= 2 {
 			e.stale = f[1]
 		}
 	}
-	// The URL line and the stale marker can collide on a minimal two-line
-	// entry; the marker wins and the entry has no URL.
-	if len(lines) > 1 && lines[1] != e.staleLine {
+	// The URL line can collide with the stale marker or a speakwrite
+	// marker on a minimal entry; the marker wins and the entry has no URL.
+	if len(lines) > 1 && lines[1] != e.staleLine && markerKind(lines[1]) == "" {
 		e.url = strings.TrimSpace(lines[1])
 	}
 	return e

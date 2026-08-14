@@ -347,6 +347,14 @@ func (m model) View() string {
 		if e.stale != "" {
 			tag = "  [stale: " + e.stale + "]"
 		}
+		// The speakwrite tag follows the stale tag; published and
+		// discarded carry no tag.
+		switch e.mark {
+		case "dictated":
+			tag += "  [dictated]"
+		case "draft":
+			tag += "  [draft]"
+		}
 		// Drop the tag entirely when it alone would overflow the width, so a
 		// narrow terminal never wraps a row and breaks the click mapping.
 		if m.width > 14 && len([]rune(tag)) > m.width-14 {
@@ -365,7 +373,7 @@ func (m model) View() string {
 			b.WriteString(tabInactive.Render(fmt.Sprintf("%4s  %-7s %s%s", age(e.ts, now), e.source, summary, tag)))
 		default:
 			b.WriteString(ageStyle.Render(fmt.Sprintf("%4s", age(e.ts, now))) + "  " +
-				sourceStyle.Render(fmt.Sprintf("%-7s", e.source)) + " " + summary)
+				sourceStyle.Render(fmt.Sprintf("%-7s", e.source)) + " " + summary + tag)
 		}
 		b.WriteString("\n")
 	}

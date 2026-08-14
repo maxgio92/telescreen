@@ -163,6 +163,52 @@ func TestViewDropsTagOnNarrowWidth(t *testing.T) {
 	}
 }
 
+func TestViewRendersSpeakwriteTags(t *testing.T) {
+	m := model{width: 80, height: 24}
+	m.lists[0] = []entry{
+		{name: "a.md", source: "github", summary: "drafted", mark: "draft"},
+		{name: "b.md", source: "github", summary: "dictated", mark: "dictated"},
+		{name: "c.md", source: "github", summary: "posted", mark: "published"},
+		{name: "d.md", source: "github", summary: "dropped", mark: "discarded"},
+	}
+	lines := strings.Split(m.View(), "\n")
+	if !strings.Contains(lines[headerLines], "[draft]") {
+		t.Errorf("draft row lacks the tag: %q", lines[headerLines])
+	}
+	if !strings.Contains(lines[headerLines+1], "[dictated]") {
+		t.Errorf("dictated row lacks the tag: %q", lines[headerLines+1])
+	}
+	for i := headerLines + 2; i < headerLines+4; i++ {
+		if row := stripANSI(lines[i]); strings.Contains(row, "[") {
+			t.Errorf("published/discarded row carries a tag: %q", row)
+		}
+	}
+}
+
+// TestViewDropsDraftTagOnNarrowWidth pins that the speakwrite tag follows
+// the same drop-whole discipline as the stale tag.
+func TestViewDropsDraftTagOnNarrowWidth(t *testing.T) {
+	m := model{width: 20, height: 24}
+	m.lists[0] = []entry{{name: "a.md", source: "github", summary: "x", mark: "draft"}}
+	lines := strings.Split(m.View(), "\n")
+	row := lines[headerLines]
+	if strings.Contains(row, "[draft]") {
+		t.Errorf("narrow row still carries the tag: %q", row)
+	}
+	if w := lipgloss.Width(row); w > m.width {
+		t.Errorf("row width = %d, want <= %d", w, m.width)
+	}
+}
+
+func TestViewRendersStaleAndDraftTags(t *testing.T) {
+	m := model{width: 80, height: 24}
+	m.lists[0] = []entry{{name: "a.md", source: "github", summary: "old draft", stale: "merged", mark: "draft"}}
+	row := strings.Split(m.View(), "\n")[headerLines]
+	if !strings.Contains(row, "[stale: merged]  [draft]") {
+		t.Errorf("row lacks stale-then-draft tags: %q", row)
+	}
+}
+
 func stripANSI(s string) string {
 	var b strings.Builder
 	inEsc := false

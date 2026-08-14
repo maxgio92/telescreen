@@ -24,6 +24,12 @@ State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
 - `todo/`: read, still needs action.
 - `waiting/`: acted on, the other side's move is pending.
 - `archive/`: closed, nothing more expected.
+- `intents/`: speakwrite dictation intents, one file per intent named
+  after the entry (`<entry-name>.intent`). Written only by the consumer
+  (the TUI); the drafting runner consumes each intent and removes the
+  file. Format: an `entry <absolute entry path>` line, an
+  `action <mapped action>` line, then a `guidance:` section with free
+  text, possibly empty.
 
 The producer writes only into `inbox/` and creates missing directories at
 startup. The consumer moves files between the four directories with plain
@@ -79,10 +85,38 @@ minimal producer can emit only line 1 and still render.
    delete entries; states beyond `inbox/` belong to the consumer. The
    producer marks, the human archives.
 
+## Entry marker sections
+
+The speakwrite drafting runner records its work as marker sections
+appended to entry files. Each marker starts with `--- ` on its own line,
+the same discipline as the stale marker: prepend a newline when the file
+lacks a trailing one.
+
+```
+--- dictated <ISO-8601 time>
+<the guidance, copied from the intent>
+
+--- draft <ISO-8601 time>
+<the draft text>
+
+--- published <ISO-8601 time> <URL>
+
+--- discarded <ISO-8601 time>
+```
+
+The drafting runner appends dictated, draft, and published. The consumer
+appends only discarded: that append is the one consumer write to entry
+content besides renames. These four kinds are the only recognized
+markers: a `--- ` line with any other kind is section text (a quoted
+diff, for example), not a marker. Markers accumulate append-only; the
+last marker wins for presentation.
+
 ## Consumer obligations
 
-1. Read and rename only, with the single exception in point 4; never edit
-   entry content. Stale markers are rendered, not written, by the consumer.
+1. Read and rename only, with two exceptions: the incinerate removal in
+   point 4 and the discarded marker append in the entry marker sections
+   above. Never otherwise edit entry content. Stale markers are rendered,
+   not written, by the consumer.
 2. Never call the upstream sources; the queue is the only input.
 3. Treat a failed read as a race with a concurrent move and retry on the
    next refresh.
