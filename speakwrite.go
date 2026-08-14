@@ -1,11 +1,14 @@
-// Speakwrite phase 3: the s dictation key. The consumer writes a
-// pre-filled intent file, suspends into the editor, and submits it by
-// renaming the temporary file into recdep/intents/. A separate runner
-// consumes intents; nothing here calls the network.
+// The s dictation key: the consumer writes a pre-filled intent file,
+// suspends into the editor, and submits it by renaming the temporary
+// file into recdep/intents/. A separate runner consumes intents;
+// nothing here calls the network.
+
 package main
 
 import (
 	"bytes"
+	"errors"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,7 +31,8 @@ type actionRule struct {
 // match on the filename slug: minitrue tags every GitHub entry [github]
 // in the header, so the slug is the only discriminator.
 var actionRules = []actionRule{
-	{nameSubstring: "-review-requested-", action: "review"},
+	{source: "github-review-requested", action: "review"},
+	{nameSubstring: "-review-requested-", source: "github", action: "review"},
 	{source: "github", whoSuffix: "[bot]", action: "vet-findings"},
 	{source: "github", action: "pr-reply"},
 	{source: "slack", action: "slack-reply"},
@@ -85,8 +89,29 @@ func dictatedGuidance(body string) string {
 // renderIntent renders the intent file per RECDEP.md: the entry path
 // line, the action line, and a guidance section pre-filled with the
 // previous guidance when re-dictating.
-func renderIntent(path string, e entry) string {
-	return "entry " + path + "\naction " + actionFor(e) + "\n\nguidance:\n" + dictatedGuidance(e.body) + "\n"
+func renderIntent(path string, e entry, guidance string) string {
+	return "entry " + path + "\naction " + actionFor(e) + "\n\nguidance:\n" + guidance + "\n"
+}
+
+// intentGuidance extracts the text under an intent's "guidance:" line.
+func intentGuidance(s string) string {
+	_, after, ok := strings.Cut(s, "\nguidance:\n")
+	if !ok {
+		return ""
+	}
+	return strings.TrimRight(after, "\n")
+}
+
+// guidanceFor returns the re-dictation pre-fill: a pending intent's
+// guidance when one exists (the runner has not consumed it yet), else
+// the body's last dictated section.
+func guidanceFor(root string, e entry) string {
+	if b, err := os.ReadFile(filepath.Join(root, intentsDir, e.name+".intent")); err == nil {
+		if g := intentGuidance(string(b)); g != "" {
+			return g
+		}
+	}
+	return dictatedGuidance(e.body)
 }
 
 // dictationSubmits reports whether an editor round submits the intent:
@@ -116,8 +141,8 @@ func (m model) dictate() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	entryPath := filepath.Join(m.root, states[m.view], e.name)
-	tmp := filepath.Join(m.root, "intents", e.name+".intent.tmp")
-	if err := os.WriteFile(tmp, []byte(renderIntent(entryPath, e)), 0o644); err != nil {
+	tmp := filepath.Join(m.root, intentsDir, e.name+".intent.tmp")
+	if err := os.WriteFile(tmp, []byte(renderIntent(entryPath, e, guidanceFor(m.root, e))), 0o644); err != nil {
 		m.status = err.Error()
 		return m, nil
 	}
@@ -128,8 +153,11 @@ func (m model) dictate() (tea.Model, tea.Cmd) {
 	if editor == "" {
 		editor = "vi"
 	}
+	// The convention allows arguments in the value ("code -w").
+	args := strings.Fields(editor)
+	args = append(args, tmp)
 	name := e.name
-	return m, tea.ExecProcess(exec.Command(editor, tmp), func(err error) tea.Msg {
+	return m, tea.ExecProcess(exec.Command(args[0], args[1:]...), func(err error) tea.Msg {
 		return editorDoneMsg{name: name, err: err}
 	})
 }
@@ -138,14 +166,20 @@ func (m model) dictate() (tea.Model, tea.Cmd) {
 // exit or an emptied file removes the draft, anything else renames it to
 // the final intent name (the atomic submit the runner watches for).
 func (m *model) finishDictation(msg editorDoneMsg) {
-	tmp := filepath.Join(m.root, "intents", msg.name+".intent.tmp")
-	content, _ := os.ReadFile(tmp)
+	tmp := filepath.Join(m.root, intentsDir, msg.name+".intent.tmp")
+	content, err := os.ReadFile(tmp)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		// A permissions or IO failure is not a cancellation; keep the
+		// dictation on disk and surface the error.
+		m.status = err.Error()
+		return
+	}
 	if !dictationSubmits(content, msg.err) {
 		_ = os.Remove(tmp)
 		m.status = "dictation cancelled"
 		return
 	}
-	if err := os.Rename(tmp, filepath.Join(m.root, "intents", msg.name+".intent")); err != nil {
+	if err := os.Rename(tmp, filepath.Join(m.root, intentsDir, msg.name+".intent")); err != nil {
 		m.status = err.Error()
 		return
 	}

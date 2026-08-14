@@ -36,7 +36,7 @@ func TestActionFor(t *testing.T) {
 func TestRenderIntent(t *testing.T) {
 	fresh := parseEntry("a.md", "[slack] wes: go for it\nhttps://example.com\nseen now\n")
 	want := "entry /q/inbox/a.md\naction slack-reply\n\nguidance:\n\n"
-	if got := renderIntent("/q/inbox/a.md", fresh); got != want {
+	if got := renderIntent("/q/inbox/a.md", fresh, dictatedGuidance(fresh.body)); got != want {
 		t.Errorf("fresh intent = %q, want %q", got, want)
 	}
 }
@@ -61,10 +61,46 @@ func TestRenderIntentPrefillsLastGuidance(t *testing.T) {
 		"the new draft",
 	}, "\n")
 	e := parseEntry("b.md", body)
-	got := renderIntent("/q/todo/b.md", e)
+	got := renderIntent("/q/todo/b.md", e, dictatedGuidance(e.body))
 	want := "entry /q/todo/b.md\naction pr-reply\n\nguidance:\nagree with the finding\npush back on the nit\n"
 	if got != want {
 		t.Errorf("re-dictation intent = %q, want %q", got, want)
+	}
+}
+
+func TestGuidanceForPrefersPendingIntent(t *testing.T) {
+	name := "20260811T142302Z-slack-wes-go-for-it.md"
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, intentsDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	e := parseEntry(name, "[slack] wes: go for it\nhttps://example.com\nseen now\n")
+	if got := guidanceFor(root, e); got != "" {
+		t.Fatalf("guidance without a pending intent = %q, want empty", got)
+	}
+	pending := "entry /q/inbox/" + name + "\naction slack-reply\n\nguidance:\nsay yes, but after the freeze\n"
+	if err := os.WriteFile(filepath.Join(root, intentsDir, name+".intent"), []byte(pending), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := guidanceFor(root, e); got != "say yes, but after the freeze" {
+		t.Errorf("guidance with a pending intent = %q", got)
+	}
+}
+
+func TestActionForReviewRequestedNeedsGitHub(t *testing.T) {
+	slack := parseEntry(
+		"20260813T172742Z-slack-review-requested-foo.md",
+		"[slack] wes: review requested: foo\nhttps://example.com\nseen now\n",
+	)
+	if got := actionFor(slack); got != "slack-reply" {
+		t.Errorf("slack entry with a review-requested slug = %q, want slack-reply", got)
+	}
+	tagged := parseEntry(
+		"20260813T131405Z-github-review-requested-77.md",
+		"[github-review-requested] ampleforth: review requested on PR 77\nhttps://example.com/pr/77\nseen now\n",
+	)
+	if got := actionFor(tagged); got != "review" {
+		t.Errorf("github-review-requested header = %q, want review", got)
 	}
 }
 

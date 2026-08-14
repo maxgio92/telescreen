@@ -32,6 +32,10 @@ const (
 // memory hole, a virtual view with no directory that is always empty.
 var views = append(slices.Clone(states), "memoryhole")
 
+// watchedDirs are the directories under the state root the model watches
+// and the tests seed: the four states plus the intents drop box.
+var watchedDirs = append(slices.Clone(states), intentsDir)
+
 // memoryHoleView is the index of the virtual fifth view.
 var memoryHoleView = len(states)
 
@@ -84,7 +88,7 @@ func (m *model) reload() {
 		}
 	}
 	m.pending = map[string]bool{}
-	if names, err := os.ReadDir(filepath.Join(m.root, "intents")); err == nil {
+	if names, err := os.ReadDir(filepath.Join(m.root, intentsDir)); err == nil {
 		for _, d := range names {
 			if name, ok := strings.CutSuffix(d.Name(), ".intent"); ok {
 				m.pending[name] = true
@@ -458,7 +462,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() { _ = w.Close() }()
-	for _, s := range append(slices.Clone(states), "intents") {
+	for _, s := range watchedDirs {
 		if err := w.Add(filepath.Join(root, s)); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)

@@ -12,6 +12,9 @@ import (
 // states are the queue subdirectories, in view order.
 var states = []string{"inbox", "todo", "waiting", "archive"}
 
+// intentsDir holds speakwrite dictation intents next to the states.
+const intentsDir = "intents"
+
 type entry struct {
 	name    string // filename, e.g. 20260811T142145Z-slack-wes-topic.md
 	source  string // tag from the header line, e.g. slack, github, linear
@@ -156,7 +159,7 @@ func stateRoot() (string, error) {
 			return "", err
 		}
 	}
-	if err := os.MkdirAll(filepath.Join(root, "intents"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, intentsDir), 0o755); err != nil {
 		return "", err
 	}
 	return root, nil

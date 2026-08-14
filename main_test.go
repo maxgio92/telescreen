@@ -16,7 +16,7 @@ import (
 func seedModel(t *testing.T, state, name string) (model, string) {
 	t.Helper()
 	root := t.TempDir()
-	for _, s := range append(slices.Clone(states), "intents") {
+	for _, s := range watchedDirs {
 		if err := os.MkdirAll(filepath.Join(root, s), 0o755); err != nil {
 			t.Fatal(err)
 		}
