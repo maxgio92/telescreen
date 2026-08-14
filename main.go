@@ -17,6 +17,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fsnotify/fsnotify"
+
+	"github.com/maxgio92/telescreen/internal/recdep"
 )
 
 type fsEventMsg struct{}
@@ -30,14 +32,14 @@ const (
 
 // views are the tabs in order: the four state directories plus the
 // memory hole, a virtual view with no directory that is always empty.
-var views = append(slices.Clone(states), "memoryhole")
+var views = append(slices.Clone(recdep.States), "memoryhole")
 
 // watchedDirs are the directories under the state root the model watches
 // and the tests seed: the four states plus the intents drop box.
-var watchedDirs = append(slices.Clone(states), intentsDir)
+var watchedDirs = append(slices.Clone(recdep.States), recdep.IntentsDir)
 
 // memoryHoleView is the index of the virtual fifth view.
-var memoryHoleView = len(states)
+var memoryHoleView = len(recdep.States)
 
 const epitaph = "The past was erased, the erasure was forgotten."
 
@@ -46,7 +48,7 @@ type model struct {
 	watcher *fsnotify.Watcher
 	view    int
 	cursor  [4]int
-	lists   [4][]entry
+	lists   [4][]recdep.Entry
 	width   int
 	height  int
 	status  string
@@ -79,7 +81,7 @@ func newModel(root string, w *fsnotify.Watcher) model {
 }
 
 func (m *model) reload() {
-	for i, s := range states {
+	for i, s := range recdep.States {
 		list, err := loadState(m.root, s)
 		if err != nil {
 			m.status = err.Error()
@@ -91,7 +93,7 @@ func (m *model) reload() {
 		}
 	}
 	m.pending = map[string]bool{}
-	if names, err := os.ReadDir(filepath.Join(m.root, intentsDir)); err == nil {
+	if names, err := os.ReadDir(filepath.Join(m.root, recdep.IntentsDir)); err == nil {
 		for _, d := range names {
 			if name, ok := strings.CutSuffix(d.Name(), ".intent"); ok {
 				m.pending[name] = true
@@ -100,13 +102,13 @@ func (m *model) reload() {
 	}
 }
 
-func (m model) selected() (entry, bool) {
-	if m.view >= len(states) {
-		return entry{}, false
+func (m model) selected() (recdep.Entry, bool) {
+	if m.view >= len(recdep.States) {
+		return recdep.Entry{}, false
 	}
 	list := m.lists[m.view]
 	if len(list) == 0 {
-		return entry{}, false
+		return recdep.Entry{}, false
 	}
 	return list[m.cursor[m.view]], true
 }
@@ -168,25 +170,25 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "1", "2", "3", "4", "5":
 		m.view = int(msg.String()[0] - '1')
 	case "j", "down":
-		if m.view < len(states) && m.cursor[m.view] < len(m.lists[m.view])-1 {
+		if m.view < len(recdep.States) && m.cursor[m.view] < len(m.lists[m.view])-1 {
 			m.cursor[m.view]++
 		}
 	case "k", "up":
-		if m.view < len(states) && m.cursor[m.view] > 0 {
+		if m.view < len(recdep.States) && m.cursor[m.view] > 0 {
 			m.cursor[m.view]--
 		}
 	case "o", "enter":
-		if e, ok := m.selected(); ok && e.url != "" {
-			if err := exec.Command("xdg-open", e.url).Start(); err != nil {
+		if e, ok := m.selected(); ok && e.URL != "" {
+			if err := exec.Command("xdg-open", e.URL).Start(); err != nil {
 				m.status = err.Error()
 			}
 		}
 	case "y":
-		if e, ok := m.selected(); ok && e.url != "" {
-			if err := copyToClipboard(e.url); err != nil {
+		if e, ok := m.selected(); ok && e.URL != "" {
+			if err := copyToClipboard(e.URL); err != nil {
 				m.status = err.Error()
 			} else {
-				m.status = "copied " + e.url
+				m.status = "copied " + e.URL
 			}
 		}
 	case "t":
@@ -218,24 +220,24 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // x on an entry arms it and a second consecutive x removes the file. In the
 // book the memory hole rides to the incinerators; nothing returns.
 func (m *model) incinerate(armed string) {
-	if m.view >= len(states) || states[m.view] != "files" {
+	if m.view >= len(recdep.States) || recdep.States[m.view] != "files" {
 		return
 	}
 	e, ok := m.selected()
 	if !ok {
 		return
 	}
-	if armed != e.name {
-		m.armed = e.name
+	if armed != e.Name {
+		m.armed = e.Name
 		m.status = "6079 Smith W.! Yes, you! Press x again to incinerate."
 		return
 	}
-	if err := os.Remove(filepath.Join(m.root, "files", e.name)); err != nil {
+	if err := os.Remove(filepath.Join(m.root, "files", e.Name)); err != nil {
 		m.status = err.Error()
 		return
 	}
 	m.reload()
-	m.status = "incinerated " + e.name
+	m.status = "incinerated " + e.Name
 }
 
 func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
@@ -244,11 +246,11 @@ func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	m.pubArmed = ""
 	switch {
 	case msg.Button == tea.MouseButtonWheelUp:
-		if m.view < len(states) && m.cursor[m.view] > 0 {
+		if m.view < len(recdep.States) && m.cursor[m.view] > 0 {
 			m.cursor[m.view]--
 		}
 	case msg.Button == tea.MouseButtonWheelDown:
-		if m.view < len(states) && m.cursor[m.view] < len(m.lists[m.view])-1 {
+		if m.view < len(recdep.States) && m.cursor[m.view] < len(m.lists[m.view])-1 {
 			m.cursor[m.view]++
 		}
 	case msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft:
@@ -258,7 +260,7 @@ func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
-		if m.view >= len(states) {
+		if m.view >= len(recdep.States) {
 			return m, nil
 		}
 		start, rows := m.listViewport()
@@ -274,7 +276,7 @@ func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 func (m model) tabLabels() []string {
 	labels := make([]string, len(views))
 	for i, s := range views {
-		if i < len(states) {
+		if i < len(recdep.States) {
 			labels[i] = fmt.Sprintf("%d %s (%d)", i+1, s, len(m.lists[i]))
 		} else {
 			labels[i] = fmt.Sprintf("%d %s", i+1, s)
@@ -323,14 +325,14 @@ func viewAtX(x int, labels []string) int {
 
 // move renames the selected entry when the active view matches from.
 func (m *model) move(from, to string) {
-	if m.view >= len(states) || states[m.view] != from {
+	if m.view >= len(recdep.States) || recdep.States[m.view] != from {
 		return
 	}
 	e, ok := m.selected()
 	if !ok {
 		return
 	}
-	if err := moveEntry(m.root, e.name, from, to); err != nil {
+	if err := recdep.MoveEntry(m.root, e.Name, from, to); err != nil {
 		m.status = err.Error()
 		return
 	}
@@ -377,14 +379,14 @@ func (m model) View() string {
 	for i := start; i < len(list) && i < start+listRows; i++ {
 		e := list[i]
 		staleTag, markTag := "", ""
-		if e.stale != "" {
-			staleTag = "  [stale: " + e.stale + "]"
+		if e.Stale != "" {
+			staleTag = "  [stale: " + e.Stale + "]"
 		}
 		// The speakwrite tag follows the stale tag; published and
 		// discarded carry no tag. A pending intent shows [dictated]
 		// before the runner writes the marker.
-		mark := e.mark
-		if m.pending[e.name] {
+		mark := e.Mark
+		if m.pending[e.Name] {
 			mark = "dictated"
 		}
 		switch mark {
@@ -402,7 +404,7 @@ func (m model) View() string {
 				tag = ""
 			}
 		}
-		summary := e.summary
+		summary := e.Summary
 		if budget := m.width - 14 - len([]rune(tag)); m.width > 14 {
 			if r := []rune(summary); len(r) > budget {
 				summary = string(r[:max(0, budget)])
@@ -410,20 +412,20 @@ func (m model) View() string {
 		}
 		switch {
 		case i == m.cursor[m.view]:
-			b.WriteString(rowSelected.Render(fmt.Sprintf("%4s  %-7s %s%s", age(e.ts, now), e.source, summary, tag)))
-		case e.stale != "":
-			b.WriteString(tabInactive.Render(fmt.Sprintf("%4s  %-7s %s%s", age(e.ts, now), e.source, summary, tag)))
+			b.WriteString(rowSelected.Render(fmt.Sprintf("%4s  %-7s %s%s", age(e.TS, now), e.Source, summary, tag)))
+		case e.Stale != "":
+			b.WriteString(tabInactive.Render(fmt.Sprintf("%4s  %-7s %s%s", age(e.TS, now), e.Source, summary, tag)))
 		default:
-			b.WriteString(ageStyle.Render(fmt.Sprintf("%4s", age(e.ts, now))) + "  " +
-				sourceStyle.Render(fmt.Sprintf("%-7s", e.source)) + " " + summary + tag)
+			b.WriteString(ageStyle.Render(fmt.Sprintf("%4s", age(e.TS, now))) + "  " +
+				sourceStyle.Render(fmt.Sprintf("%-7s", e.Source)) + " " + summary + tag)
 		}
 		b.WriteString("\n")
 	}
 
 	b.WriteString("\n")
 	if e, ok := m.selected(); ok {
-		path := filepath.Join(m.root, states[m.view], e.name)
-		b.WriteString(detailStyle.Width(max(20, m.width)).Render(e.detail(path)) + "\n")
+		path := filepath.Join(m.root, recdep.States[m.view], e.Name)
+		b.WriteString(detailStyle.Width(max(20, m.width)).Render(e.Detail(path)) + "\n")
 	}
 	if m.status != "" {
 		b.WriteString(m.status + "\n")
@@ -438,7 +440,7 @@ const helpLine = "j/k move  tab/1-5 view  o open  y yank  t take  u up  f file  
 // the virtual memory hole never appears here.
 func onceCounts(root string) (string, error) {
 	var b strings.Builder
-	for _, s := range states {
+	for _, s := range recdep.States {
 		list, err := loadState(root, s)
 		if err != nil {
 			return "", err
@@ -452,7 +454,7 @@ func main() {
 	once := flag.Bool("once", false, "print state counts and exit (no TUI)")
 	flag.Parse()
 
-	root, err := stateRoot()
+	root, err := recdep.StateRoot()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

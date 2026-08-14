@@ -1,6 +1,6 @@
 # thinkpol: the acting layer
 
-Status: design, implementation in progress.
+Status: implemented (`cmd/thinkpol`, behind the `thinkpol/` path unit).
 
 In the book the Thought Police do not deliberate; they enforce decisions
 already taken. That is exactly this component: a small deterministic

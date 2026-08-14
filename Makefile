@@ -7,6 +7,7 @@ REPO    := $(CURDIR)
 .PHONY: build
 build:
 	go build -o $(BIN)/telescreen .
+	go build -o $(BIN)/thinkpol ./cmd/thinkpol
 
 .PHONY: minitrue
 minitrue:
@@ -30,8 +31,17 @@ speakwrite:
 	systemctl --user enable --now speakwrite.path
 	@echo "speakwrite path unit enabled. Intents in $(STATE)/intents trigger the drafting runner."
 
+.PHONY: thinkpol
+thinkpol:
+	@mkdir -p $(UNITS) $(STATE)/intents
+	ln -sf $(REPO)/thinkpol/thinkpol.service $(UNITS)/thinkpol.service
+	ln -sf $(REPO)/thinkpol/thinkpol.path $(UNITS)/thinkpol.path
+	systemctl --user daemon-reload
+	systemctl --user enable --now thinkpol.path
+	@echo "thinkpol path unit enabled. Publish approvals in $(STATE)/intents trigger the actor."
+
 .PHONY: install
-install: build minitrue speakwrite
+install: build minitrue speakwrite thinkpol
 
 .PHONY: test
 test:

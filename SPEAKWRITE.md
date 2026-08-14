@@ -1,16 +1,17 @@
 # speakwrite: the drafting layer
 
 Status: fully implemented. Dictation (`s`), publish (`p` `p`), and
-discard (`D`) in the TUI; the drafting and publishing runner
-(`speakwrite/`, a headless agent behind a systemd path unit on
-`recdep/intents/`) drains both the intents and the approvals.
+discard (`D`) in the TUI; the drafting runner (`speakwrite/`, a headless
+agent behind a systemd path unit on `recdep/intents/`) drains the
+intents; thinkpol, the deterministic actor defined in THINKPOL.md,
+executes the approvals.
 
 In the book, records clerks dictate corrections into the speakwrite and the
 machine produces the text that goes back into the record. Here: the human
 dictates a stance on a queue entry, an agent drafts the response into the
 entry file, and the human publishes it with an explicit second step.
-speakwrite never posts anything on its own. The name thinkpol stays
-reserved for a possible future direct-actor.
+speakwrite never posts anything on its own; the posting binary is
+thinkpol (THINKPOL.md).
 
 ## The five decisions
 
@@ -40,12 +41,11 @@ reserved for a possible future direct-actor.
    body. The row carries a `[draft]` tag. `s` again re-dictates with the
    previous guidance pre-filled; the new draft supersedes the old.
 4. Publish. `p` shows the target in the status line; a second `p` writes
-   a publish approval into the intent directory. The runner posts it
-   (GitHub first, via `gh`), appends a published line with the URL, and
-   moves the entry to upsub (unless it already sits in upsub or
-   files). The
-   double keypress is the recorded consent; the TUI itself still never
-   calls the network.
+   a publish approval into the intent directory. thinkpol executes it
+   per THINKPOL.md: it posts the draft (GitHub first, via `gh`), appends
+   a published line with the URL, and moves the entry to upsub (unless
+   it already sits in upsub or files). The double keypress is the
+   recorded consent; the TUI itself still never calls the network.
 
 ## Key bindings
 
@@ -53,7 +53,7 @@ reserved for a possible future direct-actor.
 |---|---|---|---|
 | `s` | dictate | tube, desk, upsub | Open the intent in `$EDITOR`; save submits, empty guidance means defaults, abort cancels. Row gains `[dictated]` |
 | `s` | re-dictate | entry with a draft or pending intent | Reopen with the previous guidance; the new draft supersedes |
-| `p` `p` | publish | entry with `[draft]` | First press names the target in the status line, second press approves publication; the runner posts and moves the entry |
+| `p` `p` | publish | entry with `[draft]` | First press names the target in the status line, second press approves publication; thinkpol posts and moves the entry (THINKPOL.md) |
 | `D` | discard | entry with `[draft]` | Append a discarded marker; the draft stays in the record but stops rendering as actionable |
 
 `p` is double-keyed like `x` because publishing is outward-facing the way
@@ -72,8 +72,9 @@ guidance:
 <free text, possibly empty>
 ```
 
-Entry additions, appended by the runner (each marker on its own line, the
-same append discipline as the stale marker):
+Entry additions, appended by the drafting runner (dictated, draft) and
+by thinkpol (published), each marker on its own line, the same append
+discipline as the stale marker:
 
 ```
 --- dictated <ISO-8601 time>
@@ -109,8 +110,9 @@ it later.
 ## Guardrails
 
 - The runner's research is read-only against Slack, GitHub, and Linear.
-  Its only writes are appends to entry files and the published post
-  itself, which requires a recorded double-key approval.
+  Its only writes are appends to entry files. The published post is
+  thinkpol's, and it requires a recorded double-key approval
+  (THINKPOL.md).
 - Every step leaves a marker in the entry file: the record in recdep is
   the audit trail.
 - Publishing failures leave the entry untouched (the draft tag survives
