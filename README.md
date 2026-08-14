@@ -14,12 +14,13 @@ Every component is named in Newspeak, after Orwell's 1984: the world
 where the machinery watches the human. Here the direction flips and
 the human runs the ministry. Four components, one direction of flow:
 
-```
-minitrue  ->  recdep  ->  telescreen
-(produces)   (stores)     (displays)
-                 ^
-             speakwrite
-             (drafts, posts on approval)
+```mermaid
+flowchart LR
+    minitrue["minitrue<br/>(produces)"] -->|files records| recdep["recdep<br/>(stores)"]
+    recdep -->|renders| telescreen["telescreen<br/>(displays)"]
+    telescreen -->|dictations, approvals| recdep
+    recdep -->|intents| speakwrite["speakwrite<br/>(drafts, posts on approval)"]
+    speakwrite -->|drafts| recdep
 ```
 
 Files are the only interface between them. No sockets, no database, no
