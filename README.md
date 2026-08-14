@@ -49,9 +49,12 @@ on an archived record and the screen will challenge you by name; press
 it again and the record rides the warm draft to the incinerators.
 Nothing returns. The past was erased, the erasure was forgotten.
 
-A drafting layer, the speakwrite, is designed but not yet built:
-dictate your stance on a record and a clerk drafts the response into it
-for your explicit approval. Doctrine in [SPEAKWRITE.md](SPEAKWRITE.md).
+A drafting layer, the speakwrite (`speakwrite/`, a headless clerk
+behind a systemd path unit on `recdep/intents/`): press `s` on a record
+to dictate your stance, and the clerk researches the matter and drafts
+the response into the record for your explicit approval. Publishing the
+draft is a separate, double-keyed step and still on the drawing board.
+Doctrine in [SPEAKWRITE.md](SPEAKWRITE.md).
 
 ## Requisition
 
@@ -65,7 +68,10 @@ make install
 `~/.claude/skills/minitrue`, the systemd user units linked and enabled
 (`minitrue.timer`, every 10 minutes). Your identity papers live in
 `~/.config/minitrue.env` (SLACK_USER_ID, GH_LOGIN, LINEAR_ASSIGNEE,
-REPO).
+REPO). `make speakwrite` enrolls the drafting clerk the same way: the
+wrapper to `~/.local/bin/speakwrite`, the skill symlinked into
+`~/.claude/skills/speakwrite`, and `speakwrite.path` watching
+`recdep/intents/` so a saved dictation wakes the runner.
 
 ## Operation
 

@@ -19,8 +19,19 @@ minitrue:
 	systemctl --user enable --now minitrue.timer
 	@echo "minitrue timer enabled. Set ~/.config/minitrue.env for identity (SLACK_USER_ID, GH_LOGIN, LINEAR_ASSIGNEE, REPO)."
 
+.PHONY: speakwrite
+speakwrite:
+	@mkdir -p $(UNITS) $(SKILLS) $(STATE)/intents
+	install -m 0755 speakwrite/speakwrite $(BIN)/speakwrite
+	ln -sfn $(REPO)/speakwrite $(SKILLS)/speakwrite
+	ln -sf $(REPO)/speakwrite/speakwrite.service $(UNITS)/speakwrite.service
+	ln -sf $(REPO)/speakwrite/speakwrite.path $(UNITS)/speakwrite.path
+	systemctl --user daemon-reload
+	systemctl --user enable --now speakwrite.path
+	@echo "speakwrite path unit enabled. Intents in $(STATE)/intents trigger the drafting runner."
+
 .PHONY: install
-install: build minitrue
+install: build minitrue speakwrite
 
 .PHONY: test
 test:

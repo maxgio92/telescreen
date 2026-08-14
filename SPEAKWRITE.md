@@ -1,6 +1,9 @@
 # speakwrite: the drafting layer
 
-Status: design. No code implements this yet.
+Status: dictation (`s` in the TUI) and the drafting runner
+(`speakwrite/`, a headless agent behind a systemd path unit on
+`recdep/intents/`) are built. The publish (`p` `p`) and discard (`D`)
+keys remain design.
 
 In the book, records clerks dictate corrections into the speakwrite and the
 machine produces the text that goes back into the record. Here: the human
