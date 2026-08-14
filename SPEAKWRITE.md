@@ -42,10 +42,11 @@ thinkpol (THINKPOL.md).
    previous guidance pre-filled; the new draft supersedes the old.
 4. Publish. `p` shows the target in the status line; a second `p` writes
    a publish approval into the intent directory. thinkpol executes it
-   per THINKPOL.md: it posts the draft (GitHub first, via `gh`), appends
-   a published line with the URL, and moves the entry to upsub (unless
-   it already sits in upsub or files). The double keypress is the
-   recorded consent; the TUI itself still never calls the network.
+   per THINKPOL.md: it posts the draft through the publisher table
+   (`internal/publish`), appends a published line with the permalink,
+   and moves the entry to upsub (unless it already sits in upsub or
+   files). The double keypress is the recorded consent; the TUI itself
+   still never calls the network.
 
 ## Key bindings
 
@@ -124,5 +125,3 @@ it later.
 - Interactive tmux sessions for full PR reviews (a live session serves
   those better; the dashboard can grow a launcher later).
 - Agent-decided actions and tiered direct posting.
-- Slack and Linear publishing (drafts render for manual sending until
-  the posting path earns trust on GitHub).

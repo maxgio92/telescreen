@@ -120,13 +120,14 @@ last marker wins for presentation.
 
 The published marker records the actor's publish write, the one
 outward-facing action in the whole system: on a `.publish` approval the
-actor (thinkpol) posts the last draft upstream (GitHub only for now),
-appends the published marker with the resulting URL, moves the entry
-file to `upsub/` unless it already sits in `upsub/` or `files/`, and
-removes the approval. That single rename is the actor's only move
-between state directories; every other move belongs to the consumer. On
-a failed post the actor leaves the entry untouched and removes the
-approval, so the draft stays approvable and nothing retries silently.
+actor (thinkpol) posts the last draft upstream through its publisher
+table (THINKPOL.md), appends the published marker with the resulting
+URL, moves the entry file to `upsub/` unless it already sits in
+`upsub/` or `files/`, and removes the approval. That single rename is
+the actor's only move between state directories; every other move
+belongs to the consumer. On a failed post the actor leaves the entry
+untouched and removes the approval, so the draft stays approvable and
+nothing retries silently.
 The drafting runner's writes are the dictated and draft sections and
 the intent removals; it never posts, renames, or touches approvals.
 

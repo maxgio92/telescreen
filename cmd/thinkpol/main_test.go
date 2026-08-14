@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/maxgio92/telescreen/internal/publish"
 	"github.com/maxgio92/telescreen/internal/recdep"
 )
 
@@ -53,18 +54,18 @@ func seed(t *testing.T, state, body string) string {
 	return root
 }
 
-// fakeGH swaps ghRun for a fake and returns pointers to the recorded
-// call. err is what the fake returns alongside stdout.
+// fakeGH swaps publish.GHRun for a fake and returns pointers to the
+// recorded call. err is what the fake returns alongside stdout.
 func fakeGH(t *testing.T, stdout string, err error) (gotArgs *[]string, gotStdin *string) {
 	t.Helper()
 	var args []string
 	var stdin string
-	orig := ghRun
-	ghRun = func(a []string, in string) (string, error) {
+	orig := publish.GHRun
+	publish.GHRun = func(a []string, in string) (string, error) {
 		args, stdin = a, in
 		return stdout, err
 	}
-	t.Cleanup(func() { ghRun = orig })
+	t.Cleanup(func() { publish.GHRun = orig })
 	return &args, &stdin
 }
 

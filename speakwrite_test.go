@@ -311,8 +311,36 @@ func TestPublishGitHubIssueOnlyHints(t *testing.T) {
 	if m.pubArmed != "" {
 		t.Errorf("p armed a github issue draft: %q", m.pubArmed)
 	}
-	if !strings.Contains(m.status, "GitHub PRs only") {
-		t.Errorf("status = %q, want the PR-only hint", m.status)
+	if !strings.Contains(m.status, "no publisher") {
+		t.Errorf("status = %q, want the no-publisher hint", m.status)
+	}
+}
+
+// TestPublishArmsOnPublishableTargets pins the p gate to the publisher
+// table: every table entry's URL shape arms.
+func TestPublishArmsOnPublishableTargets(t *testing.T) {
+	cases := []struct {
+		name string
+		url  string
+	}{
+		{"20260814T090000Z-slack-wes-thread.md", "https://acme.slack.com/archives/C0A86EX00GH/p1755000000123456"},
+		{"20260814T090000Z-linear-ful-123.md", "https://linear.app/acme/issue/FUL-123/fix-the-thing"},
+	}
+	for _, c := range cases {
+		t.Run(c.url, func(t *testing.T) {
+			m, root := seedDraftModel(t, c.name, c.url)
+			m = press(t, m, key("p"))
+			if m.pubArmed != c.name {
+				t.Fatalf("p did not arm on %s: status %q", c.url, m.status)
+			}
+			m = press(t, m, key("p"))
+			if want := "publish approved: " + c.name; m.status != want {
+				t.Errorf("status = %q, want %q", m.status, want)
+			}
+			if _, err := os.Stat(filepath.Join(root, "intents", c.name+".publish")); err != nil {
+				t.Errorf("p p wrote no approval: %v", err)
+			}
+		})
 	}
 }
 
@@ -337,17 +365,17 @@ func TestPublishMousePressDisarms(t *testing.T) {
 	}
 }
 
-func TestPublishNonGitHubDraftOnlyHints(t *testing.T) {
-	name := "20260814T090000Z-slack-wes-thread.md"
+func TestPublishNonPublishableDraftOnlyHints(t *testing.T) {
+	name := "20260814T090000Z-forum-thread.md"
 	m, root := seedDraftModel(t, name, "https://example.com/thread/1")
 
 	for i := 0; i < 2; i++ {
 		m = press(t, m, key("p"))
-		if want := "publishing covers GitHub PRs only for now; y copies the draft target"; m.status != want {
+		if want := "no publisher for this record's target; y copies the url"; m.status != want {
 			t.Errorf("status after p %d = %q, want %q", i+1, m.status, want)
 		}
 		if m.pubArmed != "" {
-			t.Errorf("p %d armed a non-GitHub draft: %q", i+1, m.pubArmed)
+			t.Errorf("p %d armed a non-publishable draft: %q", i+1, m.pubArmed)
 		}
 	}
 	names, err := os.ReadDir(filepath.Join(root, "intents"))
@@ -355,7 +383,7 @@ func TestPublishNonGitHubDraftOnlyHints(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(names) != 0 {
-		t.Errorf("p on a non-GitHub draft wrote %d files in intents/", len(names))
+		t.Errorf("p on a non-publishable draft wrote %d files in intents/", len(names))
 	}
 }
 

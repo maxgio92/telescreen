@@ -29,7 +29,7 @@ files. Each is replaceable without touching the others.
 | store | recdep | plain files and renames (RECDEP.md) | a filesystem |
 | view | telescreen | reads records, renames between drawers | nothing else |
 | draft | speakwrite | consumes `.intent`, appends dictated/draft sections | claude CLI + gh for research; Slack/Linear MCP optional |
-| act | thinkpol | consumes `.publish`, posts, appends published, renames to upsub | gh, authenticated; no claude |
+| act | thinkpol | consumes `.publish`, posts, appends published, renames to upsub | per-publisher credentials (see the publisher table); no claude |
 
 The model is optional at every layer except drafting. A deterministic
 producer plus telescreen plus thinkpol is a complete, LLM-free system;
@@ -44,10 +44,10 @@ Two axes, both resolved at the edges rather than in the core:
   markers; nothing else about Slack, GitHub, or Linear leaks into the
   store, the view, or the flow. The three places that know sources are
   declared tables, not logic: the producer's watches (prose in its
-  skill), the dictation action map (a data table in the TUI), and
-  thinkpol's publishers (a dispatch table from URL shape to posting
-  command). Adding a source touches those three tables and nothing
-  else.
+  skill), the dictation action map (a data table in the TUI), and the
+  publisher table (`internal/publish`, a dispatch table from URL shape
+  to posting call; the TUI's p gate and the actor both read it). Adding
+  a source touches those three tables and nothing else.
 - Technology-agnostic. Every seam is a file format, so every component
   is swappable per role: the producer can be an agent, a deterministic
   poller, or a webhook receiver; the drafting layer can be any agent
@@ -59,17 +59,10 @@ Two axes, both resolved at the edges rather than in the core:
 
 ### Known impurities
 
-Two places fall short of the principle today, named here so they read
+One place falls short of the principle today, named here so it reads
 as debt rather than design:
 
-1. The publishable-target check exists twice. The view gates the p key
-   (so a human never approves what the actor will refuse) and the actor
-   dispatches on the same URL shapes; adding a publisher means editing
-   both, and forgetting one leaves the view lying about capability.
-   Remedy, when the second publisher lands: a declared publishers table
-   both sides read, or the view drops its gate and the actor's refusal
-   log becomes the answer.
-2. The two agent wrappers hardcode this machine's MCP tool identifiers
+1. The two agent wrappers hardcode this machine's MCP tool identifiers
    in their allowlists. The identifiers are an environment detail, not
    a contract term; they belong in the identity config next to the
    Slack and GitHub handles, with the wrapper defaults as fallback.
@@ -86,10 +79,8 @@ Triggered by a systemd path unit on `recdep/intents/*.publish`
    remove the approval and log the orphan.
 2. Extract the last draft section. No draft, or a discarded marker
    after it: remove the approval, log why, touch nothing.
-3. Dispatch on the URL. v1 ships one publisher: a github.com pull
-   request URL posts the draft via `gh pr comment <n> --repo <o/r>
-   --body-file -`. Any other URL: remove the approval, log why. The
-   dispatch table is where Slack and Linear publishers land later.
+3. Dispatch on the URL through the publisher table below. A URL no
+   publisher matches: remove the approval, log why.
 4. On success: append `--- published <ISO-8601 time> <comment URL>` to
    the entry (contract newline discipline), rename the entry to
    `upsub/` unless it already sits in `upsub/` or `files/`, remove the
@@ -100,6 +91,27 @@ Triggered by a systemd path unit on `recdep/intents/*.publish`
 
 Logs append to `recdep/publish.log`, one line per approval, so a
 disappeared approval is always explained somewhere.
+
+## The publisher table
+
+`internal/publish` declares the table; the TUI's p gate and the actor
+both read it, so the view offers exactly what the actor can do.
+
+| Publisher | URL shape | Posts via | Requires |
+|---|---|---|---|
+| github-pr | `github.com/<owner>/<repo>/pull/<n>` | `gh pr comment <n> --repo <o/r> --body-file -` | gh, authenticated |
+| slack-thread | `https://<workspace>.slack.com/archives/<CHANNEL>/p<digits>` | Slack Web API `chat.postMessage` | `SLACK_TOKEN`, a user token with `chat:write` |
+| linear-issue | `https://linear.app/<workspace>/issue/<KEY>-<n>` | Linear GraphQL `commentCreate` (issue id resolved by the `issue` query, which accepts the `KEY-<n>` identifier) | `LINEAR_API_KEY` |
+
+The Slack thread timestamp comes from the URL's `thread_ts` query when
+present, else from the `p<digits>` segment itself (a dot before the
+last six digits), so a bare message URL replies to that message as the
+thread root. `SLACK_TOKEN` is a user token on purpose: it posts as the
+human, which matches drafts written in first person.
+
+The service unit loads the tokens from `~/.config/thinkpol.env`
+(`EnvironmentFile=-`, so a missing file is fine, gh alone still works).
+The file holds secrets; `chmod 600` it.
 
 ## What changes elsewhere
 
