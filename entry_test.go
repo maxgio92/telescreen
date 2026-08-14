@@ -190,7 +190,7 @@ func TestParseEntryMalformed(t *testing.T) {
 }
 
 func TestStates(t *testing.T) {
-	want := []string{"inbox", "ack", "waiting", "archive"}
+	want := []string{"tube", "desk", "upsub", "files"}
 	if !slices.Equal(states, want) {
 		t.Errorf("states = %v, want %v", states, want)
 	}
@@ -205,34 +205,34 @@ func TestMoveEntry(t *testing.T) {
 	}
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
 	body := "[slack] wes: go for it\nhttps://example.com\nseen now\n"
-	if err := os.WriteFile(filepath.Join(root, "inbox", name), []byte(body), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "tube", name), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := moveEntry(root, name, "inbox", "ack"); err != nil {
+	if err := moveEntry(root, name, "tube", "desk"); err != nil {
 		t.Fatalf("moveEntry: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(root, "inbox", name)); !os.IsNotExist(err) {
-		t.Errorf("entry still in inbox: %v", err)
+	if _, err := os.Stat(filepath.Join(root, "tube", name)); !os.IsNotExist(err) {
+		t.Errorf("entry still in tube: %v", err)
 	}
-	got, err := os.ReadFile(filepath.Join(root, "ack", name))
+	got, err := os.ReadFile(filepath.Join(root, "desk", name))
 	if err != nil {
-		t.Fatalf("entry not in ack: %v", err)
+		t.Fatalf("entry not in desk: %v", err)
 	}
 	if string(got) != body {
 		t.Errorf("body changed after move")
 	}
 
-	if err := moveEntry(root, name, "inbox", "ack"); err == nil {
+	if err := moveEntry(root, name, "tube", "desk"); err == nil {
 		t.Error("moveEntry of a missing file succeeded, want error")
 	}
 
 	for _, step := range []struct{ from, to string }{
-		{"ack", "waiting"},
-		{"waiting", "archive"},
-		{"archive", "waiting"},
-		{"waiting", "ack"},
-		{"ack", "inbox"},
+		{"desk", "upsub"},
+		{"upsub", "files"},
+		{"files", "upsub"},
+		{"upsub", "desk"},
+		{"desk", "tube"},
 	} {
 		if err := moveEntry(root, name, step.from, step.to); err != nil {
 			t.Fatalf("moveEntry %s -> %s: %v", step.from, step.to, err)
@@ -246,10 +246,10 @@ func TestMoveEntry(t *testing.T) {
 func TestDetail(t *testing.T) {
 	body := "[slack] wes: go for it\nhttps://example.com/thread/123\nseen 2026-08-11T14:23:02Z\n\nfirst preview line\nsecond preview line\n"
 	e := parseEntry("20260811T142302Z-slack-wes-go-for-it.md", body)
-	got := e.detail("/state/recdep/ack/20260811T142302Z-slack-wes-go-for-it.md")
+	got := e.detail("/state/recdep/desk/20260811T142302Z-slack-wes-go-for-it.md")
 	want := "[slack] wes: go for it\n" +
 		"\nfirst preview line\nsecond preview line\n" +
-		"/state/recdep/ack/20260811T142302Z-slack-wes-go-for-it.md\n" +
+		"/state/recdep/desk/20260811T142302Z-slack-wes-go-for-it.md\n" +
 		"https://example.com/thread/123\n" +
 		"seen 2026-08-11T14:23:02Z"
 	if got != want {
@@ -264,11 +264,11 @@ func TestDetailWithMarkers(t *testing.T) {
 	body := "[github] alice: please review\nhttps://github.com/o/r/pull/7\nseen 2026-08-12T10:00:00Z\n\nreview requested\n\n" +
 		"--- draft 2026-08-14T10:00:00Z\nThanks, fixed in the follow-up.\n"
 	e := parseEntry("20260812T100000Z-github-alice-please-review.md", body)
-	got := e.detail("/state/recdep/ack/20260812T100000Z-github-alice-please-review.md")
+	got := e.detail("/state/recdep/desk/20260812T100000Z-github-alice-please-review.md")
 	want := "[github] alice: please review\n" +
 		"\nreview requested\n\n" +
 		"--- draft 2026-08-14T10:00:00Z\nThanks, fixed in the follow-up.\n" +
-		"/state/recdep/ack/20260812T100000Z-github-alice-please-review.md\n" +
+		"/state/recdep/desk/20260812T100000Z-github-alice-please-review.md\n" +
 		"https://github.com/o/r/pull/7\n" +
 		"seen 2026-08-12T10:00:00Z"
 	if got != want {
@@ -278,8 +278,8 @@ func TestDetailWithMarkers(t *testing.T) {
 
 func TestDetailMalformed(t *testing.T) {
 	e := parseEntry("bogus.md", "just one line, no header")
-	got := e.detail("/state/recdep/inbox/bogus.md")
-	want := "just one line, no header\n/state/recdep/inbox/bogus.md"
+	got := e.detail("/state/recdep/tube/bogus.md")
+	want := "just one line, no header\n/state/recdep/tube/bogus.md"
 	if got != want {
 		t.Errorf("detail = %q, want %q", got, want)
 	}
@@ -287,7 +287,7 @@ func TestDetailMalformed(t *testing.T) {
 
 func TestLoadStateSortsNewestFirst(t *testing.T) {
 	root := t.TempDir()
-	dir := filepath.Join(root, "inbox")
+	dir := filepath.Join(root, "tube")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +299,7 @@ func TestLoadStateSortsNewestFirst(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	list, err := loadState(root, "inbox")
+	list, err := loadState(root, "tube")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,7 +313,7 @@ func TestLoadStateSortsNewestFirst(t *testing.T) {
 
 func TestLoadStateSortsFreshBeforeStale(t *testing.T) {
 	root := t.TempDir()
-	dir := filepath.Join(root, "inbox")
+	dir := filepath.Join(root, "tube")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -330,7 +330,7 @@ func TestLoadStateSortsFreshBeforeStale(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	list, err := loadState(root, "inbox")
+	list, err := loadState(root, "tube")
 	if err != nil {
 		t.Fatal(err)
 	}

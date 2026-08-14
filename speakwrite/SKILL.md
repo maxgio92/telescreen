@@ -26,7 +26,7 @@ State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
   `<entry-name>.publish` file per publish approval, written by the TUI.
   `.intent.tmp` files are dictations still open in the editor; leave
   them alone.
-- `inbox/`, `ack/`, `waiting/`, `archive/`: the entry state dirs. The
+- `tube/`, `desk/`, `upsub/`, `files/`: the entry state dirs. The
   intent names the entry's absolute path at dictation time.
 
 ## Intent format
@@ -123,8 +123,8 @@ For each `intents/*.publish`, oldest first:
    `.publish` approval exists. Log the comment URL `gh` returns.
 4. On success: append `--- published <ISO-8601 UTC now> <comment URL>`
    to the entry (the same newline discipline as the draft append), move
-   the entry file to `waiting/` unless it is already in `waiting/` or
-   `archive/`, remove the approval, and log one line with the approval
+   the entry file to `upsub/` unless it is already in `upsub/` or
+   `files/`, remove the approval, and log one line with the approval
    name, the entry path, and the comment URL.
 5. On failure: leave the entry untouched (the `[draft]` tag survives so
    the human can re-approve), remove the approval so nothing retries
@@ -134,7 +134,7 @@ For each `intents/*.publish`, oldest first:
 
 Research is read-only against Slack, GitHub, and Linear. The writes
 are the marker appends to entry files, the intent and approval
-removals, the publish rename to `waiting/`, and the one approved PR
+removals, the publish rename to `upsub/`, and the one approved PR
 comment per `.publish` file. Nothing posts anywhere without the
 explicit double-key approval defined in SPEAKWRITE.md; every other
 move between states belongs to the human at the TUI.

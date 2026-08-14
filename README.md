@@ -52,12 +52,12 @@ news and the records. Fitting: this one manufactures your records.
 A headless agent on a systemd user timer (every 10 minutes). It polls
 Slack (channels, private channels, DMs and group DMs), GitHub (your
 PRs, mentions, review requests), and Linear (assigned tickets), and
-files one markdown record per event into the queue's `inbox/`.
+files one markdown record per event into the queue's `tube/`.
 
 It also revalidates: when a PR merges behind your back or you already
 filed the review, it stamps the record `stale <reason> <time>`, and the
 screen dims it and sinks it below the fresh ones. The producer stamps,
-you archive.
+you file.
 
 ### recdep
 
@@ -66,12 +66,16 @@ Winston Smith files and rewrites the records. Here nothing is ever
 rewritten, only filed. A directory of plain files, `~/.local/state/recdep/`, with one drawer
 per state:
 
-| Drawer | Meaning |
-|---|---|
-| `inbox/` | unseen |
-| `ack/` | seen, the next move is yours |
-| `waiting/` | you acted, the other side owes the next move |
-| `archive/` | closed |
+| Drawer | In the cubicle | In plain terms |
+|---|---|---|
+| `tube/` | the pneumatic tube delivers a record | landed, unseen |
+| `desk/` | the record sits on your desk | seen, the next move is yours |
+| `upsub/` | submitted to higher authority | you acted, the other side owes the next move |
+| `files/` | filed away | closed |
+
+Three drawers are the cubicle's plain furniture: the pneumatic tube,
+the desk, the files. `upsub` is genuine Newspeak from the book's work
+orders, "upsub antefiling": submit to higher authority before filing.
 
 Record format (`<UTC>-<source>-<slug>.md`, chronology by filename):
 
@@ -107,7 +111,7 @@ Press `s` on a record to dictate your stance in `$EDITOR`; the clerk
 researches the matter read-only, drafts the response into the record,
 and the row turns `[draft]`. Press `p` twice to approve publication:
 the clerk posts the draft upstream (GitHub PRs for now), stamps the
-record with the comment URL, and files it under waiting. Press `D` to
+record with the comment URL, and moves it to upsub. Press `D` to
 discard a draft into the record's history instead. The clerk never
 posts without a recorded double-key approval. Design in
 [SPEAKWRITE.md](SPEAKWRITE.md).
@@ -116,8 +120,8 @@ posts without a recorded double-key approval. Design in
 
 The memory hole is the slit in the wall that carries unwanted records
 to the incinerators. No metaphor drift here; it does exactly that.
-The fifth view, permanently empty, as intended. Press `x` on an
-archived record and the screen will challenge you by name; press it
+The fifth view, permanently empty, as intended. Press `x` on a filed
+record and the screen will challenge you by name; press it
 again and the record rides the warm draft to the incinerators. Nothing
 returns. The past was erased, the erasure was forgotten.
 
@@ -151,18 +155,18 @@ telescreen -once    # print per-drawer counts and exit
 
 | Key | Effect |
 |---|---|
-| `tab`/`shift+tab`, `1`-`5` | switch view (inbox, ack, waiting, archive, memoryhole) |
+| `tab`/`shift+tab`, `1`-`5` | switch view (tube, desk, upsub, files, memoryhole) |
 | `j`/`k`, arrows, wheel | navigate; click selects a row or a tab |
 | `o`, `enter` | open the record's URL |
 | `y` | copy the URL (wl-copy, fallback xclip) |
-| `r` | acknowledge (inbox to ack) |
-| `w` | their move now (ack to waiting) |
-| `a` | file it (ack or waiting to archive) |
-| `u` | unfile, one drawer back |
-| `s` | dictate into the speakwrite (inbox, ack, waiting) |
+| `t` | take (tube to desk) |
+| `u` | up (tube or desk to upsub: you answered, their move) |
+| `f` | file it (any open drawer to files) |
+| `b` | back, one drawer |
+| `s` | dictate into the speakwrite (tube, desk, upsub) |
 | `p` `p` | approve publishing a draft (GitHub PR records only) |
 | `D` | discard a draft |
-| `x` `x` | the memory hole (archive only; the screen barks first) |
+| `x` `x` | the memory hole (files only; the screen barks first) |
 | `q` | switch off the telescreen, a luxury Smith never had |
 
 The detail pane shows the selected record in full: content, preview,

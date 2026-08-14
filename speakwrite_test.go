@@ -37,8 +37,8 @@ func TestActionFor(t *testing.T) {
 
 func TestRenderIntent(t *testing.T) {
 	fresh := parseEntry("a.md", "[slack] wes: go for it\nhttps://example.com\nseen now\n")
-	want := "entry /q/inbox/a.md\naction slack-reply\n\nguidance:\n\n"
-	if got := renderIntent("/q/inbox/a.md", fresh, dictatedGuidance(fresh.body)); got != want {
+	want := "entry /q/tube/a.md\naction slack-reply\n\nguidance:\n\n"
+	if got := renderIntent("/q/tube/a.md", fresh, dictatedGuidance(fresh.body)); got != want {
 		t.Errorf("fresh intent = %q, want %q", got, want)
 	}
 }
@@ -63,8 +63,8 @@ func TestRenderIntentPrefillsLastGuidance(t *testing.T) {
 		"the new draft",
 	}, "\n")
 	e := parseEntry("b.md", body)
-	got := renderIntent("/q/ack/b.md", e, dictatedGuidance(e.body))
-	want := "entry /q/ack/b.md\naction pr-reply\n\nguidance:\nagree with the finding\npush back on the nit\n"
+	got := renderIntent("/q/desk/b.md", e, dictatedGuidance(e.body))
+	want := "entry /q/desk/b.md\naction pr-reply\n\nguidance:\nagree with the finding\npush back on the nit\n"
 	if got != want {
 		t.Errorf("re-dictation intent = %q, want %q", got, want)
 	}
@@ -80,7 +80,7 @@ func TestGuidanceForPrefersPendingIntent(t *testing.T) {
 	if got := guidanceFor(root, e); got != "" {
 		t.Fatalf("guidance without a pending intent = %q, want empty", got)
 	}
-	pending := "entry /q/inbox/" + name + "\naction slack-reply\n\nguidance:\nsay yes, but after the freeze\n"
+	pending := "entry /q/tube/" + name + "\naction slack-reply\n\nguidance:\nsay yes, but after the freeze\n"
 	if err := os.WriteFile(filepath.Join(root, intentsDir, name+".intent"), []byte(pending), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +138,7 @@ func TestDictationSubmits(t *testing.T) {
 
 func TestDictateWritesDraftIntent(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
-	for _, state := range []string{"inbox", "ack", "waiting"} {
+	for _, state := range []string{"tube", "desk", "upsub"} {
 		t.Run(state, func(t *testing.T) {
 			m, root := seedModel(t, state, name)
 			_, cmd := m.Update(key("s"))
@@ -159,9 +159,9 @@ func TestDictateWritesDraftIntent(t *testing.T) {
 
 func TestDictateOutsideOpenStatesDoesNothing(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
-	for _, view := range []string{"archive", "memoryhole"} {
+	for _, view := range []string{"files", "memoryhole"} {
 		t.Run(view, func(t *testing.T) {
-			m, root := seedModel(t, "archive", name)
+			m, root := seedModel(t, "files", name)
 			if view == "memoryhole" {
 				m.view = memoryHoleView
 			}
@@ -186,7 +186,7 @@ func TestDictateOutsideOpenStatesDoesNothing(t *testing.T) {
 
 func TestFinishDictationSubmitsOnCleanExit(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
-	m, root := seedModel(t, "inbox", name)
+	m, root := seedModel(t, "tube", name)
 	nm, _ := m.Update(key("s"))
 	nm, _ = nm.(model).Update(editorDoneMsg{name: name})
 	m = nm.(model)
@@ -226,7 +226,7 @@ func TestFinishDictationCancels(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, root := seedModel(t, "inbox", name)
+			m, root := seedModel(t, "tube", name)
 			nm, _ := m.Update(key("s"))
 			tt.prepare(t, filepath.Join(root, "intents", name+".intent.tmp"))
 			nm, _ = nm.(model).Update(tt.msg)
@@ -245,7 +245,7 @@ func TestFinishDictationCancels(t *testing.T) {
 	}
 }
 
-// seedDraftModel creates a state root with one drafted entry in ack and
+// seedDraftModel creates a state root with one drafted entry in desk and
 // returns a loaded model on that view. url is the entry's link line.
 func seedDraftModel(t *testing.T, name, url string) (model, string) {
 	t.Helper()
@@ -267,7 +267,7 @@ func seedDraftModel(t *testing.T, name, url string) (model, string) {
 		"the draft text",
 		"",
 	}, "\n")
-	if err := os.WriteFile(filepath.Join(root, "ack", name), []byte(body), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "desk", name), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	m := newModel(root, nil)
@@ -297,7 +297,7 @@ func TestPublishArmsThenApproves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "entry " + filepath.Join(root, "ack", name) + "\n"
+	want := "entry " + filepath.Join(root, "desk", name) + "\n"
 	if string(got) != want {
 		t.Errorf("approval = %q, want %q", got, want)
 	}
@@ -381,7 +381,7 @@ func TestPublishNonGitHubDraftOnlyHints(t *testing.T) {
 
 func TestPublishFreshEntryDoesNothing(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
-	m, root := seedModel(t, "inbox", name)
+	m, root := seedModel(t, "tube", name)
 	m = press(t, m, key("p"))
 	m = press(t, m, key("p"))
 	if m.status != "" || m.pubArmed != "" {
@@ -473,8 +473,8 @@ func TestDiscardRevokesPendingPublishApproval(t *testing.T) {
 
 func TestDiscardFreshEntryDoesNothing(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
-	m, root := seedModel(t, "inbox", name)
-	before, err := os.ReadFile(filepath.Join(root, "inbox", name))
+	m, root := seedModel(t, "tube", name)
+	before, err := os.ReadFile(filepath.Join(root, "tube", name))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -482,7 +482,7 @@ func TestDiscardFreshEntryDoesNothing(t *testing.T) {
 	if m.status != "" {
 		t.Errorf("D on a fresh entry set status %q", m.status)
 	}
-	after, err := os.ReadFile(filepath.Join(root, "inbox", name))
+	after, err := os.ReadFile(filepath.Join(root, "tube", name))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -493,7 +493,7 @@ func TestDiscardFreshEntryDoesNothing(t *testing.T) {
 
 func TestPendingIntentShowsDictatedTag(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
-	m, root := seedModel(t, "inbox", name)
+	m, root := seedModel(t, "tube", name)
 	m.width, m.height = 80, 24
 	if strings.Contains(m.View(), "[dictated]") {
 		t.Fatal("row shows [dictated] before any intent exists")

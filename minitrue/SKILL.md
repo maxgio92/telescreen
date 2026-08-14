@@ -1,6 +1,6 @@
 ---
 name: minitrue
-description: Watch one person's Slack threads, GitHub PRs (opened, mentioned, and review-requested), and assigned Linear tickets. Producer/consumer over a file queue with an ack state for read-but-unactioned items. Use when asked to watch my notifications, set up a personal inbox or notification loop, drain the watch inbox, mark a watch item archived, or keep an eye on replies, reviews, mentions, or ticket activity. minitrue produces headless on a timer; the telescreen TUI (pw) is the consumer.
+description: Watch one person's Slack threads, GitHub PRs (opened, mentioned, and review-requested), and assigned Linear tickets. Producer/consumer over a file queue with a desk state for seen-but-unactioned items. Use when asked to watch my notifications, set up a personal notification loop, drain the watch queue, mark a watch item filed, or keep an eye on replies, reviews, mentions, or ticket activity. minitrue produces headless on a timer; the telescreen TUI (pw) is the consumer.
 ---
 
 # minitrue
@@ -23,11 +23,11 @@ State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
 
 - `since`: ISO-8601 UTC instant the producer last polled through. Producer owns
   it; consumer never touches it.
-- `inbox/`: one file per unread hit. Presence means unread.
-- `ack/`: read but not yet acted on. The dashboard's `r` key moves entries here.
-- `waiting/`: acted on, the other side's move is pending. The dashboard's `w`
-  key moves ack entries here.
-- `archive/`: closed, nothing more expected. Entries land here via the dashboard's `a` key.
+- `tube/`: one file per unseen hit. Presence means unseen.
+- `desk/`: seen but not yet acted on. The dashboard's `d` key moves entries here.
+- `upsub/`: acted on, the other side's move is pending. The dashboard's `u`
+  key moves desk entries here.
+- `files/`: closed, nothing more expected. Entries land here via the dashboard's `f` key.
 
 ## Identity (config)
 
@@ -45,11 +45,11 @@ BOT_LOGINS=                 # space-separated bot logins to skip, besides [bot] 
 
 ## produce (headless, the only API caller)
 
-1. Read `since`. If absent, write `now`, create `inbox/`, `ack/`,
-   `waiting/`, and `archive/`, and stop (baseline; no history replayed).
+1. Read `since`. If absent, write `now`, create `tube/`, `desk/`,
+   `upsub/`, and `files/`, and stop (baseline; no history replayed).
 2. Run the four watches for activity strictly after `since`, from someone other
    than the watched person. For each hit, write
-   `inbox/<UTC>-<source>-<slug>.md` with this body:
+   `tube/<UTC>-<source>-<slug>.md` with this body:
    ```
    [<source>] <who>: <one-line summary>
    <link>
@@ -102,8 +102,8 @@ Watches:
   `since` (`list_comments issueId=...` per assigned ticket updated after
   `since`) by someone other than the watched person.
 
-Revalidate (after the watches, same run): for each entry in `inbox/`,
-`ack/`, and `waiting/` whose URL points at a GitHub PR in `$REPO` and whose
+Revalidate (after the watches, same run): for each entry in `tube/`,
+`desk/`, and `upsub/` whose URL points at a GitHub PR in `$REPO` and whose
 body does not already contain a `stale` line, check the PR with `gh`:
 
 - PR merged: append `stale merged <now>`. PR closed without merging: append
@@ -116,7 +116,7 @@ body does not already contain a `stale` line, check the PR with `gh`:
 
 `<now>` is the produce run time, ISO-8601 UTC. Keep it cheap: one
 `gh pr view <n> --json state,mergedAt,reviews` per distinct PR, reused across
-entries for the same PR. One marker per entry, ever; never touch `archive/`.
+entries for the same PR. One marker per entry, ever; never touch `files/`.
 Slack and Linear entries are out of scope for now.
 
 Headless caveat: GitHub uses the `gh` CLI (token auth, always works). Slack and
@@ -129,13 +129,13 @@ rather than failing silently.
 The TUI at `~/src/github.com/maxgio92/telescreen/` (private repo
 github.com/maxgio92/telescreen) is the consumer. `pw`
 launches it (building `~/.local/bin/telescreen` on first use; `pw` stays as a
-short alias). Five views (inbox, ack, waiting, archive, memoryhole) switch with tab or
-1-5; `r` moves inbox to ack (read), `w` moves ack to waiting (waiting
-on the other side), `a` moves ack or waiting to archive, `u` moves one state
-back (archive to waiting, waiting to ack, ack to inbox). A fifth virtual
-view, memoryhole (key 5), is always empty, and `x` in archive, pressed twice
+short alias). Five views (tube, desk, upsub, files, memoryhole) switch with tab or
+1-5; `d` moves tube to desk (take), `u` moves desk to upsub (sent up,
+their move), `f` moves desk or upsub to files, `z` moves one state
+back (files to upsub, upsub to desk, desk to tube). A fifth virtual
+view, memoryhole (key 5), is always empty, and `x` in files, pressed twice
 on the same entry, permanently deletes its file. `o` opens the
-entry's URL, `y` copies it, `q` quits. `s` on an inbox, ack, or waiting
+entry's URL, `y` copies it, `q` quits. `s` on a tube, desk, or upsub
 entry dictates a speakwrite intent: it opens a pre-filled intent file in the
 editor and submits it into `intents/` on save, and the row shows `[dictated]`
 while the intent is pending. It watches the state dirs with
@@ -143,11 +143,11 @@ fsnotify, so new producer entries appear live. `pw -once` prints per-state
 counts and exits.
 
 The dashboard only reads, shows, and renames files between the state dirs. It
-never calls Slack, GitHub, or Linear, and never advances `since`. Archive means
-closed, nothing more expected; `waiting/` holds entries where the other side owes the
-next move; `ack/` is the live to-do list. When an agent performs an entry's
+never calls Slack, GitHub, or Linear, and never advances `since`. Files means
+closed, nothing more expected; `upsub/` holds entries where the other side owes the
+next move; `desk/` is the live to-do list. When an agent performs an entry's
 action in-session (posts the review, sends the reply), it moves that entry's
-file from `ack/` to `archive/` (or `waiting/` when a reply is expected) in the
+file from `desk/` to `files/` (or `upsub/` when a reply is expected) in the
 same turn.
 
 ## Driving it

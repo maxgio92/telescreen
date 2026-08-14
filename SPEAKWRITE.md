@@ -42,8 +42,8 @@ reserved for a possible future direct-actor.
 4. Publish. `p` shows the target in the status line; a second `p` writes
    a publish approval into the intent directory. The runner posts it
    (GitHub first, via `gh`), appends a published line with the URL, and
-   moves the entry to waiting (unless it already sits in waiting or
-   archive). The
+   moves the entry to upsub (unless it already sits in upsub or
+   files). The
    double keypress is the recorded consent; the TUI itself still never
    calls the network.
 
@@ -51,7 +51,7 @@ reserved for a possible future direct-actor.
 
 | Key | Name | Works in | Effect |
 |---|---|---|---|
-| `s` | dictate | inbox, ack, waiting | Open the intent in `$EDITOR`; save submits, empty guidance means defaults, abort cancels. Row gains `[dictated]` |
+| `s` | dictate | tube, desk, upsub | Open the intent in `$EDITOR`; save submits, empty guidance means defaults, abort cancels. Row gains `[dictated]` |
 | `s` | re-dictate | entry with a draft or pending intent | Reopen with the previous guidance; the new draft supersedes |
 | `p` `p` | publish | entry with `[draft]` | First press names the target in the status line, second press approves publication; the runner posts and moves the entry |
 | `D` | discard | entry with `[draft]` | Append a discarded marker; the draft stays in the record but stops rendering as actionable |

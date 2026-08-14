@@ -1,5 +1,5 @@
 // Command telescreen is a dashboard for the recdep file
-// queue: four states (inbox, ack, waiting, archive), one markdown file per entry.
+// queue: four states (tube, desk, upsub, files), one markdown file per entry.
 // It reads and renames files under the state dir, and removes one file per
 // incinerate keypress pair; the producer is a separate process.
 package main
@@ -189,17 +189,19 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.status = "copied " + e.url
 			}
 		}
-	case "r":
-		m.move("inbox", "ack")
-	case "w":
-		m.move("ack", "waiting")
-	case "a":
-		m.move("ack", "archive")
-		m.move("waiting", "archive")
+	case "t":
+		m.move("tube", "desk")
 	case "u":
-		m.move("archive", "waiting")
-		m.move("waiting", "ack")
-		m.move("ack", "inbox")
+		m.move("tube", "upsub")
+		m.move("desk", "upsub")
+	case "f":
+		m.move("tube", "files")
+		m.move("desk", "files")
+		m.move("upsub", "files")
+	case "b":
+		m.move("files", "upsub")
+		m.move("upsub", "desk")
+		m.move("desk", "tube")
 	case "s":
 		return m.dictate()
 	case "p":
@@ -212,11 +214,11 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// incinerate is the one destructive action: in the archive view, the first
+// incinerate is the one destructive action: in the files view, the first
 // x on an entry arms it and a second consecutive x removes the file. In the
 // book the memory hole rides to the incinerators; nothing returns.
 func (m *model) incinerate(armed string) {
-	if m.view >= len(states) || states[m.view] != "archive" {
+	if m.view >= len(states) || states[m.view] != "files" {
 		return
 	}
 	e, ok := m.selected()
@@ -228,7 +230,7 @@ func (m *model) incinerate(armed string) {
 		m.status = "6079 Smith W.! Yes, you! Press x again to incinerate."
 		return
 	}
-	if err := os.Remove(filepath.Join(m.root, "archive", e.name)); err != nil {
+	if err := os.Remove(filepath.Join(m.root, "files", e.name)); err != nil {
 		m.status = err.Error()
 		return
 	}
@@ -430,7 +432,7 @@ func (m model) View() string {
 	return b.String()
 }
 
-const helpLine = "j/k/wheel move  click select  tab/shift+tab/1-5/click view  o open  y yank url  r ack  w waiting  a archive  u undo  s dictate  p publish  D discard  x incinerate  q quit"
+const helpLine = "j/k move  tab/1-5 view  o open  y yank  t take  u up  f file  b back  s dictate  p publish  D discard  x incinerate  q quit"
 
 // onceCounts renders one "<state> <count>" line per real state directory;
 // the virtual memory hole never appears here.

@@ -8,7 +8,7 @@ the two sides.
 ## Roles
 
 - Producer (reference implementation: minitrue, a headless agent run on a
-  systemd timer): polls upstream sources, writes entry files into `inbox/`,
+  systemd timer): polls upstream sources, writes entry files into `tube/`,
   owns `since`.
 - Consumer (telescreen, this repo): renders the queue and renames entries
   between state directories. Never touches the network, never writes entry
@@ -20,10 +20,10 @@ State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
 
 - `since`: an ISO-8601 UTC instant, the moment the producer last polled
   through. Producer-owned. The consumer never reads or writes it.
-- `inbox/`: unread entries. Presence means unread.
-- `ack/`: read, still needs action.
-- `waiting/`: acted on, the other side's move is pending.
-- `archive/`: closed, nothing more expected.
+- `tube/`: landed, unseen entries. Presence means unseen.
+- `desk/`: seen, still needs action.
+- `upsub/`: acted on, the other side's move is pending.
+- `files/`: closed, nothing more expected.
 - `intents/`: speakwrite dictation intents, one file per intent named
   after the entry (`<entry-name>.intent`). Written only by the consumer
   (the TUI); the drafting runner consumes each intent and removes the
@@ -37,7 +37,7 @@ State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
   outward write. The consumer may also remove a pending approval when
   the human discards the draft: the revocation of that consent.
 
-The producer writes only into `inbox/` and creates missing directories at
+The producer writes only into `tube/` and creates missing directories at
 startup. The consumer moves files between the four directories with plain
 renames and creates missing directories, `intents/` included, at startup.
 Files, not sockets or databases, are the whole interface.
@@ -84,12 +84,12 @@ minimal producer can emit only line 1 and still render.
 5. Entries are append-only once written, with one sanctioned addition: a
    revalidation pass may append a single marker line
    `stale <reason> <ISO-8601 time>` (kebab-case reason, e.g. `merged`,
-   `closed`, `already-reviewed`) to entries in `inbox/`, `ack/`, or
-   `waiting/`. The marker must start on its own line: prepend a newline
+   `closed`, `already-reviewed`) to entries in `tube/`, `desk/`, or
+   `upsub/`. The marker must start on its own line: prepend a newline
    when the file lacks a trailing one. Never mark an entry twice; never
-   touch `archive/`. Never
-   delete entries; states beyond `inbox/` belong to the consumer. The
-   producer marks, the human archives.
+   touch `files/`. Never
+   delete entries; states beyond `tube/` belong to the consumer. The
+   producer marks, the human files.
 
 ## Entry marker sections
 
@@ -121,7 +121,7 @@ The published marker records the runner's publish write, the one
 outward-facing action in the whole system: on a `.publish` approval the
 runner posts the last draft upstream (GitHub only for now), appends the
 published marker with the resulting URL, moves the entry file to
-`waiting/` unless it already sits in `waiting/` or `archive/`, and
+`upsub/` unless it already sits in `upsub/` or `files/`, and
 removes the approval. That single rename is the runner's only move
 between state directories; every other move belongs to the consumer. On
 a failed post the runner leaves the entry untouched and removes the
@@ -137,5 +137,5 @@ approval, so the draft stays approvable and nothing retries silently.
 3. Treat a failed read as a race with a concurrent move and retry on the
    next refresh.
 4. One destructive action exists: incinerate, which removes an entry file
-   from `archive/` only, behind a double keypress on the same entry. The
+   from `files/` only, behind a double keypress on the same entry. The
    removal is permanent; nothing returns from the memory hole.

@@ -67,20 +67,20 @@ func TestRowAtY(t *testing.T) {
 }
 
 func TestViewAtX(t *testing.T) {
-	// Widths 7, 6, 9: tabs span [0,7), [9,15), [17,26).
-	labels := []string{"1 inbox", "2 ack", "3 waiting"}
+	// Widths 6, 6, 7: tabs span [0,6), [8,14), [16,23).
+	labels := []string{"1 tube", "2 desk", "3 upsub"}
 	tests := []struct {
 		name string
 		x    int
 		want int
 	}{
 		{"first tab start", 0, 0},
-		{"first tab end", 6, 0},
-		{"separator", 7, -1},
-		{"separator second column", 8, -1},
-		{"second tab", 9, 1},
-		{"third tab", 17, 2},
-		{"past the last tab", 26, -1},
+		{"first tab end", 5, 0},
+		{"separator", 6, -1},
+		{"separator second column", 7, -1},
+		{"second tab", 8, 1},
+		{"third tab", 16, 2},
+		{"past the last tab", 23, -1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -93,14 +93,14 @@ func TestViewAtX(t *testing.T) {
 
 func TestViewAtXStyledLabels(t *testing.T) {
 	styled := []string{
-		tabActive.Render("1 inbox"),
-		tabInactive.Render("2 ack"),
+		tabActive.Render("1 tube"),
+		tabInactive.Render("2 desk"),
 	}
-	if w := lipgloss.Width(styled[0]); w != 7 {
-		t.Fatalf("styled label width = %d, want 7", w)
+	if w := lipgloss.Width(styled[0]); w != 6 {
+		t.Fatalf("styled label width = %d, want 6", w)
 	}
-	if got := viewAtX(9, styled); got != 1 {
-		t.Errorf("viewAtX(9, styled) = %d, want 1", got)
+	if got := viewAtX(8, styled); got != 1 {
+		t.Errorf("viewAtX(8, styled) = %d, want 1", got)
 	}
 }
 
@@ -239,11 +239,11 @@ func press(t *testing.T, m model, msg tea.Msg) model {
 
 func TestIncinerateArmsThenDeletes(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
-	m, root := seedModel(t, "archive", name)
+	m, root := seedModel(t, "files", name)
 
 	m = press(t, m, key("x"))
-	if got := inState(t, root, name); !slices.Equal(got, []string{"archive"}) {
-		t.Fatalf("after first x: entry in %v, want [archive]", got)
+	if got := inState(t, root, name); !slices.Equal(got, []string{"files"}) {
+		t.Fatalf("after first x: entry in %v, want [files]", got)
 	}
 	if want := "6079 Smith W.! Yes, you! Press x again to incinerate."; m.status != want {
 		t.Errorf("status = %q, want %q", m.status, want)
@@ -260,13 +260,13 @@ func TestIncinerateArmsThenDeletes(t *testing.T) {
 
 func TestIncinerateDisarmsOnOtherKey(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
-	m, root := seedModel(t, "archive", name)
+	m, root := seedModel(t, "files", name)
 
 	m = press(t, m, key("x"))
 	m = press(t, m, key("j"))
 	m = press(t, m, key("x"))
-	if got := inState(t, root, name); !slices.Equal(got, []string{"archive"}) {
-		t.Fatalf("x j x deleted the entry: in %v, want [archive]", got)
+	if got := inState(t, root, name); !slices.Equal(got, []string{"files"}) {
+		t.Fatalf("x j x deleted the entry: in %v, want [files]", got)
 	}
 	if want := "6079 Smith W.! Yes, you! Press x again to incinerate."; m.status != want {
 		t.Errorf("status = %q, want %q (re-armed)", m.status, want)
@@ -278,9 +278,9 @@ func TestIncinerateDisarmsOnOtherKey(t *testing.T) {
 	}
 }
 
-func TestIncinerateOutsideArchiveDoesNothing(t *testing.T) {
+func TestIncinerateOutsideFilesDoesNothing(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
-	for _, state := range []string{"inbox", "ack", "waiting"} {
+	for _, state := range []string{"tube", "desk", "upsub"} {
 		t.Run(state, func(t *testing.T) {
 			m, root := seedModel(t, state, name)
 			m = press(t, m, key("x"))
@@ -295,14 +295,14 @@ func TestIncinerateOutsideArchiveDoesNothing(t *testing.T) {
 	}
 
 	// The memory hole view is where losing the states-bound guard would
-	// panic instead of no-oping: seed archive, press x from view 5.
+	// panic instead of no-oping: seed files, press x from view 5.
 	t.Run("memoryhole", func(t *testing.T) {
-		m, root := seedModel(t, "archive", name)
+		m, root := seedModel(t, "files", name)
 		m.view = memoryHoleView
 		m = press(t, m, key("x"))
 		m = press(t, m, key("x"))
-		if got := inState(t, root, name); !slices.Equal(got, []string{"archive"}) {
-			t.Errorf("x x in memoryhole: entry in %v, want [archive]", got)
+		if got := inState(t, root, name); !slices.Equal(got, []string{"files"}) {
+			t.Errorf("x x in memoryhole: entry in %v, want [files]", got)
 		}
 		if m.status != "" || m.armed != "" {
 			t.Errorf("x in memoryhole set status %q, armed %q", m.status, m.armed)
@@ -333,7 +333,7 @@ func TestTabCyclesAcrossFiveViews(t *testing.T) {
 	}
 	m = press(t, m, tea.KeyMsg{Type: tea.KeyShiftTab})
 	if m.view != memoryHoleView {
-		t.Errorf("shift+tab from inbox: view = %d, want %d", m.view, memoryHoleView)
+		t.Errorf("shift+tab from tube: view = %d, want %d", m.view, memoryHoleView)
 	}
 	for range views {
 		m = press(t, m, tea.KeyMsg{Type: tea.KeyTab})
@@ -345,7 +345,7 @@ func TestTabCyclesAcrossFiveViews(t *testing.T) {
 
 func TestOnceCountsListsRealStatesOnly(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
-	_, root := seedModel(t, "inbox", name)
+	_, root := seedModel(t, "tube", name)
 	// A pending intent never shows up in the counts.
 	if err := os.WriteFile(filepath.Join(root, "intents", name+".intent"), []byte("entry x\naction respond\n\nguidance:\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -354,7 +354,7 @@ func TestOnceCountsListsRealStatesOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "inbox 1\nack 0\nwaiting 0\narchive 0\n"
+	want := "tube 1\ndesk 0\nupsub 0\nfiles 0\n"
 	if out != want {
 		t.Errorf("onceCounts = %q, want %q", out, want)
 	}
@@ -367,8 +367,15 @@ func TestHandleKeyMovesOnce(t *testing.T) {
 		from string
 		want string
 	}{
-		{"u", "archive", "waiting"},
-		{"a", "ack", "archive"},
+		{"t", "tube", "desk"},
+		{"u", "tube", "upsub"},
+		{"u", "desk", "upsub"},
+		{"f", "tube", "files"},
+		{"f", "desk", "files"},
+		{"f", "upsub", "files"},
+		{"b", "files", "upsub"},
+		{"b", "upsub", "desk"},
+		{"b", "desk", "tube"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.key+"-from-"+tt.from, func(t *testing.T) {
