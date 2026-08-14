@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"errors"
 	"io/fs"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,6 +19,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/maxgio92/telescreen/internal/publish"
 	"github.com/maxgio92/telescreen/internal/recdep"
 )
 
@@ -140,18 +140,6 @@ func (m model) dictate() (tea.Model, tea.Cmd) {
 	})
 }
 
-// isGitHubPRURL reports whether raw points at a github.com pull request,
-// the only publish target v1 supports (the runner posts with gh pr
-// comment, so issues and commits would approve and then die there).
-func isGitHubPRURL(raw string) bool {
-	u, err := url.Parse(raw)
-	if err != nil || u.Hostname() != "github.com" {
-		return false
-	}
-	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
-	return len(parts) >= 4 && parts[2] == "pull"
-}
-
 // publish handles the p key: on a drafted entry the first p arms it and
 // a second consecutive p writes the publish approval into recdep/intents/.
 // The runner posts; the TUI stays offline. Publishing is double-keyed
@@ -165,8 +153,11 @@ func (m *model) publish(armed string) {
 	if !ok || e.Mark != "draft" {
 		return
 	}
-	if !isGitHubPRURL(e.URL) {
-		m.status = "publishing covers GitHub PRs only for now; y copies the draft target"
+	// The gate reads the same publisher table the actor dispatches on
+	// (internal/publish), so the view never approves what the actor
+	// would refuse. Match parses the URL only; the TUI stays offline.
+	if _, ok := publish.Match(e.URL); !ok {
+		m.status = "no publisher for this record's target; y copies the url"
 		return
 	}
 	if armed != e.Name {

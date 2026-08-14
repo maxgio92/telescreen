@@ -6,78 +6,19 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/maxgio92/telescreen/internal/publish"
 	"github.com/maxgio92/telescreen/internal/recdep"
 )
 
 var version = "dev"
-
-// ghRun executes gh with args, feeding it stdin, and returns its stdout.
-// A package-level variable so tests substitute a fake.
-var ghRun = func(args []string, stdin string) (string, error) {
-	cmd := exec.Command("gh", args...)
-	cmd.Stdin = strings.NewReader(stdin)
-	var out, errb bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &errb
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("gh %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(errb.String()))
-	}
-	return out.String(), nil
-}
-
-// A publisher matches an entry URL shape and yields the gh invocation
-// that posts a draft there. This dispatch table is where Slack and
-// Linear publishers land later.
-type publisher struct {
-	name string
-	// match returns the gh args for raw, or ok=false when raw is not
-	// this publisher's shape. The draft text goes on stdin.
-	match func(raw string) (args []string, ok bool)
-}
-
-var publishers = []publisher{
-	{name: "github-pr", match: githubPRArgs},
-}
-
-// githubPRArgs matches a github.com pull request URL and returns the
-// gh pr comment invocation for it.
-func githubPRArgs(raw string) ([]string, bool) {
-	u, err := url.Parse(raw)
-	if err != nil || u.Hostname() != "github.com" {
-		return nil, false
-	}
-	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
-	if len(parts) < 4 || parts[2] != "pull" {
-		return nil, false
-	}
-	if _, err := strconv.Atoi(parts[3]); err != nil {
-		return nil, false
-	}
-	return []string{"pr", "comment", parts[3], "--repo", parts[0] + "/" + parts[1], "--body-file", "-"}, true
-}
-
-// dispatch returns the first matching publisher's name and gh args for
-// raw, ok=false when no publisher matches.
-func dispatch(raw string) (name string, args []string, ok bool) {
-	for _, p := range publishers {
-		if args, ok := p.match(raw); ok {
-			return p.name, args, true
-		}
-	}
-	return "", nil, false
-}
 
 // logLine appends one line to recdep/publish.log (created when missing)
 // and mirrors it to stdout, so a disappeared approval is always
@@ -127,11 +68,11 @@ func resolve(root, recorded string) (state, path string, ok bool) {
 	return "", "", false
 }
 
-// publish executes one approval file per the THINKPOL.md procedure. The
+// execute runs one approval file per the THINKPOL.md procedure. The
 // approval is always removed: posted, refused, or failed, nothing
 // retries silently. Only an unreadable approval or entry returns an
 // error and leaves the file for the next run.
-func publish(root, approval string) error {
+func execute(root, approval string) error {
 	aname := filepath.Base(approval)
 	b, err := os.ReadFile(approval)
 	if err != nil {
@@ -165,21 +106,16 @@ func publish(root, approval string) error {
 		logLine(root, "refused %s: no draft section in %s", aname, path)
 		return nil
 	}
-	pubName, args, ok := dispatch(e.URL)
-	if !ok {
+	if _, ok := publish.Match(e.URL); !ok {
 		_ = os.Remove(approval)
 		logLine(root, "refused %s: no publisher for %q", aname, e.URL)
 		return nil
 	}
-	out, err := ghRun(args, draft)
+	pubName, commentURL, err := publish.Post(e.URL, draft)
 	if err != nil {
 		_ = os.Remove(approval)
 		logLine(root, "failed %s: %v", aname, err)
 		return nil
-	}
-	commentURL := strings.TrimSpace(out)
-	if i := strings.LastIndexByte(commentURL, '\n'); i >= 0 {
-		commentURL = commentURL[i+1:]
 	}
 	// The post happened; a failure past this point is logged, and the
 	// approval still goes so nothing double-posts.
@@ -206,7 +142,7 @@ func drain(root string) error {
 		return err
 	}
 	for _, a := range approvals {
-		if err := publish(root, a); err != nil {
+		if err := execute(root, a); err != nil {
 			return err
 		}
 	}
