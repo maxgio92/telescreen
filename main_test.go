@@ -9,6 +9,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/maxgio92/telescreen/internal/recdep"
 )
 
 // seedModel creates a state root with one entry in state and returns a
@@ -26,7 +28,7 @@ func seedModel(t *testing.T, state, name string) (model, string) {
 		t.Fatal(err)
 	}
 	m := newModel(root, nil)
-	m.view = slices.Index(states, state)
+	m.view = slices.Index(recdep.States, state)
 	return m, root
 }
 
@@ -34,7 +36,7 @@ func seedModel(t *testing.T, state, name string) (model, string) {
 func inState(t *testing.T, root, name string) []string {
 	t.Helper()
 	var got []string
-	for _, s := range states {
+	for _, s := range recdep.States {
 		if _, err := os.Stat(filepath.Join(root, s, name)); err == nil {
 			got = append(got, s)
 		}
@@ -116,9 +118,9 @@ func TestViewRowsFitWidth(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := model{width: 80, height: 24}
-			m.lists[0] = []entry{
-				{name: "a.md", source: "slack", summary: long, stale: tt.stale},
-				{name: "b.md", source: "github", summary: long, stale: tt.stale},
+			m.lists[0] = []recdep.Entry{
+				{Name: "a.md", Source: "slack", Summary: long, Stale: tt.stale},
+				{Name: "b.md", Source: "github", Summary: long, Stale: tt.stale},
 			}
 			// The cursor stays on index 0, so both the selected and the
 			// plain row style are covered. List rows start after the header.
@@ -134,9 +136,9 @@ func TestViewRowsFitWidth(t *testing.T) {
 
 func TestViewRendersStaleTagDimmed(t *testing.T) {
 	m := model{width: 80, height: 24}
-	m.lists[0] = []entry{
-		{name: "a.md", source: "github", summary: "please review", stale: ""},
-		{name: "b.md", source: "github", summary: "old ask", stale: "merged"},
+	m.lists[0] = []recdep.Entry{
+		{Name: "a.md", Source: "github", Summary: "please review", Stale: ""},
+		{Name: "b.md", Source: "github", Summary: "old ask", Stale: "merged"},
 	}
 	view := m.View()
 	if !strings.Contains(view, "[stale: merged]") {
@@ -152,7 +154,7 @@ func TestViewRendersStaleTagDimmed(t *testing.T) {
 // disappears instead of wrapping the row.
 func TestViewDropsTagOnNarrowWidth(t *testing.T) {
 	m := model{width: 30, height: 24}
-	m.lists[0] = []entry{{name: "a.md", source: "github", summary: "x", stale: "already-reviewed"}}
+	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "x", Stale: "already-reviewed"}}
 	lines := strings.Split(m.View(), "\n")
 	row := lines[headerLines]
 	if strings.Contains(row, "[stale:") {
@@ -165,11 +167,11 @@ func TestViewDropsTagOnNarrowWidth(t *testing.T) {
 
 func TestViewRendersSpeakwriteTags(t *testing.T) {
 	m := model{width: 80, height: 24}
-	m.lists[0] = []entry{
-		{name: "a.md", source: "github", summary: "drafted", mark: "draft"},
-		{name: "b.md", source: "github", summary: "dictated", mark: "dictated"},
-		{name: "c.md", source: "github", summary: "posted", mark: "published"},
-		{name: "d.md", source: "github", summary: "dropped", mark: "discarded"},
+	m.lists[0] = []recdep.Entry{
+		{Name: "a.md", Source: "github", Summary: "drafted", Mark: "draft"},
+		{Name: "b.md", Source: "github", Summary: "dictated", Mark: "dictated"},
+		{Name: "c.md", Source: "github", Summary: "posted", Mark: "published"},
+		{Name: "d.md", Source: "github", Summary: "dropped", Mark: "discarded"},
 	}
 	lines := strings.Split(m.View(), "\n")
 	if !strings.Contains(lines[headerLines], "[draft]") {
@@ -189,7 +191,7 @@ func TestViewRendersSpeakwriteTags(t *testing.T) {
 // the same drop-whole discipline as the stale tag.
 func TestViewDropsDraftTagOnNarrowWidth(t *testing.T) {
 	m := model{width: 20, height: 24}
-	m.lists[0] = []entry{{name: "a.md", source: "github", summary: "x", mark: "draft"}}
+	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "x", Mark: "draft"}}
 	lines := strings.Split(m.View(), "\n")
 	row := lines[headerLines]
 	if strings.Contains(row, "[draft]") {
@@ -202,7 +204,7 @@ func TestViewDropsDraftTagOnNarrowWidth(t *testing.T) {
 
 func TestViewRendersStaleAndDraftTags(t *testing.T) {
 	m := model{width: 80, height: 24}
-	m.lists[0] = []entry{{name: "a.md", source: "github", summary: "old draft", stale: "merged", mark: "draft"}}
+	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "old draft", Stale: "merged", Mark: "draft"}}
 	row := strings.Split(m.View(), "\n")[headerLines]
 	if !strings.Contains(row, "[stale: merged]  [draft]") {
 		t.Errorf("row lacks stale-then-draft tags: %q", row)
@@ -312,7 +314,7 @@ func TestIncinerateOutsideFilesDoesNothing(t *testing.T) {
 
 func TestMemoryHoleRendersEpitaphOnly(t *testing.T) {
 	m := model{width: 80, height: 24, view: memoryHoleView}
-	m.lists[0] = []entry{{name: "a.md", source: "slack", summary: "still visible?"}}
+	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "slack", Summary: "still visible?"}}
 	view := m.View()
 	if !strings.Contains(view, epitaph) {
 		t.Errorf("memory hole view lacks the epitaph:\n%s", view)

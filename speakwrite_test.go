@@ -8,37 +8,45 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/maxgio92/telescreen/internal/recdep"
 )
+
+// lastDictated is renderIntent's pre-fill source, shortened for tests.
+func lastDictated(body string) string {
+	g, _ := recdep.LastSection(body, "dictated")
+	return g
+}
 
 func TestActionFor(t *testing.T) {
 	tests := []struct {
 		name string
-		e    entry
+		e    recdep.Entry
 		want string
 	}{
-		{"review requested", parseEntry(
+		{"review requested", recdep.ParseEntry(
 			"20260813T172742Z-github-review-requested-demo-42.md",
 			"[github] alice: review requested: fix the widget (#42)\nhttps://example.com/pr/42\nseen now\n",
 		), "review"},
-		{"bot findings", entry{source: "github", who: "dastardly[bot]"}, "vet-findings"},
-		{"github human", entry{source: "github", who: "alice"}, "pr-reply"},
-		{"slack", entry{source: "slack", who: "wes"}, "slack-reply"},
-		{"linear", entry{source: "linear", who: "chuck"}, "linear-comment"},
-		{"unknown source", entry{source: "carrier-pigeon", who: "alice"}, "respond"},
+		{"bot findings", recdep.Entry{Source: "github", Who: "dastardly[bot]"}, "vet-findings"},
+		{"github human", recdep.Entry{Source: "github", Who: "alice"}, "pr-reply"},
+		{"slack", recdep.Entry{Source: "slack", Who: "wes"}, "slack-reply"},
+		{"linear", recdep.Entry{Source: "linear", Who: "chuck"}, "linear-comment"},
+		{"unknown source", recdep.Entry{Source: "carrier-pigeon", Who: "alice"}, "respond"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := actionFor(tt.e); got != tt.want {
-				t.Errorf("actionFor(%q, %q) = %q, want %q", tt.e.source, tt.e.who, got, tt.want)
+				t.Errorf("actionFor(%q, %q) = %q, want %q", tt.e.Source, tt.e.Who, got, tt.want)
 			}
 		})
 	}
 }
 
 func TestRenderIntent(t *testing.T) {
-	fresh := parseEntry("a.md", "[slack] wes: go for it\nhttps://example.com\nseen now\n")
+	fresh := recdep.ParseEntry("a.md", "[slack] wes: go for it\nhttps://example.com\nseen now\n")
 	want := "entry /q/tube/a.md\naction slack-reply\n\nguidance:\n\n"
-	if got := renderIntent("/q/tube/a.md", fresh, dictatedGuidance(fresh.body)); got != want {
+	if got := renderIntent("/q/tube/a.md", fresh, lastDictated(fresh.Body)); got != want {
 		t.Errorf("fresh intent = %q, want %q", got, want)
 	}
 }
@@ -62,8 +70,8 @@ func TestRenderIntentPrefillsLastGuidance(t *testing.T) {
 		"--- draft 2026-08-14T09:05:00Z",
 		"the new draft",
 	}, "\n")
-	e := parseEntry("b.md", body)
-	got := renderIntent("/q/desk/b.md", e, dictatedGuidance(e.body))
+	e := recdep.ParseEntry("b.md", body)
+	got := renderIntent("/q/desk/b.md", e, lastDictated(e.Body))
 	want := "entry /q/desk/b.md\naction pr-reply\n\nguidance:\nagree with the finding\npush back on the nit\n"
 	if got != want {
 		t.Errorf("re-dictation intent = %q, want %q", got, want)
@@ -73,15 +81,15 @@ func TestRenderIntentPrefillsLastGuidance(t *testing.T) {
 func TestGuidanceForPrefersPendingIntent(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
 	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, intentsDir), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, recdep.IntentsDir), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	e := parseEntry(name, "[slack] wes: go for it\nhttps://example.com\nseen now\n")
+	e := recdep.ParseEntry(name, "[slack] wes: go for it\nhttps://example.com\nseen now\n")
 	if got := guidanceFor(root, e); got != "" {
 		t.Fatalf("guidance without a pending intent = %q, want empty", got)
 	}
 	pending := "entry /q/tube/" + name + "\naction slack-reply\n\nguidance:\nsay yes, but after the freeze\n"
-	if err := os.WriteFile(filepath.Join(root, intentsDir, name+".intent"), []byte(pending), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, recdep.IntentsDir, name+".intent"), []byte(pending), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if got := guidanceFor(root, e); got != "say yes, but after the freeze" {
@@ -90,26 +98,19 @@ func TestGuidanceForPrefersPendingIntent(t *testing.T) {
 }
 
 func TestActionForReviewRequestedNeedsGitHub(t *testing.T) {
-	slack := parseEntry(
+	slack := recdep.ParseEntry(
 		"20260813T172742Z-slack-review-requested-foo.md",
 		"[slack] wes: review requested: foo\nhttps://example.com\nseen now\n",
 	)
 	if got := actionFor(slack); got != "slack-reply" {
 		t.Errorf("slack entry with a review-requested slug = %q, want slack-reply", got)
 	}
-	tagged := parseEntry(
+	tagged := recdep.ParseEntry(
 		"20260813T131405Z-github-review-requested-77.md",
 		"[github-review-requested] ampleforth: review requested on PR 77\nhttps://example.com/pr/77\nseen now\n",
 	)
 	if got := actionFor(tagged); got != "review" {
 		t.Errorf("github-review-requested header = %q, want review", got)
-	}
-}
-
-func TestDictatedGuidanceRunsToEndOfBody(t *testing.T) {
-	body := "[github] alice: hi\nurl\nseen now\n\n--- dictated 2026-08-14T09:00:00Z\ntail guidance\n"
-	if got := dictatedGuidance(strings.TrimRight(body, "\n")); got != "tail guidance" {
-		t.Errorf("dictatedGuidance = %q, want %q", got, "tail guidance")
 	}
 }
 
@@ -336,27 +337,6 @@ func TestPublishMousePressDisarms(t *testing.T) {
 	}
 }
 
-func TestAppendMarkerWithoutTrailingNewline(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "e.md")
-	if err := os.WriteFile(path, []byte("[x] y: z\nhttp://u\nseen t\n\npreview without newline"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := appendMarker(path, "--- discarded 2026-08-14T12:00:00Z\n"); err != nil {
-		t.Fatal(err)
-	}
-	b, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(b), "newline\n--- discarded") {
-		t.Errorf("marker does not start its own line:\n%s", b)
-	}
-	if parseEntry("e.md", string(b)).mark != "discarded" {
-		t.Errorf("parser missed the appended marker:\n%s", b)
-	}
-}
-
 func TestPublishNonGitHubDraftOnlyHints(t *testing.T) {
 	name := "20260814T090000Z-slack-wes-thread.md"
 	m, root := seedDraftModel(t, name, "https://example.com/thread/1")
@@ -440,11 +420,11 @@ func TestDiscardAppendsMarkerOnce(t *testing.T) {
 	if !ok {
 		t.Fatal("entry disappeared")
 	}
-	if got := strings.Count(e.body, "--- discarded "); got != 1 {
-		t.Errorf("discarded markers = %d, want 1\nbody:\n%s", got, e.body)
+	if got := strings.Count(e.Body, "--- discarded "); got != 1 {
+		t.Errorf("discarded markers = %d, want 1\nbody:\n%s", got, e.Body)
 	}
-	if e.mark != "discarded" {
-		t.Errorf("mark = %q, want discarded", e.mark)
+	if e.Mark != "discarded" {
+		t.Errorf("mark = %q, want discarded", e.Mark)
 	}
 }
 

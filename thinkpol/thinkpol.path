@@ -1,0 +1,11 @@
+[Unit]
+Description=run thinkpol when a publish approval lands in recdep/intents/
+
+[Path]
+PathExistsGlob=%S/recdep/intents/*.publish
+# an approval surviving a failed run would otherwise re-trigger back to back
+TriggerLimitIntervalSec=1h
+TriggerLimitBurst=6
+
+[Install]
+WantedBy=paths.target

@@ -1,31 +1,30 @@
 ---
 name: speakwrite
-description: The drafting and publishing runner for the telescreen queue. Consume speakwrite dictation intents from recdep/intents/, research the entry read-only (the PR, the thread, the ticket), and append a dictated and a draft marker section to the entry file for human review in the telescreen TUI. Consume publish approvals (.publish files, written by the TUI after a double-key approval) and post the approved draft as a GitHub PR comment. Use when asked to run the speakwrite, drain dictation intents, draft the queued responses, publish approved drafts, or when a headless run invokes /speakwrite draft.
+description: The drafting runner for the telescreen queue. Consume speakwrite dictation intents from recdep/intents/, research the entry read-only (the PR, the thread, the ticket), and append a dictated and a draft marker section to the entry file for human review in the telescreen TUI. Use when asked to run the speakwrite, drain dictation intents, draft the queued responses, or when a headless run invokes /speakwrite draft.
 ---
 
 # speakwrite
 
-The runner half of the flow defined in SPEAKWRITE.md of
+The drafting half of the flow defined in SPEAKWRITE.md of
 github.com/maxgio92/telescreen. The TUI's `s` key writes an intent file;
 this runner consumes it, researches the entry, and appends the draft to
-the entry file. The TUI's `p` `p` writes a publish approval; this runner
-consumes it and posts the draft. The queue and marker contract is
-normative in RECDEP.md; this skill is one runner implementation, and any
-program that appends conforming marker sections is a drop-in
-replacement.
+the entry file. Publishing belongs to thinkpol, the deterministic actor
+defined in THINKPOL.md; this runner has no publish procedure. The queue
+and marker contract is normative in RECDEP.md; this skill is one runner
+implementation, and any program that appends conforming marker sections
+is a drop-in replacement.
 
 `draft` (the first arg, default, headless) drains `intents/`: the
-drafting pass over `*.intent` files, then the publish pass over
-`*.publish` files.
+drafting pass over `*.intent` files.
 
 ## Paths
 
 State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
 
-- `intents/`: one `<entry-name>.intent` file per dictation and one
-  `<entry-name>.publish` file per publish approval, written by the TUI.
-  `.intent.tmp` files are dictations still open in the editor; leave
-  them alone.
+- `intents/`: one `<entry-name>.intent` file per dictation, written by
+  the TUI. `.intent.tmp` files are dictations still open in the editor;
+  leave them alone. `.publish` files are approvals for thinkpol; leave
+  them alone too.
 - `tube/`, `desk/`, `upsub/`, `files/`: the entry state dirs. The
   intent names the entry's absolute path at dictation time.
 
@@ -93,48 +92,10 @@ For each `intents/*.intent`, oldest first:
    inside the entry, so the draft can always be audited against what
    was asked.
 
-## publish (headless, the one outward write)
-
-Approval format, written only by the TUI after a double-key approval:
-
-```
-entry <absolute entry path>
-```
-
-For each `intents/*.publish`, oldest first:
-
-1. Parse the entry path and resolve the entry the way the drafting pass
-   does: the recorded path, else the same filename in the other state
-   dirs, else remove the approval, log one line naming the orphaned
-   approval and the missing entry path, and continue.
-2. Extract the last draft section (the text after the last `--- draft`
-   marker line, up to the next marker or the end) and the entry URL
-   (line 2 of the body). The TUI gates on github.com; verify anyway,
-   and on a non-GitHub URL remove the approval and log why.
-3. Post the draft text as a PR comment. Derive the number and repo from
-   the URL (`https://github.com/<owner>/<repo>/pull/<number>`), write
-   the draft text to a temporary file, then:
-
-   ```
-   gh pr comment <number> --repo <owner>/<repo> --body-file <file>
-   ```
-
-   This is the single sanctioned outward write, and only because the
-   `.publish` approval exists. Log the comment URL `gh` returns.
-4. On success: append `--- published <ISO-8601 UTC now> <comment URL>`
-   to the entry (the same newline discipline as the draft append), move
-   the entry file to `upsub/` unless it is already in `upsub/` or
-   `files/`, remove the approval, and log one line with the approval
-   name, the entry path, and the comment URL.
-5. On failure: leave the entry untouched (the `[draft]` tag survives so
-   the human can re-approve), remove the approval so nothing retries
-   silently, and log the error.
-
 ## Guardrails
 
-Research is read-only against Slack, GitHub, and Linear. The writes
-are the marker appends to entry files, the intent and approval
-removals, the publish rename to `upsub/`, and the one approved PR
-comment per `.publish` file. Nothing posts anywhere without the
-explicit double-key approval defined in SPEAKWRITE.md; every other
-move between states belongs to the human at the TUI.
+Research is read-only against Slack, GitHub, and Linear. The only
+writes are the marker appends to entry files and the intent removals.
+This runner cannot post: publishing is thinkpol's job, executed per
+THINKPOL.md only on an explicit double-key approval. Every move between
+states belongs to the human at the TUI.
