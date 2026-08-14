@@ -33,8 +33,8 @@ State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
 
 The producer writes only into `inbox/` and creates missing directories at
 startup. The consumer moves files between the four directories with plain
-renames and creates missing directories at startup. Files, not sockets or
-databases, are the whole interface.
+renames and creates missing directories, `intents/` included, at startup.
+Files, not sockets or databases, are the whole interface.
 
 ## Entry files
 

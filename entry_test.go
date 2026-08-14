@@ -139,6 +139,28 @@ func TestParseEntryLastMarkerWins(t *testing.T) {
 	if e.markTime != "2026-08-14T10:00:00Z" {
 		t.Errorf("markTime = %q", e.markTime)
 	}
+
+	// The discard flow: the consumer's discarded marker supersedes the
+	// draft, so the tag disappears.
+	e = parseEntry("x.md", body+"\n--- discarded 2026-08-14T11:00:00Z\n")
+	if e.mark != "discarded" {
+		t.Errorf("mark after discard = %q, want discarded", e.mark)
+	}
+}
+
+// TestParseEntryMarkersAfterStale pins the other ordering: the producer
+// stamped stale first, the runner appended sections after it.
+func TestParseEntryMarkersAfterStale(t *testing.T) {
+	body := "[github] alice: please review\nhttps://github.com/o/r/pull/7\nseen 2026-08-12T10:00:00Z\n\nreview requested\n" +
+		"stale merged 2026-08-14T08:00:00Z\n\n" +
+		"--- draft 2026-08-14T10:00:00Z\nThanks, fixed in the follow-up.\n"
+	e := parseEntry("20260812T100000Z-github-alice-please-review.md", body)
+	if e.stale != "merged" {
+		t.Errorf("stale = %q, want merged", e.stale)
+	}
+	if e.mark != "draft" {
+		t.Errorf("mark = %q, want draft", e.mark)
+	}
 }
 
 func TestParseEntryStaleWithMarkers(t *testing.T) {

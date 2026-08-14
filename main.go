@@ -343,22 +343,26 @@ func (m model) View() string {
 	start, listRows := m.listViewport()
 	for i := start; i < len(list) && i < start+listRows; i++ {
 		e := list[i]
-		tag := ""
+		staleTag, markTag := "", ""
 		if e.stale != "" {
-			tag = "  [stale: " + e.stale + "]"
+			staleTag = "  [stale: " + e.stale + "]"
 		}
 		// The speakwrite tag follows the stale tag; published and
 		// discarded carry no tag.
 		switch e.mark {
 		case "dictated":
-			tag += "  [dictated]"
+			markTag = "  [dictated]"
 		case "draft":
-			tag += "  [draft]"
+			markTag = "  [draft]"
 		}
-		// Drop the tag entirely when it alone would overflow the width, so a
-		// narrow terminal never wraps a row and breaks the click mapping.
+		// Tags drop whole, never wrap: the speakwrite tag goes first, the
+		// stale tag survives alone when it still fits.
+		tag := staleTag + markTag
 		if m.width > 14 && len([]rune(tag)) > m.width-14 {
-			tag = ""
+			tag = staleTag
+			if len([]rune(tag)) > m.width-14 {
+				tag = ""
+			}
 		}
 		summary := e.summary
 		if budget := m.width - 14 - len([]rune(tag)); m.width > 14 {

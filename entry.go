@@ -48,15 +48,20 @@ var markerKinds = map[string]bool{
 }
 
 // markerKind returns the marker kind when line is a speakwrite marker
-// line, and "" otherwise.
+// line, and "" otherwise. The preview quotes third-party text verbatim,
+// so a marker also needs a parseable RFC 3339 time to count.
 func markerKind(line string) string {
 	if !strings.HasPrefix(line, "--- ") {
 		return ""
 	}
-	if f := strings.Fields(line); len(f) >= 2 && markerKinds[f[1]] {
-		return f[1]
+	f := strings.Fields(line)
+	if len(f) < 3 || !markerKinds[f[1]] {
+		return ""
 	}
-	return ""
+	if _, err := time.Parse(time.RFC3339, f[2]); err != nil {
+		return ""
+	}
+	return f[1]
 }
 
 // parseEntry builds an entry from a queue filename and its body.
@@ -94,9 +99,21 @@ func parseEntry(name, body string) entry {
 			}
 		}
 	}
-	if last := lines[len(lines)-1]; len(lines) > 1 && strings.HasPrefix(last, "stale ") {
-		e.staleLine = last
-		if f := strings.Fields(last); len(f) >= 2 {
+	// The stale line sits at the very end, or just above the marker
+	// sections when the runner appended after the revalidation pass.
+	staleAt := len(lines) - 1
+	if !strings.HasPrefix(lines[staleAt], "stale ") {
+		for i, line := range lines {
+			if markerKind(line) != "" {
+				for staleAt = i - 1; staleAt > 0 && lines[staleAt] == ""; staleAt-- {
+				}
+				break
+			}
+		}
+	}
+	if staleAt > 0 && strings.HasPrefix(lines[staleAt], "stale ") {
+		e.staleLine = lines[staleAt]
+		if f := strings.Fields(lines[staleAt]); len(f) >= 2 {
 			e.stale = f[1]
 		}
 	}
