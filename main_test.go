@@ -68,7 +68,7 @@ func TestRowAtY(t *testing.T) {
 
 func TestViewAtX(t *testing.T) {
 	// Widths 7, 6, 9: tabs span [0,7), [9,15), [17,26).
-	labels := []string{"1 inbox", "2 todo", "3 waiting"}
+	labels := []string{"1 inbox", "2 ack", "3 waiting"}
 	tests := []struct {
 		name string
 		x    int
@@ -94,7 +94,7 @@ func TestViewAtX(t *testing.T) {
 func TestViewAtXStyledLabels(t *testing.T) {
 	styled := []string{
 		tabActive.Render("1 inbox"),
-		tabInactive.Render("2 todo"),
+		tabInactive.Render("2 ack"),
 	}
 	if w := lipgloss.Width(styled[0]); w != 7 {
 		t.Fatalf("styled label width = %d, want 7", w)
@@ -280,7 +280,7 @@ func TestIncinerateDisarmsOnOtherKey(t *testing.T) {
 
 func TestIncinerateOutsideArchiveDoesNothing(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
-	for _, state := range []string{"inbox", "todo", "waiting"} {
+	for _, state := range []string{"inbox", "ack", "waiting"} {
 		t.Run(state, func(t *testing.T) {
 			m, root := seedModel(t, state, name)
 			m = press(t, m, key("x"))
@@ -354,7 +354,7 @@ func TestOnceCountsListsRealStatesOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "inbox 1\ntodo 0\nwaiting 0\narchive 0\n"
+	want := "inbox 1\nack 0\nwaiting 0\narchive 0\n"
 	if out != want {
 		t.Errorf("onceCounts = %q, want %q", out, want)
 	}
@@ -368,7 +368,7 @@ func TestHandleKeyMovesOnce(t *testing.T) {
 		want string
 	}{
 		{"u", "archive", "waiting"},
-		{"a", "todo", "archive"},
+		{"a", "ack", "archive"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.key+"-from-"+tt.from, func(t *testing.T) {

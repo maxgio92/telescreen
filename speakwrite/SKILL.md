@@ -26,7 +26,7 @@ State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
   `<entry-name>.publish` file per publish approval, written by the TUI.
   `.intent.tmp` files are dictations still open in the editor; leave
   them alone.
-- `inbox/`, `todo/`, `waiting/`, `archive/`: the entry state dirs. The
+- `inbox/`, `ack/`, `waiting/`, `archive/`: the entry state dirs. The
   intent names the entry's absolute path at dictation time.
 
 ## Intent format

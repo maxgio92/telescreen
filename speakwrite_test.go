@@ -63,8 +63,8 @@ func TestRenderIntentPrefillsLastGuidance(t *testing.T) {
 		"the new draft",
 	}, "\n")
 	e := parseEntry("b.md", body)
-	got := renderIntent("/q/todo/b.md", e, dictatedGuidance(e.body))
-	want := "entry /q/todo/b.md\naction pr-reply\n\nguidance:\nagree with the finding\npush back on the nit\n"
+	got := renderIntent("/q/ack/b.md", e, dictatedGuidance(e.body))
+	want := "entry /q/ack/b.md\naction pr-reply\n\nguidance:\nagree with the finding\npush back on the nit\n"
 	if got != want {
 		t.Errorf("re-dictation intent = %q, want %q", got, want)
 	}
@@ -138,7 +138,7 @@ func TestDictationSubmits(t *testing.T) {
 
 func TestDictateWritesDraftIntent(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
-	for _, state := range []string{"inbox", "todo", "waiting"} {
+	for _, state := range []string{"inbox", "ack", "waiting"} {
 		t.Run(state, func(t *testing.T) {
 			m, root := seedModel(t, state, name)
 			_, cmd := m.Update(key("s"))
@@ -245,7 +245,7 @@ func TestFinishDictationCancels(t *testing.T) {
 	}
 }
 
-// seedDraftModel creates a state root with one drafted entry in todo and
+// seedDraftModel creates a state root with one drafted entry in ack and
 // returns a loaded model on that view. url is the entry's link line.
 func seedDraftModel(t *testing.T, name, url string) (model, string) {
 	t.Helper()
@@ -267,7 +267,7 @@ func seedDraftModel(t *testing.T, name, url string) (model, string) {
 		"the draft text",
 		"",
 	}, "\n")
-	if err := os.WriteFile(filepath.Join(root, "todo", name), []byte(body), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "ack", name), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	m := newModel(root, nil)
@@ -297,7 +297,7 @@ func TestPublishArmsThenApproves(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "entry " + filepath.Join(root, "todo", name) + "\n"
+	want := "entry " + filepath.Join(root, "ack", name) + "\n"
 	if string(got) != want {
 		t.Errorf("approval = %q, want %q", got, want)
 	}

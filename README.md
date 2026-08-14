@@ -15,7 +15,7 @@ The Ministry of Truth (`minitrue/`, a headless agent on a systemd user
 timer) manufactures the records: it polls Slack, GitHub, and Linear and
 files one markdown record per event. The Records Department (`recdep`,
 a directory of plain files) holds them in four drawers: `inbox/` for
-the unseen, `todo/` for your turn, `waiting/` for their turn, and
+the unseen, `ack/` for your turn, `waiting/` for their turn, and
 `archive/` for the closed. This program is the screen itself: it renders
 the records and moves them between drawers on single keys. It never
 touches the network. Files are the only interface, and the file is the
@@ -85,16 +85,16 @@ telescreen -once    # print per-drawer counts and exit
 
 Keys:
 
-- `tab`/`shift+tab`, `1`-`5`: switch view (inbox, todo, waiting,
+- `tab`/`shift+tab`, `1`-`5`: switch view (inbox, ack, waiting,
   archive, memoryhole)
 - `j`/`k`, arrows, mouse wheel: navigate; click selects a row or a tab
 - `o`, `enter`: open the record's URL
 - `y`: copy the URL (wl-copy, fallback xclip)
-- `r`: mark read (inbox to todo)
-- `w`: their move now (todo to waiting)
-- `a`: file it (todo or waiting to archive)
+- `r`: acknowledge (inbox to ack, seen and mine)
+- `w`: their move now (ack to waiting)
+- `a`: file it (ack or waiting to archive)
 - `u`: unfile, one drawer back (the Party admits no mistakes; you may)
-- `s`: dictate into the speakwrite (inbox, todo, waiting): edit a
+- `s`: dictate into the speakwrite (inbox, ack, waiting): edit a
   pre-filled intent in `$VISUAL`/`$EDITOR`; saving submits it to
   `intents/`, emptying the file or aborting cancels
 - `p` `p`: publish a draft (GitHub records only): the first press names

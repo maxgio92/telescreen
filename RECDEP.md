@@ -21,7 +21,7 @@ State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
 - `since`: an ISO-8601 UTC instant, the moment the producer last polled
   through. Producer-owned. The consumer never reads or writes it.
 - `inbox/`: unread entries. Presence means unread.
-- `todo/`: read, still needs action.
+- `ack/`: read, still needs action.
 - `waiting/`: acted on, the other side's move is pending.
 - `archive/`: closed, nothing more expected.
 - `intents/`: speakwrite dictation intents, one file per intent named
@@ -84,7 +84,7 @@ minimal producer can emit only line 1 and still render.
 5. Entries are append-only once written, with one sanctioned addition: a
    revalidation pass may append a single marker line
    `stale <reason> <ISO-8601 time>` (kebab-case reason, e.g. `merged`,
-   `closed`, `already-reviewed`) to entries in `inbox/`, `todo/`, or
+   `closed`, `already-reviewed`) to entries in `inbox/`, `ack/`, or
    `waiting/`. The marker must start on its own line: prepend a newline
    when the file lacks a trailing one. Never mark an entry twice; never
    touch `archive/`. Never

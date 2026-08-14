@@ -51,7 +51,7 @@ reserved for a possible future direct-actor.
 
 | Key | Name | Works in | Effect |
 |---|---|---|---|
-| `s` | dictate | inbox, todo, waiting | Open the intent in `$EDITOR`; save submits, empty guidance means defaults, abort cancels. Row gains `[dictated]` |
+| `s` | dictate | inbox, ack, waiting | Open the intent in `$EDITOR`; save submits, empty guidance means defaults, abort cancels. Row gains `[dictated]` |
 | `s` | re-dictate | entry with a draft or pending intent | Reopen with the previous guidance; the new draft supersedes |
 | `p` `p` | publish | entry with `[draft]` | First press names the target in the status line, second press approves publication; the runner posts and moves the entry |
 | `D` | discard | entry with `[draft]` | Append a discarded marker; the draft stays in the record but stops rendering as actionable |

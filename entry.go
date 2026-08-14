@@ -10,7 +10,7 @@ import (
 )
 
 // states are the queue subdirectories, in view order.
-var states = []string{"inbox", "todo", "waiting", "archive"}
+var states = []string{"inbox", "ack", "waiting", "archive"}
 
 // intentsDir holds speakwrite dictation intents next to the states.
 const intentsDir = "intents"

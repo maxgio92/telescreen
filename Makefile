@@ -10,7 +10,7 @@ build:
 
 .PHONY: minitrue
 minitrue:
-	@mkdir -p $(UNITS) $(SKILLS) $(STATE)/inbox $(STATE)/todo $(STATE)/waiting $(STATE)/archive
+	@mkdir -p $(UNITS) $(SKILLS) $(STATE)/inbox $(STATE)/ack $(STATE)/waiting $(STATE)/archive
 	install -m 0755 minitrue/minitrue $(BIN)/minitrue
 	ln -sfn $(REPO)/minitrue $(SKILLS)/minitrue
 	ln -sf $(REPO)/minitrue/minitrue.service $(UNITS)/minitrue.service

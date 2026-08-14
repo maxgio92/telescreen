@@ -1,5 +1,5 @@
 // Command telescreen is a dashboard for the recdep file
-// queue: four states (inbox, todo, waiting, archive), one markdown file per entry.
+// queue: four states (inbox, ack, waiting, archive), one markdown file per entry.
 // It reads and renames files under the state dir, and removes one file per
 // incinerate keypress pair; the producer is a separate process.
 package main
@@ -190,16 +190,16 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case "r":
-		m.move("inbox", "todo")
+		m.move("inbox", "ack")
 	case "w":
-		m.move("todo", "waiting")
+		m.move("ack", "waiting")
 	case "a":
-		m.move("todo", "archive")
+		m.move("ack", "archive")
 		m.move("waiting", "archive")
 	case "u":
 		m.move("archive", "waiting")
-		m.move("waiting", "todo")
-		m.move("todo", "inbox")
+		m.move("waiting", "ack")
+		m.move("ack", "inbox")
 	case "s":
 		return m.dictate()
 	case "p":
@@ -430,7 +430,7 @@ func (m model) View() string {
 	return b.String()
 }
 
-const helpLine = "j/k/wheel move  click select  tab/shift+tab/1-5/click view  o open  y yank url  r read  w waiting  a archive  u undo  s dictate  p publish  D discard  x incinerate  q quit"
+const helpLine = "j/k/wheel move  click select  tab/shift+tab/1-5/click view  o open  y yank url  r ack  w waiting  a archive  u undo  s dictate  p publish  D discard  x incinerate  q quit"
 
 // onceCounts renders one "<state> <count>" line per real state directory;
 // the virtual memory hole never appears here.

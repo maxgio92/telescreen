@@ -133,7 +133,7 @@ type editorDoneMsg struct {
 	err  error
 }
 
-// dictate handles the s key: in inbox, todo, and waiting it writes a
+// dictate handles the s key: in inbox, ack, and waiting it writes a
 // pre-filled draft intent and suspends into the editor. Archive and the
 // memory hole hold closed or destroyed records; dictation is a no-op.
 func (m model) dictate() (tea.Model, tea.Cmd) {
