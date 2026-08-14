@@ -4,6 +4,6 @@ Description=thinkpol, the acting layer (execute publish approvals deterministica
 [Service]
 Type=oneshot
 TimeoutStartSec=300
-Environment=PATH=/home/linuxbrew/.linuxbrew/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 EnvironmentFile=-%h/.config/thinkpol.env
 ExecStart=%h/.local/bin/thinkpol

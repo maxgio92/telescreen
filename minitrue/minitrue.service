@@ -4,5 +4,5 @@ Description=minitrue, the personal-watch producer (poll Slack/GitHub/Linear, enq
 [Service]
 Type=oneshot
 TimeoutStartSec=900
-Environment=PATH=/home/linuxbrew/.linuxbrew/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=%h/.local/bin/minitrue

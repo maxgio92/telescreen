@@ -171,6 +171,38 @@ enrolls everything. Per-component targets:
   `~/.claude/skills/speakwrite`, `speakwrite.path` enabled so a saved
   dictation or a publish approval wakes the runner).
 
+## Configuration
+
+Structured tables live in `~/.config/recdep/config.yaml`. Today that is
+the dictation action map; a non-empty `actions` list replaces the
+built-in one:
+
+```yaml
+actions:
+  - source: github
+    name_contains: -review-requested-
+    action: review
+```
+
+Each rule matches on any of `source` (the record's source tag),
+`name_contains` (a filename substring), and `who_suffix` (an author
+suffix); `action` is required, and the first matching rule wins.
+
+Flat parameters live in per-component env files, next to the identity
+and secrets already there:
+
+- `~/.config/minitrue.env`: MINITRUE_AGENT, MINITRUE_PROMPT,
+  MINITRUE_ALLOWED_TOOLS, MINITRUE_TIMEOUT. A timeout above 900 also
+  needs TimeoutStartSec raised in the unit, or systemd kills the run
+  first.
+- `~/.config/speakwrite.env`: SPEAKWRITE_AGENT, SPEAKWRITE_PROMPT,
+  SPEAKWRITE_ALLOWED_TOOLS, SPEAKWRITE_TIMEOUT.
+- `~/.config/thinkpol.env`: SLACK_TOKEN, LINEAR_API_KEY.
+
+Swapping the LLM agent is `*_AGENT` (an absolute path when the binary
+sits outside the units' PATH) plus a prompt of your own; the defaults
+run claude with the bundled skills.
+
 ## Usage
 
 ```

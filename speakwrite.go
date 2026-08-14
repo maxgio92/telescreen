@@ -19,6 +19,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/maxgio92/telescreen/internal/config"
 	"github.com/maxgio92/telescreen/internal/publish"
 	"github.com/maxgio92/telescreen/internal/recdep"
 )
@@ -32,8 +33,8 @@ type actionRule struct {
 	action        string
 }
 
-// actionRules is the v1 source-action map, in match order. It stays a
-// data table so a config file can override it later. Review requests
+// actionRules is the source-action map, in match order. It stays a data
+// table so config.yaml can replace it (applyConfig). Review requests
 // match on the filename slug: minitrue tags every GitHub entry [github]
 // in the header, so the slug is the only discriminator.
 var actionRules = []actionRule{
@@ -43,6 +44,25 @@ var actionRules = []actionRule{
 	{source: "github", action: "pr-reply"},
 	{source: "slack", action: "slack-reply"},
 	{source: "linear", action: "linear-comment"},
+}
+
+// applyConfig replaces the built-in action map with the configured one.
+// An empty list keeps the built-ins: override is all or nothing, never
+// a merge.
+func applyConfig(c config.Config) {
+	if len(c.Actions) == 0 {
+		return
+	}
+	rules := make([]actionRule, len(c.Actions))
+	for i, a := range c.Actions {
+		rules[i] = actionRule{
+			nameSubstring: a.NameContains,
+			source:        a.Source,
+			whoSuffix:     a.WhoSuffix,
+			action:        a.Action,
+		}
+	}
+	actionRules = rules
 }
 
 // actionFor returns the speakwrite action for an entry, "respond" when

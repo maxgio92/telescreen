@@ -17,6 +17,7 @@ import (
 // loaded model whose active view is that state.
 func seedModel(t *testing.T, state, name string) (model, string) {
 	t.Helper()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	root := t.TempDir()
 	for _, s := range watchedDirs {
 		if err := os.MkdirAll(filepath.Join(root, s), 0o755); err != nil {
@@ -42,6 +43,30 @@ func inState(t *testing.T, root, name string) []string {
 		}
 	}
 	return got
+}
+
+// TestNewModelMalformedConfigFallsBack pins the startup wiring: a broken
+// config.yaml surfaces in the status line and the built-in action table
+// stands. XDG_CONFIG_HOME isolation works on Linux only; os.UserConfigDir
+// ignores it on darwin, where these tests would read the real config.
+func TestNewModelMalformedConfigFallsBack(t *testing.T) {
+	confdir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", confdir)
+	if err := os.MkdirAll(filepath.Join(confdir, "recdep"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(confdir, "recdep", "config.yaml"), []byte("actions: ["), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	builtin := actionRules
+	t.Cleanup(func() { actionRules = builtin })
+	m := newModel(t.TempDir(), nil)
+	if m.status == "" {
+		t.Error("malformed config left no trace in the status line")
+	}
+	if got := actionFor(recdep.Entry{Source: "slack", Who: "wes"}); got != "slack-reply" {
+		t.Errorf("actionFor(slack) = %q, want the built-in slack-reply", got)
+	}
 }
 
 func TestRowAtY(t *testing.T) {
