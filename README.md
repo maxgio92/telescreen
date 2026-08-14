@@ -20,15 +20,29 @@ watched, filed, and displayed.
 
 ## Try it
 
+The dashboard alone, no agents, no timers, nothing enrolled:
+
 ```
 OS=$(uname -s | tr '[:upper:]' '[:lower:]'); ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 gh release download --repo maxgio92/telescreen --pattern "telescreen_*_${OS}_${ARCH}.tar.gz"
-tar xzf telescreen_*_${OS}_${ARCH}.tar.gz telescreen && ./telescreen
+tar xzf telescreen_*_${OS}_${ARCH}.tar.gz telescreen
+
+mkdir -p ~/.local/state/recdep/tube
+cat > ~/.local/state/recdep/tube/$(date -u +%Y%m%dT%H%M%SZ)-github-demo-42.md <<'RECORD'
+[github] julia: review requested on demo#42: feat(ministry): ration the chocolate
+https://github.com/example/demo/pull/42
+seen 2026-08-14T09:05:00Z
+
+the ration goes from 30 grammes to 20. the announcement says it went up.
+RECORD
+
+./telescreen
 ```
 
-No build, no agents, no timers: the screen renders whatever sits in
-`~/.local/state/recdep/`. Drop a few records there by hand (format
-below) or enroll the producer when you want the real feed.
+That is the screen with one record in the tube: move it with `t`, `u`,
+`f`, read it in the detail pane, feed it to the memory hole. The real
+feed and the drafting need the agents enrolled (the Install section
+below); they run on systemd user units and require the claude CLI.
 
 ## How it works
 
@@ -173,35 +187,12 @@ enrolls everything. Per-component targets:
 
 ## Configuration
 
-Structured tables live in `~/.config/recdep/config.yaml`. Today that is
-the dictation action map; a non-empty `actions` list replaces the
-built-in one:
-
-```yaml
-actions:
-  - source: github
-    name_contains: -review-requested-
-    action: review
-```
-
-Each rule matches on any of `source` (the record's source tag),
-`name_contains` (a filename substring), and `who_suffix` (an author
-suffix); `action` is required, and the first matching rule wins.
-
-Flat parameters live in per-component env files, next to the identity
-and secrets already there:
-
-- `~/.config/minitrue.env`: MINITRUE_AGENT, MINITRUE_PROMPT,
-  MINITRUE_ALLOWED_TOOLS, MINITRUE_TIMEOUT. A timeout above 900 also
-  needs TimeoutStartSec raised in the unit, or systemd kills the run
-  first.
-- `~/.config/speakwrite.env`: SPEAKWRITE_AGENT, SPEAKWRITE_PROMPT,
-  SPEAKWRITE_ALLOWED_TOOLS, SPEAKWRITE_TIMEOUT.
-- `~/.config/thinkpol.env`: SLACK_TOKEN, LINEAR_API_KEY.
-
-Swapping the LLM agent is `*_AGENT` (an absolute path when the binary
-sits outside the units' PATH) plus a prompt of your own; the defaults
-run claude with the bundled skills.
+Everything a user can tune, and how, lives in [CONFIG.md](CONFIG.md):
+the dictation action map (`~/.config/recdep/config.yaml`), the
+per-component env files (identity, secrets, agent binary, tool
+allowlists, timeouts), and the systemd knobs. The short version: env
+files carry parameters and secrets, YAML carries tables, and choosing
+an implementation is enrollment, not configuration.
 
 ## Usage
 

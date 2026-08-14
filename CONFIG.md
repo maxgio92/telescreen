@@ -1,0 +1,106 @@
+# Configuration
+
+Three mechanisms, split by what is being decided:
+
+| Mechanism | Decides | Examples |
+|---|---|---|
+| env files (`~/.config/*.env`) | parameters and secrets of a chosen implementation | identity handles, tokens, agent binary, tool allowlists, timeouts |
+| YAML (`~/.config/recdep/config.yaml`) | structured, human-edited tables | the dictation action map |
+| systemd enrollment | which implementation runs each role | `make minitrue`, or your own producer's unit |
+
+Choosing an implementation is never a config key: you enroll a unit.
+Everything below configures the implementations this repo ships.
+
+## config.yaml: the action map
+
+`~/.config/recdep/config.yaml` overrides the dictation action map, the
+table that picks the speakwrite action when you press `s` on a record.
+A non-empty `actions` list replaces the built-in table entirely; rules
+match top-down, first match wins, and every field except `action` is
+optional (an omitted field matches anything).
+
+```yaml
+actions:
+  - source: github            # exact match on the record's source tag
+    name_contains: -review-requested-   # substring of the filename
+    action: review
+  - source: slack
+    action: slack-reply
+  - who_suffix: "[bot]"       # suffix of the author
+    action: vet-findings
+```
+
+The built-in table (applied when the file is absent or the list empty):
+
+| source | name contains | who suffix | action |
+|---|---|---|---|
+| github-review-requested | | | review |
+| github | -review-requested- | | review |
+| github | | [bot] | vet-findings |
+| github | | | pr-reply |
+| slack | | | slack-reply |
+| linear | | | linear-comment |
+| (anything else) | | | respond |
+
+Action names are free-form verbs: the drafting agent interprets them,
+so a custom action like `summarize` works as soon as your speakwrite
+prompt knows what to do with it. The YAML is parsed strictly: an
+unknown key is a startup error shown once in the status line, and the
+built-ins stand.
+
+## minitrue.env: the producer
+
+`~/.config/minitrue.env`, plain `KEY=value` lines.
+
+| Key | Meaning | Default |
+|---|---|---|
+| SLACK_USER_ID | your Slack user id, the person being watched | required |
+| GH_LOGIN | your GitHub login; `gh` must resolve `@me` to it | required |
+| LINEAR_ASSIGNEE | the Linear assignee to watch | `me` |
+| REPO | the GitHub repo to scope PR watches to | required |
+| BOT_LOGINS | bot logins to skip, besides `[bot]` suffixes | empty |
+| MINITRUE_AGENT | the agent binary the wrapper runs | `claude` |
+| MINITRUE_PROMPT | the headless prompt | `/minitrue produce` |
+| MINITRUE_ALLOWED_TOOLS | the agent's tool allowlist | the wrapper's default |
+| MINITRUE_TIMEOUT | seconds before the wrapper kills the run | `600` |
+
+Swapping the LLM agent is `MINITRUE_AGENT` (an absolute path when it
+is not on the unit's PATH) plus a prompt of your own; the allowlist
+carries your environment's MCP tool identifiers. A timeout above 900
+also needs `TimeoutStartSec` raised in the unit, or systemd kills the
+run first.
+
+## speakwrite.env: the drafting clerk
+
+`~/.config/speakwrite.env`, same pattern:
+
+| Key | Meaning | Default |
+|---|---|---|
+| SPEAKWRITE_AGENT | the agent binary | `claude` |
+| SPEAKWRITE_PROMPT | the headless prompt | `/speakwrite draft` |
+| SPEAKWRITE_ALLOWED_TOOLS | the agent's tool allowlist | the wrapper's default |
+| SPEAKWRITE_TIMEOUT | seconds before the wrapper kills the run | `600` |
+
+## thinkpol.env: the actor's credentials
+
+`~/.config/thinkpol.env`, loaded by the service unit; it holds
+secrets, so `chmod 600` it.
+
+| Key | Meaning | Needed for |
+|---|---|---|
+| SLACK_TOKEN | a user token with `chat:write`; posts as you | the slack-thread publisher |
+| LINEAR_API_KEY | a Linear API key | the linear-issue publisher |
+
+The github-pr publisher uses your authenticated `gh` and needs no
+entry here. A missing token fails the post gracefully: the draft
+survives, the approval is consumed, `publish.log` names the reason.
+
+## Everything else
+
+- The state root honors `XDG_STATE_HOME` (default
+  `~/.local/state/recdep`).
+- Dictation opens `$VISUAL`, else `$EDITOR`, else `vi`; values may
+  carry flags (`code -w`).
+- Producer cadence (10 minutes) and the path units' trigger bounds are
+  systemd settings: override with `systemctl --user edit
+  minitrue.timer` rather than a config file.
