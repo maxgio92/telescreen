@@ -3,10 +3,16 @@
 Status: implemented (`cmd/thinkpol`, behind the `thinkpol/` path unit).
 
 In the book the Thought Police do not deliberate; they enforce decisions
-already taken. That is exactly this component: a small deterministic
-binary that executes recorded approvals. It never composes a word and
-never judges a draft; the human decided (the `.publish` approval), the
-speakwrite drafted, thinkpol acts.
+already taken. thinkpol is the acting role, defined by the `.publish`
+contract rather than by any particular executable. This repo ships a
+deterministic reference actor (ordinary Go: it never composes a word,
+posts the draft verbatim); an agentic actor is equally welcome: your
+own agent, your persona and tone, its MCP credentials, acting on the
+approved plan. The enrolled actor declares its semantics: verbatim
+(the draft is the post) or interpretive (the agent may adapt the text,
+and must then record what it actually posted in the published marker's
+section body, per RECDEP.md). Exactly one actor is enrolled at a time;
+two consumers of the same approvals would race into double-posting.
 
 ## Why a separate binary
 
