@@ -1,34 +1,33 @@
 # telescreen
 
-A terminal dashboard for a personal notification queue: Slack thread replies,
-GitHub PR activity (reviews, mentions, review requests), and Linear ticket
-updates, collected by a headless producer and triaged in a bubbletea TUI.
+A screen for monitoring your daily job. Yes, Smith, I am looking at you.
 
-In 1984 the telescreen watches you; this one flips the direction. A screen
-in your terminal through which you watch everything said about and asked of
-you.
+The telescreen in the book received and transmitted simultaneously, and
+there was no way of shutting it off. This one differs on a single point
+of doctrine: it works for you. Slack thread replies, GitHub reviews,
+mentions and review requests, Linear tickets; everything said about you
+and asked of you, watched, filed, and displayed. There is always an eye
+on your work. Now it is yours.
 
-## How it works
+## The apparatus
 
-A producer polls Slack, GitHub, and Linear and writes one markdown file per
-hit into a filesystem queue. This program is the consumer: it renders the
-queue and moves entries between states with single keys. Files are the only
-interface; the TUI makes no network calls.
+The Ministry of Truth (`minitrue/`, a headless agent on a systemd user
+timer) manufactures the records: it polls Slack, GitHub, and Linear and
+files one markdown record per event. The Records Department (`recdep`,
+a directory of plain files) holds them in four drawers: `inbox/` for
+the unseen, `todo/` for your turn, `waiting/` for their turn, and
+`archive/` for the closed. This program is the screen itself: it renders
+the records and moves them between drawers on single keys. It never
+touches the network. Files are the only interface, and the file is the
+only truth.
 
-The queue format is a producer-agnostic contract, specified in
-[RECDEP.md](RECDEP.md). The reference producer, minitrue, is a headless
-Claude Code skill run by a systemd user timer, but any program that writes
-conforming files works: an agent with whatever model you like, a
-deterministic poller, a webhook receiver.
+The drawer layout is a contract, [RECDEP.md](RECDEP.md), and any
+producer that writes conforming records is a loyal citizen: an agent
+with whatever model you like, a deterministic poller, a webhook
+receiver. The Party is not particular about who writes history, only
+about the format.
 
-State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
-
-- `inbox/`: unread hits
-- `todo/`: read, still needs action
-- `waiting/`: acted on, the other side's move is pending
-- `archive/`: closed, nothing more expected
-
-Entry format (`<UTC>-<source>-<slug>.md`, sorts by time):
+Record format (`<UTC>-<source>-<slug>.md`, chronology by filename):
 
 ```
 [<source>] <who>: <one-line summary>
@@ -38,44 +37,62 @@ seen <produce-run-time>
 <preview>
 ```
 
-## Install
+Records rot. When a PR merges behind your back or you already filed the
+review, the Ministry's revalidation pass stamps the record
+(`stale <reason> <time>`); the screen dims it and sinks it below the
+fresh ones. The producer stamps, you archive. Nobody rewrites history
+here, which admittedly is where we diverge from the source material.
+
+And at the end of the row of drawers there is a slit in the wall. The
+fifth view is the memory hole: permanently empty, as intended. Press `x`
+on an archived record and the screen will challenge you by name; press
+it again and the record rides the warm draft to the incinerators.
+Nothing returns. The past was erased, the erasure was forgotten.
+
+A drafting layer, the speakwrite, is designed but not yet built:
+dictate your stance on a record and a clerk drafts the response into it
+for your explicit approval. Doctrine in [SPEAKWRITE.md](SPEAKWRITE.md).
+
+## Requisition
 
 ```
 make install
 ```
 
-`make build` compiles the dashboard to `~/.local/bin/telescreen`.
-`make minitrue` installs the reference producer from [minitrue/](minitrue/):
-the wrapper script to `~/.local/bin/minitrue`, the skill directory symlinked
-into `~/.claude/skills/minitrue`, and the systemd user units linked and
-enabled (`minitrue.timer`, every 10 minutes). It also creates the four state
-directories (`inbox/`, `todo/`, `waiting/`, `archive/`) under the state root.
-Identity lives in
-`~/.config/minitrue.env` (SLACK_USER_ID, GH_LOGIN, LINEAR_ASSIGNEE, REPO).
+`make build` compiles the screen to `~/.local/bin/telescreen`.
+`make minitrue` enrolls the Ministry: the wrapper to
+`~/.local/bin/minitrue`, the skill symlinked into
+`~/.claude/skills/minitrue`, the systemd user units linked and enabled
+(`minitrue.timer`, every 10 minutes). Your identity papers live in
+`~/.config/minitrue.env` (SLACK_USER_ID, GH_LOGIN, LINEAR_ASSIGNEE,
+REPO).
 
-## Usage
+## Operation
 
 ```
-telescreen          # dashboard
-telescreen -once    # print per-state counts and exit
+telescreen          # the screen
+telescreen -once    # print per-drawer counts and exit
 ```
 
 Keys:
 
-- `tab`/`shift+tab`, `1`-`5`: switch view (inbox, todo, waiting, archive,
-  memoryhole). The fifth view is virtual: no directory, always empty, only
-  an epitaph.
-- `j`/`k`, arrows: navigate
-- mouse: wheel scrolls the list, click selects a row, click a tab switches view
-- `o`, `enter`: open the entry's URL
-- `r`: mark read (inbox to todo)
-- `w`: mark waiting (todo to waiting)
-- `a`: archive (todo or waiting to archive)
-- `u`: undo, one state back (archive to waiting, waiting to todo, todo to inbox)
-- `x`: incinerate (archive only): the first press arms the selected entry, a
-  second consecutive `x` deletes its file permanently; any other key disarms
+- `tab`/`shift+tab`, `1`-`5`: switch view (inbox, todo, waiting,
+  archive, memoryhole)
+- `j`/`k`, arrows, mouse wheel: navigate; click selects a row or a tab
+- `o`, `enter`: open the record's URL
 - `y`: copy the URL (wl-copy, fallback xclip)
-- `q`: quit
+- `r`: mark read (inbox to todo)
+- `w`: their move now (todo to waiting)
+- `a`: file it (todo or waiting to archive)
+- `u`: unfile, one drawer back (the Party admits no mistakes; you may)
+- `x` `x`: the memory hole (archive only, and the screen will bark
+  first)
+- `q`: switch off the telescreen, a luxury Smith never had
 
-The TUI watches the state directories with fsnotify, so new producer entries
-appear live.
+New records appear on the screen the moment the Ministry files them
+(fsnotify). The detail pane shows the record in full: content, preview,
+the file's absolute path (one `cat` away, or one agent handle), the
+link, and when it was seen.
+
+Under no circumstances does this screen watch you back. That would be
+doubleplusungood.
