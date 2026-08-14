@@ -53,8 +53,28 @@ Two axes, both resolved at the edges rather than in the core:
   poller, or a webhook receiver; the drafting layer can be any agent
   runtime that reads intents and appends sections; the actor can be
   this Go binary, a shell script, or anything that honors the approval
-  semantics. The contract files (RECDEP.md, SPEAKWRITE.md, this one)
-  are the only coupling.
+  semantics. The actor needs no model at all; the model is optional
+  everywhere except drafting. The contract files (RECDEP.md,
+  SPEAKWRITE.md, this one) are the only coupling.
+
+### Known impurities
+
+Two places fall short of the principle today, named here so they read
+as debt rather than design:
+
+1. The publishable-target check exists twice. The view gates the p key
+   (so a human never approves what the actor will refuse) and the actor
+   dispatches on the same URL shapes; adding a publisher means editing
+   both, and forgetting one leaves the view lying about capability.
+   Remedy, when the second publisher lands: a declared publishers table
+   both sides read, or the view drops its gate and the actor's refusal
+   log becomes the answer.
+2. The two agent wrappers hardcode this machine's MCP tool identifiers
+   in their allowlists. The identifiers are an environment detail, not
+   a contract term; they belong in the identity config next to the
+   Slack and GitHub handles, with the wrapper defaults as fallback.
+   Until then the wrappers are a reference implementation for exactly
+   one setup.
 
 ## Procedure
 
