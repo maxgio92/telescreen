@@ -53,6 +53,9 @@ type model struct {
 	// armed holds the entry name the last x keypress selected for
 	// incineration; any other key or mouse press clears it.
 	armed string
+	// pubArmed holds the entry name the last p keypress selected for
+	// publication; any other key or mouse press clears it.
+	pubArmed string
 	// pending holds the entry names with an intent file waiting in
 	// recdep/intents/; their rows show [dictated] before the runner
 	// writes the marker.
@@ -151,7 +154,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	armed := m.armed
+	pubArmed := m.pubArmed
 	m.armed = ""
+	m.pubArmed = ""
 	m.status = ""
 	switch msg.String() {
 	case "q", "ctrl+c":
@@ -197,6 +202,10 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.move("todo", "inbox")
 	case "s":
 		return m.dictate()
+	case "p":
+		m.publish(pubArmed)
+	case "D":
+		m.discard()
 	case "x":
 		m.incinerate(armed)
 	}
@@ -230,6 +239,7 @@ func (m *model) incinerate(armed string) {
 func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	m.status = ""
 	m.armed = ""
+	m.pubArmed = ""
 	switch {
 	case msg.Button == tea.MouseButtonWheelUp:
 		if m.view < len(states) && m.cursor[m.view] > 0 {
@@ -420,7 +430,7 @@ func (m model) View() string {
 	return b.String()
 }
 
-const helpLine = "j/k/wheel move  click select  tab/shift+tab/1-5/click view  o open  y yank url  r read  w waiting  a archive  u undo  s dictate  x incinerate  q quit"
+const helpLine = "j/k/wheel move  click select  tab/shift+tab/1-5/click view  o open  y yank url  r read  w waiting  a archive  u undo  s dictate  p publish  D discard  x incinerate  q quit"
 
 // onceCounts renders one "<state> <count>" line per real state directory;
 // the virtual memory hole never appears here.

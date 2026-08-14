@@ -1,7 +1,9 @@
-// The s dictation key: the consumer writes a pre-filled intent file,
-// suspends into the editor, and submits it by renaming the temporary
-// file into recdep/intents/. A separate runner consumes intents;
-// nothing here calls the network.
+// The speakwrite keys. s dictates: the consumer writes a pre-filled
+// intent file, suspends into the editor, and submits it by renaming the
+// temporary file into recdep/intents/. p p approves publication by
+// writing a .publish file next to the intents. D discards a draft by
+// appending the discarded marker. A separate runner consumes the intent
+// and approval files; nothing here calls the network.
 
 package main
 
@@ -9,10 +11,12 @@ import (
 	"bytes"
 	"errors"
 	"io/fs"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -160,6 +164,104 @@ func (m model) dictate() (tea.Model, tea.Cmd) {
 	return m, tea.ExecProcess(exec.Command(args[0], args[1:]...), func(err error) tea.Msg {
 		return editorDoneMsg{name: name, err: err}
 	})
+}
+
+// isGitHubPRURL reports whether raw points at a github.com pull request,
+// the only publish target v1 supports (the runner posts with gh pr
+// comment, so issues and commits would approve and then die there).
+func isGitHubPRURL(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || u.Hostname() != "github.com" {
+		return false
+	}
+	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	return len(parts) >= 4 && parts[2] == "pull"
+}
+
+// publish handles the p key: on a drafted entry the first p arms it and
+// a second consecutive p writes the publish approval into recdep/intents/.
+// The runner posts; the TUI stays offline. Publishing is double-keyed
+// like incinerate because it is outward-facing the way incineration is
+// destructive.
+func (m *model) publish(armed string) {
+	if m.view >= len(states) {
+		return
+	}
+	e, ok := m.selected()
+	if !ok || e.mark != "draft" {
+		return
+	}
+	if !isGitHubPRURL(e.url) {
+		m.status = "publishing covers GitHub PRs only for now; y copies the draft target"
+		return
+	}
+	if armed != e.name {
+		m.pubArmed = e.name
+		m.status = "publish to " + e.url + ": press p again to approve"
+		return
+	}
+	entryPath := filepath.Join(m.root, states[m.view], e.name)
+	approval := filepath.Join(m.root, intentsDir, e.name+".publish")
+	// tmp plus rename, like the dictation submit: the runner globs the
+	// final name and must never see a half-written approval.
+	if err := os.WriteFile(approval+".tmp", []byte("entry "+entryPath+"\n"), 0o644); err != nil {
+		m.status = err.Error()
+		return
+	}
+	if err := os.Rename(approval+".tmp", approval); err != nil {
+		m.status = err.Error()
+		return
+	}
+	m.status = "publish approved: " + e.name
+}
+
+// discard handles the D key: on a drafted entry it appends the
+// discarded marker, the one consumer content-write RECDEP.md sanctions.
+// The draft stays in the record but stops rendering as actionable.
+func (m *model) discard() {
+	if m.view >= len(states) {
+		return
+	}
+	e, ok := m.selected()
+	if !ok || e.mark != "draft" {
+		return
+	}
+	entryPath := filepath.Join(m.root, states[m.view], e.name)
+	marker := "--- discarded " + time.Now().UTC().Format(time.RFC3339) + "\n"
+	if err := appendMarker(entryPath, marker); err != nil {
+		m.status = err.Error()
+		return
+	}
+	// Revoke a pending publish approval: the runner would otherwise
+	// still post the withdrawn draft.
+	if err := os.Remove(filepath.Join(m.root, intentsDir, e.name+".publish")); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		m.status = err.Error()
+		return
+	}
+	m.reload()
+	m.status = "draft discarded"
+}
+
+// appendMarker appends a marker line to an entry file with the contract's
+// newline discipline: the marker must start its own line, so prepend a
+// newline when the file lacks a trailing one.
+func appendMarker(path, marker string) error {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	if len(body) > 0 && !bytes.HasSuffix(body, []byte("\n")) {
+		marker = "\n" + marker
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	if _, err := f.WriteString(marker); err != nil {
+		_ = f.Close()
+		return err
+	}
+	return f.Close()
 }
 
 // finishDictation submits or cancels after the editor exits: a nonzero

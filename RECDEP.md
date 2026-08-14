@@ -29,7 +29,13 @@ State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
   (the TUI); the drafting runner consumes each intent and removes the
   file. Format: an `entry <absolute entry path>` line, an
   `action <mapped action>` line, then a `guidance:` section with free
-  text, possibly empty.
+  text, possibly empty. The directory also holds publish approvals
+  (`<entry-name>.publish`): a single `entry <absolute entry path>` line,
+  written only by the consumer after an explicit double-key approval on
+  a drafted entry. The runner consumes each approval, posts the draft,
+  and removes the file; the approval is the recorded consent for the one
+  outward write. The consumer may also remove a pending approval when
+  the human discards the draft: the revocation of that consent.
 
 The producer writes only into `inbox/` and creates missing directories at
 startup. The consumer moves files between the four directories with plain
@@ -110,6 +116,16 @@ content besides renames. These four kinds are the only recognized
 markers: a `--- ` line with any other kind is section text (a quoted
 diff, for example), not a marker. Markers accumulate append-only; the
 last marker wins for presentation.
+
+The published marker records the runner's publish write, the one
+outward-facing action in the whole system: on a `.publish` approval the
+runner posts the last draft upstream (GitHub only for now), appends the
+published marker with the resulting URL, moves the entry file to
+`waiting/` unless it already sits in `waiting/` or `archive/`, and
+removes the approval. That single rename is the runner's only move
+between state directories; every other move belongs to the consumer. On
+a failed post the runner leaves the entry untouched and removes the
+approval, so the draft stays approvable and nothing retries silently.
 
 ## Consumer obligations
 

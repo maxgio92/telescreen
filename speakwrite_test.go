@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestActionFor(t *testing.T) {
@@ -240,6 +242,252 @@ func TestFinishDictationCancels(t *testing.T) {
 				t.Errorf("cancel left %d files in intents/", len(names))
 			}
 		})
+	}
+}
+
+// seedDraftModel creates a state root with one drafted entry in todo and
+// returns a loaded model on that view. url is the entry's link line.
+func seedDraftModel(t *testing.T, name, url string) (model, string) {
+	t.Helper()
+	root := t.TempDir()
+	for _, s := range watchedDirs {
+		if err := os.MkdirAll(filepath.Join(root, s), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	body := strings.Join([]string{
+		"[github] alice: please review",
+		url,
+		"seen now",
+		"",
+		"--- dictated 2026-08-14T09:00:00Z",
+		"agree with the finding",
+		"",
+		"--- draft 2026-08-14T09:05:00Z",
+		"the draft text",
+		"",
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(root, "todo", name), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m := newModel(root, nil)
+	m.view = 1
+	m.width, m.height = 80, 24
+	return m, root
+}
+
+func TestPublishArmsThenApproves(t *testing.T) {
+	name := "20260814T090000Z-github-review-demo-1.md"
+	m, root := seedDraftModel(t, name, "https://github.com/o/r/pull/1")
+	approval := filepath.Join(root, "intents", name+".publish")
+
+	m = press(t, m, key("p"))
+	if want := "publish to https://github.com/o/r/pull/1: press p again to approve"; m.status != want {
+		t.Errorf("status after first p = %q, want %q", m.status, want)
+	}
+	if _, err := os.Stat(approval); !os.IsNotExist(err) {
+		t.Fatalf("first p already wrote the approval: %v", err)
+	}
+
+	m = press(t, m, key("p"))
+	if want := "publish approved: " + name; m.status != want {
+		t.Errorf("status after second p = %q, want %q", m.status, want)
+	}
+	got, err := os.ReadFile(approval)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "entry " + filepath.Join(root, "todo", name) + "\n"
+	if string(got) != want {
+		t.Errorf("approval = %q, want %q", got, want)
+	}
+}
+
+func TestPublishGitHubIssueOnlyHints(t *testing.T) {
+	name := "20260814T090000Z-github-issue.md"
+	m, _ := seedDraftModel(t, name, "https://github.com/o/r/issues/7")
+	m = press(t, m, key("p"))
+	if m.pubArmed != "" {
+		t.Errorf("p armed a github issue draft: %q", m.pubArmed)
+	}
+	if !strings.Contains(m.status, "GitHub PRs only") {
+		t.Errorf("status = %q, want the PR-only hint", m.status)
+	}
+}
+
+func TestPublishMousePressDisarms(t *testing.T) {
+	name := "20260814T090000Z-github-pr.md"
+	m, root := seedDraftModel(t, name, "https://github.com/o/r/pull/1")
+	m = press(t, m, key("p"))
+	if m.pubArmed != name {
+		t.Fatalf("p did not arm: %q", m.pubArmed)
+	}
+	m = press(t, m, tea.MouseMsg{Action: tea.MouseActionPress, Button: tea.MouseButtonLeft, Y: 1, X: 0})
+	m = press(t, m, key("p"))
+	if got := m.pubArmed; got != name {
+		t.Errorf("p after a mouse press should re-arm, got armed %q", got)
+	}
+	names, err := os.ReadDir(filepath.Join(root, "intents"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(names) != 0 {
+		t.Errorf("mouse-interrupted p p published anyway: %d files", len(names))
+	}
+}
+
+func TestAppendMarkerWithoutTrailingNewline(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "e.md")
+	if err := os.WriteFile(path, []byte("[x] y: z\nhttp://u\nseen t\n\npreview without newline"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := appendMarker(path, "--- discarded 2026-08-14T12:00:00Z\n"); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), "newline\n--- discarded") {
+		t.Errorf("marker does not start its own line:\n%s", b)
+	}
+	if parseEntry("e.md", string(b)).mark != "discarded" {
+		t.Errorf("parser missed the appended marker:\n%s", b)
+	}
+}
+
+func TestPublishNonGitHubDraftOnlyHints(t *testing.T) {
+	name := "20260814T090000Z-slack-wes-thread.md"
+	m, root := seedDraftModel(t, name, "https://example.com/thread/1")
+
+	for i := 0; i < 2; i++ {
+		m = press(t, m, key("p"))
+		if want := "publishing covers GitHub PRs only for now; y copies the draft target"; m.status != want {
+			t.Errorf("status after p %d = %q, want %q", i+1, m.status, want)
+		}
+		if m.pubArmed != "" {
+			t.Errorf("p %d armed a non-GitHub draft: %q", i+1, m.pubArmed)
+		}
+	}
+	names, err := os.ReadDir(filepath.Join(root, "intents"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(names) != 0 {
+		t.Errorf("p on a non-GitHub draft wrote %d files in intents/", len(names))
+	}
+}
+
+func TestPublishFreshEntryDoesNothing(t *testing.T) {
+	name := "20260811T142302Z-slack-wes-go-for-it.md"
+	m, root := seedModel(t, "inbox", name)
+	m = press(t, m, key("p"))
+	m = press(t, m, key("p"))
+	if m.status != "" || m.pubArmed != "" {
+		t.Errorf("p on a fresh entry set status %q, pubArmed %q", m.status, m.pubArmed)
+	}
+	names, err := os.ReadDir(filepath.Join(root, "intents"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(names) != 0 {
+		t.Errorf("p on a fresh entry wrote %d files in intents/", len(names))
+	}
+}
+
+func TestPublishDisarmsOnOtherKey(t *testing.T) {
+	name := "20260814T090000Z-github-review-demo-1.md"
+	m, root := seedDraftModel(t, name, "https://github.com/o/r/pull/1")
+	approval := filepath.Join(root, "intents", name+".publish")
+
+	m = press(t, m, key("p"))
+	m = press(t, m, key("k"))
+	if m.pubArmed != "" {
+		t.Fatalf("k left the entry armed: %q", m.pubArmed)
+	}
+	m = press(t, m, key("p"))
+	if _, err := os.Stat(approval); !os.IsNotExist(err) {
+		t.Fatalf("p after disarm approved instead of re-arming: %v", err)
+	}
+	m = press(t, m, key("p"))
+	if _, err := os.Stat(approval); err != nil {
+		t.Errorf("second clean arm did not approve: %v", err)
+	}
+	if want := "publish approved: " + name; m.status != want {
+		t.Errorf("status = %q, want %q", m.status, want)
+	}
+}
+
+func TestDiscardAppendsMarkerOnce(t *testing.T) {
+	name := "20260814T090000Z-github-review-demo-1.md"
+	m, _ := seedDraftModel(t, name, "https://github.com/o/r/pull/1")
+	if !strings.Contains(m.View(), "[draft]") {
+		t.Fatal("seeded row lacks [draft]")
+	}
+
+	m = press(t, m, key("D"))
+	if m.status != "draft discarded" {
+		t.Errorf("status = %q, want %q", m.status, "draft discarded")
+	}
+	if strings.Contains(m.View(), "[draft]") {
+		t.Errorf("discarded row still carries [draft]:\n%s", m.View())
+	}
+
+	// A second D is a no-op: the last marker is discarded, not draft.
+	m = press(t, m, key("D"))
+	e, ok := m.selected()
+	if !ok {
+		t.Fatal("entry disappeared")
+	}
+	if got := strings.Count(e.body, "--- discarded "); got != 1 {
+		t.Errorf("discarded markers = %d, want 1\nbody:\n%s", got, e.body)
+	}
+	if e.mark != "discarded" {
+		t.Errorf("mark = %q, want discarded", e.mark)
+	}
+}
+
+func TestDiscardRevokesPendingPublishApproval(t *testing.T) {
+	name := "20260814T090000Z-github-review-demo-1.md"
+	m, root := seedDraftModel(t, name, "https://github.com/o/r/pull/1")
+
+	m = press(t, m, key("p"))
+	m = press(t, m, key("p"))
+	if _, err := os.Stat(filepath.Join(root, "intents", name+".publish")); err != nil {
+		t.Fatalf("p p did not approve: %v", err)
+	}
+
+	m = press(t, m, key("D"))
+	if m.status != "draft discarded" {
+		t.Errorf("status = %q, want %q", m.status, "draft discarded")
+	}
+	names, err := os.ReadDir(filepath.Join(root, "intents"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(names) != 0 {
+		t.Errorf("D left %d files in intents/, want 0", len(names))
+	}
+}
+
+func TestDiscardFreshEntryDoesNothing(t *testing.T) {
+	name := "20260811T142302Z-slack-wes-go-for-it.md"
+	m, root := seedModel(t, "inbox", name)
+	before, err := os.ReadFile(filepath.Join(root, "inbox", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	m = press(t, m, key("D"))
+	if m.status != "" {
+		t.Errorf("D on a fresh entry set status %q", m.status)
+	}
+	after, err := os.ReadFile(filepath.Join(root, "inbox", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(before) != string(after) {
+		t.Errorf("D on a fresh entry changed the file:\n%s", after)
 	}
 }
 

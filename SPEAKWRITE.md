@@ -1,9 +1,9 @@
 # speakwrite: the drafting layer
 
-Status: dictation (`s` in the TUI) and the drafting runner
+Status: fully implemented. Dictation (`s`), publish (`p` `p`), and
+discard (`D`) in the TUI; the drafting and publishing runner
 (`speakwrite/`, a headless agent behind a systemd path unit on
-`recdep/intents/`) are built. The publish (`p` `p`) and discard (`D`)
-keys remain design.
+`recdep/intents/`) drains both the intents and the approvals.
 
 In the book, records clerks dictate corrections into the speakwrite and the
 machine produces the text that goes back into the record. Here: the human
@@ -42,7 +42,8 @@ reserved for a possible future direct-actor.
 4. Publish. `p` shows the target in the status line; a second `p` writes
    a publish approval into the intent directory. The runner posts it
    (GitHub first, via `gh`), appends a published line with the URL, and
-   moves the entry to waiting or archive as the action dictates. The
+   moves the entry to waiting (unless it already sits in waiting or
+   archive). The
    double keypress is the recorded consent; the TUI itself still never
    calls the network.
 
@@ -112,8 +113,9 @@ it later.
   itself, which requires a recorded double-key approval.
 - Every step leaves a marker in the entry file: the record in recdep is
   the audit trail.
-- Publishing failures append an error line and leave the entry where it
-  is; nothing retries silently.
+- Publishing failures leave the entry untouched (the draft tag survives
+  so the human can re-approve) and remove the approval; nothing retries
+  silently. The failure is logged.
 
 ## Out of scope for v1
 

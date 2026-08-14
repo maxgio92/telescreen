@@ -52,8 +52,10 @@ Nothing returns. The past was erased, the erasure was forgotten.
 A drafting layer, the speakwrite (`speakwrite/`, a headless clerk
 behind a systemd path unit on `recdep/intents/`): press `s` on a record
 to dictate your stance, and the clerk researches the matter and drafts
-the response into the record for your explicit approval. Publishing the
-draft is a separate, double-keyed step and still on the drawing board.
+the response into the record for your explicit approval. Press `p`
+twice on the draft and the clerk posts it upstream (GitHub for now),
+stamps the record with the comment URL, and files it under waiting;
+press `D` to discard the draft into the record's history instead.
 Doctrine in [SPEAKWRITE.md](SPEAKWRITE.md).
 
 ## Requisition
@@ -71,7 +73,8 @@ make install
 REPO). `make speakwrite` enrolls the drafting clerk the same way: the
 wrapper to `~/.local/bin/speakwrite`, the skill symlinked into
 `~/.claude/skills/speakwrite`, and `speakwrite.path` watching
-`recdep/intents/` so a saved dictation wakes the runner.
+`recdep/intents/` so a saved dictation or a publish approval wakes the
+runner.
 
 ## Operation
 
@@ -94,6 +97,11 @@ Keys:
 - `s`: dictate into the speakwrite (inbox, todo, waiting): edit a
   pre-filled intent in `$VISUAL`/`$EDITOR`; saving submits it to
   `intents/`, emptying the file or aborting cancels
+- `p` `p`: publish a draft (GitHub records only): the first press names
+  the target, the second files the approval; the clerk does the posting,
+  the screen never touches the network
+- `D`: discard a draft: the record keeps the history, the `[draft]` tag
+  goes away
 - `x` `x`: the memory hole (archive only, and the screen will bark
   first)
 - `q`: switch off the telescreen, a luxury Smith never had

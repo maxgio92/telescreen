@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# speakwrite: the drafting runner. consume dictation intents, append drafts. Run by the path unit.
+# speakwrite: the drafting runner. consume dictation intents and publish
+# approvals, append drafts, post approved drafts. Run by the path unit.
 # timeout + </dev/null so the process always exits (claude -p can hang on
 # teardown), which lets the oneshot complete and the path unit re-trigger.
 CLAUDE="$(command -v claude || echo /home/linuxbrew/.linuxbrew/bin/claude)"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/recdep"
 mkdir -p "$STATE/intents"
 shopt -s nullglob
-intents=("$STATE/intents/"*.intent)
+intents=("$STATE/intents/"*.intent "$STATE/intents/"*.publish)
 [ ${#intents[@]} -eq 0 ] && exit 0
 exec timeout 600 "$CLAUDE" -p "/speakwrite draft" \
   --allowedTools "Bash Read Write Glob Grep mcp__plugin_slack_slack__slack_read_thread mcp__linear-server__get_issue mcp__linear-server__list_comments" \

@@ -1,8 +1,9 @@
 [Unit]
-Description=run speakwrite when a dictation intent lands in recdep/intents/
+Description=run speakwrite when a dictation intent or a publish approval lands in recdep/intents/
 
 [Path]
 PathExistsGlob=%S/recdep/intents/*.intent
+PathExistsGlob=%S/recdep/intents/*.publish
 # an intent surviving a dead claude run would otherwise re-trigger back to back
 TriggerLimitIntervalSec=1h
 TriggerLimitBurst=6
