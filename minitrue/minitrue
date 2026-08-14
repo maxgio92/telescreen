@@ -6,5 +6,5 @@ CLAUDE="$(command -v claude || echo /home/linuxbrew/.linuxbrew/bin/claude)"
 STATE="${XDG_STATE_HOME:-$HOME/.local/state}/recdep"
 mkdir -p "$STATE/inbox" "$STATE/ack" "$STATE/waiting" "$STATE/archive"
 exec timeout 600 "$CLAUDE" -p "/minitrue produce" \
-  --allowedTools "Bash Read Write Glob Grep mcp__plugin_slack_slack__slack_search_public mcp__plugin_slack_slack__slack_read_thread mcp__linear-server__list_issues mcp__linear-server__list_comments" \
+  --allowedTools "Bash Read Write Glob Grep mcp__plugin_slack_slack__slack_search_public_and_private mcp__plugin_slack_slack__slack_read_thread mcp__linear-server__list_issues mcp__linear-server__list_comments" \
   </dev/null >>"$STATE/produce.log" 2>&1

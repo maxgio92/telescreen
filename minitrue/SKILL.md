@@ -66,9 +66,17 @@ BOT_LOGINS=                 # space-separated bot logins to skip, besides [bot] 
 
 Watches:
 
-- A. Slack: `slack_search_public` `from:<@$SLACK_USER_ID> is:thread`. For each
-  thread root he authored, `slack_read_thread`, enqueue replies by others with
-  ts after `since`. Slack `after:` is date-granular, so filter ts precisely.
+- A. Slack threads: `slack_search_public_and_private`
+  `from:<@$SLACK_USER_ID> is:thread`, covering public and private channels
+  alike. For each thread root he authored, `slack_read_thread`, enqueue
+  replies by others with ts after `since`. Slack `after:` is
+  date-granular, so filter ts precisely.
+- F. Slack DMs: `slack_search_public_and_private` `to:<@$SLACK_USER_ID>`
+  (and `is:dm` where the search syntax needs it), covering direct and
+  group DMs. Enqueue messages from others with ts after `since`; keep the
+  `[slack]` source tag and let the slug carry the dm hint. DMs are
+  sensitive content: keep the preview within the usual cap and quote
+  nothing beyond the triggering message.
 - B. PRs opened: `gh search prs --repo $REPO --author @me --json number,title,url,updatedAt`.
   For each updated after `since`, read `gh pr view <n> --json reviews,comments`
   and `gh api repos/$REPO/pulls/<n>/comments`; enqueue reviews and comments by
