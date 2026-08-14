@@ -27,7 +27,7 @@ Files are the only interface between them. No sockets, no database, no
 shared process: the queue is a directory of markdown files, and each
 component reads or writes exactly its own part of it.
 
-### minitrue, the producer
+### minitrue
 
 Minitrue is the Ministry of Truth, the branch that manufactures the
 news and the records. Fitting: this one manufactures your records.
@@ -41,7 +41,7 @@ filed the review, it stamps the record `stale <reason> <time>`, and the
 screen dims it and sinks it below the fresh ones. The producer stamps,
 you archive.
 
-### recdep, the queue
+### recdep
 
 RecDep is the Records Department, the section of Minitrue where
 Winston Smith files and rewrites the records. Here nothing is ever
@@ -70,7 +70,7 @@ writes conforming records is a drop-in replacement, whether an agent
 with the model of your choice, a deterministic poller, or a webhook
 receiver.
 
-### telescreen, the dashboard
+### telescreen
 
 The telescreen is the two-way screen on every wall, watching and
 broadcasting at once. This one only broadcasts, and only to you.
@@ -80,7 +80,7 @@ network; every state change is a file rename, so the queue stays the
 single source of truth. New records appear the moment the producer
 files them (fsnotify).
 
-### speakwrite, the drafting clerk
+### speakwrite
 
 The speakwrite is the dictation machine on Winston's desk at RecDep:
 he speaks the correction, the machine writes it into the record.
