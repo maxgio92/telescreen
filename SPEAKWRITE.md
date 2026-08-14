@@ -13,7 +13,7 @@ reserved for a possible future direct-actor.
 
 | Decision | Choice | Why |
 |---|---|---|
-| Execution surface | Headless runner (wrapper plus timer or path unit, same pattern as minitrue), triggered by intent files under `recdep/intents/` | telescreen stays offline and file-only; the runner is swappable like the producer |
+| Execution surface | Headless runner (wrapper plus a systemd path unit on `recdep/intents/`, same wrapper pattern as minitrue) | telescreen stays offline and file-only; the runner is swappable like the producer |
 | Action selection | Source-mapped: the entry's source and shape pick the action; the human adds guidance at dictation time | The map knows the verb, only the human knows the stance |
 | Result flow | Draft appended to the entry file, rendered in the detail pane, tagged in the list row | The record stays in recdep; the TUI needs only a tag |
 | Human gate | Draft-then-publish: the runner never posts; publishing requires an explicit, double-keyed approval | Nothing outward-facing happens without live consent |
@@ -50,7 +50,7 @@ reserved for a possible future direct-actor.
 | `s` | dictate | inbox, todo, waiting | Open the intent in `$EDITOR`; save submits, empty guidance means defaults, abort cancels. Row gains `[dictated]` |
 | `s` | re-dictate | entry with a draft or pending intent | Reopen with the previous guidance; the new draft supersedes |
 | `p` `p` | publish | entry with `[draft]` | First press names the target in the status line, second press approves publication; the runner posts and moves the entry |
-| `D` | discard | entry with `[draft]` | Strike the draft section, keep the entry |
+| `D` | discard | entry with `[draft]` | Append a discarded marker; the draft stays in the record but stops rendering as actionable |
 
 `p` is double-keyed like `x` because publishing is outward-facing the way
 incineration is destructive. `D` is shifted because it discards work; the
@@ -79,11 +79,15 @@ same append discipline as the stale marker):
 <the draft text>
 
 --- published <ISO-8601 time> <URL>
+
+--- discarded <ISO-8601 time>
 ```
 
-The TUI derives tags from the markers: `[dictated]` when a dictated
-section exists without a draft, `[draft]` when a draft section is last,
-nothing after published (the entry moves state instead).
+The TUI derives tags from the last marker: `[dictated]` after dictated,
+`[draft]` after draft, nothing after published (the entry moves state
+instead) or discarded. Everything is append-only, the TUI included: the
+discarded marker is the one line the consumer may append, so the record
+keeps the full history and the rename-only rule bends exactly once.
 
 ## Source-action map
 
