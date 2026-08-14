@@ -11,22 +11,7 @@ works for you. Slack thread replies, GitHub reviews, mentions and review
 requests, Linear tickets; everything said about you and asked of you,
 watched, filed, and displayed.
 
-```
-1 inbox (3)  2 ack (1)  3 waiting (0)  4 archive (0)  5 memoryhole
-
-  7h  github  review requested on demo#42: feat(ministry): ration the chocolate
-  7h  slack   replied in your thread: we should meet in the place where there is
- 10h  github  review requested on demo#99: chore: increase the two  [stale: merged]
-
-──────────────────────────────────────────────────────────────────────────────────
-[github] julia: review requested on demo#42: feat(ministry): ration the chocolate
-
-the ration goes from 30 grammes to 20. the announcement says it went up.
-~/.local/state/recdep/inbox/20260814T090000Z-github-review-requested-demo-42.md
-https://github.com/example/demo/pull/42
-seen 2026-08-14T09:05:00Z
-j/k/wheel move  click select  tab/1-5 view  o open  y yank  r ack  w waiting  ...
-```
+<p align="center"><img src="assets/screenshot.png" alt="the telescreen dashboard" width="900"></p>
 
 ## Try it
 
