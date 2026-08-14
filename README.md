@@ -21,15 +21,14 @@ watched, filed, and displayed.
 ## Try it
 
 ```
-git clone https://github.com/maxgio92/telescreen
-cd telescreen
-make build      # the dashboard alone, no agents, no timers
-telescreen
+OS=$(uname -s | tr '[:upper:]' '[:lower:]'); ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+gh release download --repo maxgio92/telescreen --pattern "telescreen_*_${OS}_${ARCH}.tar.gz"
+tar xzf telescreen_*_${OS}_${ARCH}.tar.gz telescreen && ./telescreen
 ```
 
-The screen renders whatever sits in `~/.local/state/recdep/`; drop a
-few records there by hand (format below) or enroll the producer with
-`make minitrue` when you want the real feed.
+No build, no agents, no timers: the screen renders whatever sits in
+`~/.local/state/recdep/`. Drop a few records there by hand (format
+below) or enroll the producer when you want the real feed.
 
 ## How it works
 
@@ -132,13 +131,29 @@ returns. The past was erased, the erasure was forgotten.
 
 ## Install
 
+From a release, no build required: the prebuilt archives carry the two
+binaries, the screen and the actor.
+
 ```
-make install
+OS=$(uname -s | tr '[:upper:]' '[:lower:]'); ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+gh release download --repo maxgio92/telescreen --pattern "*_${OS}_${ARCH}.tar.gz"
+tar xzf telescreen_*_${OS}_${ARCH}.tar.gz -C ~/.local/bin telescreen
+tar xzf thinkpol_*_${OS}_${ARCH}.tar.gz -C ~/.local/bin thinkpol
 ```
 
-Per-component targets:
+The agents are skills plus systemd units rather than binaries, so
+enrolling minitrue and speakwrite takes the repo:
 
-- `make build`: compile the dashboard to `~/.local/bin/telescreen`.
+```
+git clone https://github.com/maxgio92/telescreen
+cd telescreen
+make minitrue speakwrite thinkpol
+```
+
+From source, for development or by choice, `make install` builds and
+enrolls everything. Per-component targets:
+
+- `make build`: compile both binaries into `~/.local/bin`.
 - `make minitrue`: install the producer (wrapper to
   `~/.local/bin/minitrue`, skill symlinked into
   `~/.claude/skills/minitrue`, systemd user timer enabled). Identity
