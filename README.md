@@ -170,7 +170,7 @@ telescreen -once    # print per-drawer counts and exit
 | `q` | switch off the telescreen, a luxury Smith never had |
 
 The detail pane shows the selected record in full: content, preview,
-the file's absolute path (one `cat` away, or one agent handle), the
+the labeled path (one `cat` away, or one agent handle) and url, the
 link, and when it was seen.
 
 Under no circumstances does this screen watch you back. That would be

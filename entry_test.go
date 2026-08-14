@@ -249,8 +249,8 @@ func TestDetail(t *testing.T) {
 	got := e.detail("/state/recdep/desk/20260811T142302Z-slack-wes-go-for-it.md")
 	want := "[slack] wes: go for it\n" +
 		"\nfirst preview line\nsecond preview line\n" +
-		"/state/recdep/desk/20260811T142302Z-slack-wes-go-for-it.md\n" +
-		"https://example.com/thread/123\n" +
+		"path /state/recdep/desk/20260811T142302Z-slack-wes-go-for-it.md\n" +
+		"url https://example.com/thread/123\n" +
 		"seen 2026-08-11T14:23:02Z"
 	if got != want {
 		t.Errorf("detail =\n%q\nwant\n%q", got, want)
@@ -268,8 +268,8 @@ func TestDetailWithMarkers(t *testing.T) {
 	want := "[github] alice: please review\n" +
 		"\nreview requested\n\n" +
 		"--- draft 2026-08-14T10:00:00Z\nThanks, fixed in the follow-up.\n" +
-		"/state/recdep/desk/20260812T100000Z-github-alice-please-review.md\n" +
-		"https://github.com/o/r/pull/7\n" +
+		"path /state/recdep/desk/20260812T100000Z-github-alice-please-review.md\n" +
+		"url https://github.com/o/r/pull/7\n" +
 		"seen 2026-08-12T10:00:00Z"
 	if got != want {
 		t.Errorf("detail =\n%q\nwant\n%q", got, want)
@@ -279,7 +279,7 @@ func TestDetailWithMarkers(t *testing.T) {
 func TestDetailMalformed(t *testing.T) {
 	e := parseEntry("bogus.md", "just one line, no header")
 	got := e.detail("/state/recdep/tube/bogus.md")
-	want := "just one line, no header\n/state/recdep/tube/bogus.md"
+	want := "just one line, no header\npath /state/recdep/tube/bogus.md"
 	if got != want {
 		t.Errorf("detail = %q, want %q", got, want)
 	}

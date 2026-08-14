@@ -134,11 +134,13 @@ func parseEntry(name, body string) entry {
 func (e entry) detail(path string) string {
 	lines := strings.Split(e.body, "\n")
 	if len(lines) < 3 || !strings.HasPrefix(lines[2], "seen ") {
-		return e.body + "\n" + path
+		return e.body + "\npath " + path
 	}
+	// path and url carry labels in the seen line's style, so the two
+	// look-alike lines cannot be confused.
 	out := []string{lines[0]}
 	out = append(out, lines[3:]...)
-	out = append(out, path, lines[1], lines[2])
+	out = append(out, "path "+path, "url "+lines[1], lines[2])
 	return strings.Join(out, "\n")
 }
 
