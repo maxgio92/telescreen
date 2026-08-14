@@ -1,12 +1,45 @@
-# telescreen
+<p align="center"><img src="assets/telescreen.png" alt="telescreen" width="640"></p>
 
-A screen for monitoring your daily job. Yes, Smith, I am looking at you.
+A screen for monitoring your daily job, in your terminal. Yes, Smith, I
+am looking at you.
 
-The telescreen in the book received and transmitted simultaneously, and
-there was no way of shutting it off. This one differs on a single point
-of doctrine: it works for you. Slack thread replies, GitHub reviews,
-mentions and review requests, Linear tickets; everything said about you
-and asked of you, watched, filed, and displayed.
+telescreen is a TUI: a keyboard-and-mouse dashboard that runs where you
+already live, next to your editor and your shells. The telescreen in the
+book received and transmitted simultaneously, and there was no way of
+shutting it off. This one differs on a single point of doctrine: it
+works for you. Slack thread replies, GitHub reviews, mentions and review
+requests, Linear tickets; everything said about you and asked of you,
+watched, filed, and displayed.
+
+```
+1 inbox (3)  2 ack (1)  3 waiting (0)  4 archive (0)  5 memoryhole
+
+  7h  github  review requested on demo#42: feat(ministry): ration the chocolate
+  7h  slack   replied in your thread: we should meet in the place where there is
+ 10h  github  review requested on demo#99: chore: increase the two  [stale: merged]
+
+──────────────────────────────────────────────────────────────────────────────────
+[github] julia: review requested on demo#42: feat(ministry): ration the chocolate
+
+the ration goes from 30 grammes to 20. the announcement says it went up.
+~/.local/state/recdep/inbox/20260814T090000Z-github-review-requested-demo-42.md
+https://github.com/example/demo/pull/42
+seen 2026-08-14T09:05:00Z
+j/k/wheel move  click select  tab/1-5 view  o open  y yank  r ack  w waiting  ...
+```
+
+## Try it
+
+```
+git clone https://github.com/maxgio92/telescreen
+cd telescreen
+make build      # the dashboard alone, no agents, no timers
+telescreen
+```
+
+The screen renders whatever sits in `~/.local/state/recdep/`; drop a
+few records there by hand (format below) or enroll the producer with
+`make minitrue` when you want the real feed.
 
 ## How it works
 
