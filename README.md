@@ -15,7 +15,7 @@ where the machinery watches the human. Here the direction flips and
 the human runs the ministry. Four components, one direction of flow:
 
 ```mermaid
-flowchart LR
+flowchart TB
     minitrue["minitrue<br/>(produces)"] -->|files records| recdep["recdep<br/>(stores)"]
     recdep -->|renders| telescreen["telescreen<br/>(displays)"]
     telescreen -->|dictations, approvals| recdep
