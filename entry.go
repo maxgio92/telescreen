@@ -139,7 +139,8 @@ func (e entry) detail(path string) string {
 	return strings.Join(out, "\n")
 }
 
-// stateRoot returns the queue root and creates the four state dirs.
+// stateRoot returns the queue root and creates the four state dirs plus
+// the intents dir the speakwrite dictation writes into.
 func stateRoot() (string, error) {
 	base := os.Getenv("XDG_STATE_HOME")
 	if base == "" {
@@ -154,6 +155,9 @@ func stateRoot() (string, error) {
 		if err := os.MkdirAll(filepath.Join(root, s), 0o755); err != nil {
 			return "", err
 		}
+	}
+	if err := os.MkdirAll(filepath.Join(root, "intents"), 0o755); err != nil {
+		return "", err
 	}
 	return root, nil
 }

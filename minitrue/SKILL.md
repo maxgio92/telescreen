@@ -127,7 +127,10 @@ on the other side), `a` moves todo or waiting to archive, `u` moves one state
 back (archive to waiting, waiting to todo, todo to inbox). A fifth virtual
 view, memoryhole (key 5), is always empty, and `x` in archive, pressed twice
 on the same entry, permanently deletes its file. `o` opens the
-entry's URL, `y` copies it, `q` quits. It watches the state dirs with
+entry's URL, `y` copies it, `q` quits. `s` on an inbox, todo, or waiting
+entry dictates a speakwrite intent: it opens a pre-filled intent file in the
+editor and submits it into `intents/` on save, and the row shows `[dictated]`
+while the intent is pending. It watches the state dirs with
 fsnotify, so new producer entries appear live. `pw -once` prints per-state
 counts and exits.
 

@@ -85,6 +85,9 @@ Keys:
 - `w`: their move now (todo to waiting)
 - `a`: file it (todo or waiting to archive)
 - `u`: unfile, one drawer back (the Party admits no mistakes; you may)
+- `s`: dictate into the speakwrite (inbox, todo, waiting): edit a
+  pre-filled intent in `$VISUAL`/`$EDITOR`; saving submits it to
+  `intents/`, emptying the file or aborting cancels
 - `x` `x`: the memory hole (archive only, and the screen will bark
   first)
 - `q`: switch off the telescreen, a luxury Smith never had

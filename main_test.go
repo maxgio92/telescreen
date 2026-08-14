@@ -16,7 +16,7 @@ import (
 func seedModel(t *testing.T, state, name string) (model, string) {
 	t.Helper()
 	root := t.TempDir()
-	for _, s := range states {
+	for _, s := range append(slices.Clone(states), "intents") {
 		if err := os.MkdirAll(filepath.Join(root, s), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -346,6 +346,10 @@ func TestTabCyclesAcrossFiveViews(t *testing.T) {
 func TestOnceCountsListsRealStatesOnly(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
 	_, root := seedModel(t, "inbox", name)
+	// A pending intent never shows up in the counts.
+	if err := os.WriteFile(filepath.Join(root, "intents", name+".intent"), []byte("entry x\naction respond\n\nguidance:\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	out, err := onceCounts(root)
 	if err != nil {
 		t.Fatal(err)

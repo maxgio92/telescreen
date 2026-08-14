@@ -49,6 +49,10 @@ type model struct {
 	// armed holds the entry name the last x keypress selected for
 	// incineration; any other key or mouse press clears it.
 	armed string
+	// pending holds the entry names with an intent file waiting in
+	// recdep/intents/; their rows show [dictated] before the runner
+	// writes the marker.
+	pending map[string]bool
 }
 
 var (
@@ -77,6 +81,14 @@ func (m *model) reload() {
 		m.lists[i] = list
 		if m.cursor[i] >= len(list) {
 			m.cursor[i] = max(0, len(list)-1)
+		}
+	}
+	m.pending = map[string]bool{}
+	if names, err := os.ReadDir(filepath.Join(m.root, "intents")); err == nil {
+		for _, d := range names {
+			if name, ok := strings.CutSuffix(d.Name(), ".intent"); ok {
+				m.pending[name] = true
+			}
 		}
 	}
 }
@@ -122,6 +134,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case fsEventMsg:
 		m.reload()
 		return m, watchCmd(m.watcher)
+	case editorDoneMsg:
+		m.finishDictation(msg)
+		return m, nil
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	case tea.MouseMsg:
@@ -176,6 +191,8 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.move("archive", "waiting")
 		m.move("waiting", "todo")
 		m.move("todo", "inbox")
+	case "s":
+		return m.dictate()
 	case "x":
 		m.incinerate(armed)
 	}
@@ -348,8 +365,13 @@ func (m model) View() string {
 			staleTag = "  [stale: " + e.stale + "]"
 		}
 		// The speakwrite tag follows the stale tag; published and
-		// discarded carry no tag.
-		switch e.mark {
+		// discarded carry no tag. A pending intent shows [dictated]
+		// before the runner writes the marker.
+		mark := e.mark
+		if m.pending[e.name] {
+			mark = "dictated"
+		}
+		switch mark {
 		case "dictated":
 			markTag = "  [dictated]"
 		case "draft":
@@ -394,7 +416,7 @@ func (m model) View() string {
 	return b.String()
 }
 
-const helpLine = "j/k/wheel move  click select  tab/shift+tab/1-5/click view  o open  y yank url  r read  w waiting  a archive  u undo  x incinerate  q quit"
+const helpLine = "j/k/wheel move  click select  tab/shift+tab/1-5/click view  o open  y yank url  r read  w waiting  a archive  u undo  s dictate  x incinerate  q quit"
 
 // onceCounts renders one "<state> <count>" line per real state directory;
 // the virtual memory hole never appears here.
@@ -436,7 +458,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() { _ = w.Close() }()
-	for _, s := range states {
+	for _, s := range append(slices.Clone(states), "intents") {
 		if err := w.Add(filepath.Join(root, s)); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
