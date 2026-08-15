@@ -166,6 +166,7 @@ Then enroll the whole stack, or one component at a time:
 telescreen install                 # minitrue, speakwrite, thinkpol
 telescreen install thinkpol        # one component
 telescreen install --dry-run       # print the plan without writing
+telescreen install --force         # restore the shipped skills over your edits
 ```
 
 The installer carries everything it enrolls: it writes the agent

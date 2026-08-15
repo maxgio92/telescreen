@@ -56,16 +56,18 @@ func New() *cobra.Command {
 	for i, c := range components {
 		names[i] = c.name
 	}
+	var force bool
 	cmd := &cobra.Command{
 		Use:       "install [component]...",
 		Short:     "enroll the stack, or one component (" + strings.Join(names, ", ") + ")",
 		Args:      cobra.OnlyValidArgs,
 		ValidArgs: names,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return run(cmd.OutOrStdout(), args, dryRun)
+			return run(cmd.OutOrStdout(), args, dryRun, force)
 		},
 	}
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print what install would write, without writing")
+	cmd.Flags().BoolVar(&force, "force", false, "overwrite installed skills the user may have edited")
 	return cmd
 }
 
@@ -87,7 +89,7 @@ func selected(args []string) []component {
 	return out
 }
 
-func run(out io.Writer, args []string, dryRun bool) error {
+func run(out io.Writer, args []string, dryRun, force bool) error {
 	exe, err := os.Executable()
 	if err != nil {
 		return err
@@ -126,7 +128,12 @@ func run(out io.Writer, args []string, dryRun bool) error {
 	picked := selected(args)
 	for _, c := range picked {
 		if c.skill != nil {
-			if err := write(filepath.Join(skillsDir, c.name, "SKILL.md"), c.skill); err != nil {
+			// A skill is a user file once installed: the embed only seeds
+			// it, and edits survive re-installs unless force says otherwise.
+			path := filepath.Join(skillsDir, c.name, "SKILL.md")
+			if _, err := os.Stat(path); err == nil && !force {
+				_, _ = fmt.Fprintln(out, "kept "+path+" (exists; --force overwrites)")
+			} else if err := write(path, c.skill); err != nil {
 				return err
 			}
 		}

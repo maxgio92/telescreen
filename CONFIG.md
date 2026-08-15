@@ -11,6 +11,11 @@ Three mechanisms, split by what is being decided:
 Choosing an implementation is never a config key: you enroll a unit.
 Everything below configures the implementations this repo ships.
 
+The skills that `telescreen install` writes under `~/.claude/skills/`
+are seeds: edit them freely, the agents read the installed files at
+run time and re-installs keep your edits (`--force` restores the
+shipped versions). No rebuild is ever needed to tweak a prompt.
+
 ## config.yaml: the action map
 
 `~/.config/recdep/config.yaml` overrides the dictation action map, the
