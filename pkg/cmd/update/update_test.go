@@ -53,7 +53,7 @@ func serveRelease(t *testing.T, tag string, archive []byte, digest string) *http
 	mux := http.NewServeMux()
 	var srv *httptest.Server
 	release := func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprintf(w, `{"tag_name": %q, "assets": [
+		_, _ = fmt.Fprintf(w, `{"tag_name": %q, "assets": [
 			{"name": %q, "browser_download_url": %q},
 			{"name": "checksums.txt", "browser_download_url": %q}
 		]}`, tag, name, srv.URL+"/dl/"+name, srv.URL+"/dl/checksums.txt")
@@ -64,7 +64,7 @@ func serveRelease(t *testing.T, tag string, archive []byte, digest string) *http
 		_, _ = w.Write(archive)
 	})
 	mux.HandleFunc("/dl/checksums.txt", func(w http.ResponseWriter, _ *http.Request) {
-		fmt.Fprintf(w, "%s  %s\n", digest, name)
+		_, _ = fmt.Fprintf(w, "%s  %s\n", digest, name)
 	})
 	srv = httptest.NewServer(mux)
 	t.Cleanup(srv.Close)

@@ -79,7 +79,7 @@ func run(out io.Writer, tag, exe, current string) error {
 	}
 	relVersion := strings.TrimPrefix(rel.TagName, "v")
 	if current != "dev" && relVersion == current {
-		fmt.Fprintf(out, "telescreen %s is already the release version\n", current)
+		_, _ = fmt.Fprintf(out, "telescreen %s is already the release version\n", current)
 		return nil
 	}
 
@@ -119,8 +119,8 @@ func run(out io.Writer, tag, exe, current string) error {
 	if err := swap(exe, binary); err != nil {
 		return permissionHint(exe, err)
 	}
-	fmt.Fprintf(out, "updated telescreen %s -> %s\n", current, relVersion)
-	fmt.Fprintln(out, "run telescreen install --force to refresh the shipped skills when the release notes say they changed")
+	_, _ = fmt.Fprintf(out, "updated telescreen %s -> %s\n", current, relVersion)
+	_, _ = fmt.Fprintln(out, "run telescreen install --force to refresh the shipped skills when the release notes say they changed")
 	return nil
 }
 
@@ -147,7 +147,7 @@ func resolve(tag string) (*release, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusNotFound {
 		if tag == "" {
 			return nil, errors.New("no release published yet")
@@ -170,7 +170,7 @@ func fetch(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("download %s: %s", url, resp.Status)
 	}
@@ -206,7 +206,7 @@ func extract(archive []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer gz.Close()
+	defer func() { _ = gz.Close() }()
 	tr := tar.NewReader(gz)
 	for {
 		hdr, err := tr.Next()
@@ -240,21 +240,21 @@ func swap(exe string, binary []byte) error {
 	}
 	tmpName := tmp.Name()
 	if _, err := tmp.Write(binary); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
 		return err
 	}
 	if err := tmp.Chmod(info.Mode()); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
 		return err
 	}
 	if err := tmp.Close(); err != nil {
-		os.Remove(tmpName)
+		_ = os.Remove(tmpName)
 		return err
 	}
 	if err := os.Rename(tmpName, exe); err != nil {
-		os.Remove(tmpName)
+		_ = os.Remove(tmpName)
 		return fmt.Errorf("replace %s: %w", exe, err)
 	}
 	return nil
