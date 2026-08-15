@@ -213,7 +213,7 @@ func (m *model) publish(armed string) {
 	}
 	if armed != e.Name {
 		m.pubArmed = e.Name
-		m.status = "publish to " + e.URL + ": press p again to approve"
+		m.status = "approve posting to " + e.URL + ": press p again"
 		return
 	}
 	entryPath := filepath.Join(m.root, recdep.States[m.view], e.Name)
@@ -228,7 +228,7 @@ func (m *model) publish(armed string) {
 		m.status = err.Error()
 		return
 	}
-	m.status = "publish approved: " + e.Name
+	m.status = "approved " + e.Name
 }
 
 // discard handles the D key: on a drafted entry it appends the

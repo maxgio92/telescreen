@@ -273,7 +273,7 @@ func TestIncinerateArmsThenDeletes(t *testing.T) {
 	if got := inState(t, root, name); !slices.Equal(got, []string{"files"}) {
 		t.Fatalf("after first x: entry in %v, want [files]", got)
 	}
-	if want := "6079 Smith W.! Yes, you! Press x again to incinerate."; m.status != want {
+	if want := "press x again to delete " + name + " permanently"; m.status != want {
 		t.Errorf("status = %q, want %q", m.status, want)
 	}
 
@@ -281,7 +281,7 @@ func TestIncinerateArmsThenDeletes(t *testing.T) {
 	if got := inState(t, root, name); got != nil {
 		t.Errorf("after second x: entry in %v, want gone", got)
 	}
-	if want := "incinerated " + name; m.status != want {
+	if want := "deleted " + name; m.status != want {
 		t.Errorf("status = %q, want %q", m.status, want)
 	}
 }
@@ -296,7 +296,7 @@ func TestIncinerateDisarmsOnOtherKey(t *testing.T) {
 	if got := inState(t, root, name); !slices.Equal(got, []string{"files"}) {
 		t.Fatalf("x j x deleted the entry: in %v, want [files]", got)
 	}
-	if want := "6079 Smith W.! Yes, you! Press x again to incinerate."; m.status != want {
+	if want := "press x again to delete " + name + " permanently"; m.status != want {
 		t.Errorf("status = %q, want %q (re-armed)", m.status, want)
 	}
 
@@ -535,6 +535,16 @@ func TestViewRowsNeverWiderThanTerminal(t *testing.T) {
 	for _, line := range strings.Split(m.View(), "\n") {
 		if w := lipgloss.Width(line); w > m.width {
 			t.Errorf("row is %d columns at width %d: %q", w, m.width, line)
+		}
+	}
+}
+
+// TestHelpLineSpeaksDocumentedVerbs pins the help line to the verbs the
+// README keys table documents for each key.
+func TestHelpLineSpeaksDocumentedVerbs(t *testing.T) {
+	for _, want := range []string{"t take", "u up", "f file", "s dictate", "p approve", "D discard", "x delete"} {
+		if !strings.Contains(helpLine, want) {
+			t.Errorf("helpLine lacks %q: %q", want, helpLine)
 		}
 	}
 }

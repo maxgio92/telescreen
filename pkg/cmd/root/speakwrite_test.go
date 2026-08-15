@@ -410,7 +410,7 @@ func TestPublishArmsThenApproves(t *testing.T) {
 	approval := filepath.Join(root, "intents", name+".publish")
 
 	m = press(t, m, key("p"))
-	if want := "publish to https://github.com/o/r/pull/1: press p again to approve"; m.status != want {
+	if want := "approve posting to https://github.com/o/r/pull/1: press p again"; m.status != want {
 		t.Errorf("status after first p = %q, want %q", m.status, want)
 	}
 	if _, err := os.Stat(approval); !os.IsNotExist(err) {
@@ -418,7 +418,7 @@ func TestPublishArmsThenApproves(t *testing.T) {
 	}
 
 	m = press(t, m, key("p"))
-	if want := "publish approved: " + name; m.status != want {
+	if want := "approved " + name; m.status != want {
 		t.Errorf("status after second p = %q, want %q", m.status, want)
 	}
 	got, err := os.ReadFile(approval)
@@ -461,7 +461,7 @@ func TestPublishArmsOnPublishableTargets(t *testing.T) {
 				t.Fatalf("p did not arm on %s: status %q", c.url, m.status)
 			}
 			m = press(t, m, key("p"))
-			if want := "publish approved: " + c.name; m.status != want {
+			if want := "approved " + c.name; m.status != want {
 				t.Errorf("status = %q, want %q", m.status, want)
 			}
 			if _, err := os.Stat(filepath.Join(root, "intents", c.name+".publish")); err != nil {
@@ -549,7 +549,7 @@ func TestPublishDisarmsOnOtherKey(t *testing.T) {
 	if _, err := os.Stat(approval); err != nil {
 		t.Errorf("second clean arm did not approve: %v", err)
 	}
-	if want := "publish approved: " + name; m.status != want {
+	if want := "approved " + name; m.status != want {
 		t.Errorf("status = %q, want %q", m.status, want)
 	}
 }

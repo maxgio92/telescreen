@@ -233,7 +233,7 @@ func (m *model) incinerate(armed string) {
 	}
 	if armed != e.Name {
 		m.armed = e.Name
-		m.status = "6079 Smith W.! Yes, you! Press x again to incinerate."
+		m.status = "press x again to delete " + e.Name + " permanently"
 		return
 	}
 	if err := os.Remove(filepath.Join(m.root, "files", e.Name)); err != nil {
@@ -241,7 +241,7 @@ func (m *model) incinerate(armed string) {
 		return
 	}
 	m.reload()
-	m.status = "incinerated " + e.Name
+	m.status = "deleted " + e.Name
 }
 
 func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
@@ -503,7 +503,7 @@ func capDetail(content string, width, rows int) string {
 	return strings.Join(append(out, lines[tail:]...), "\n")
 }
 
-const helpLine = "j/k move  tab/1-5 view  o open  y yank  t take  u up  f file  b back  s dictate  p publish  D discard  x incinerate  q quit"
+const helpLine = "j/k move  tab/1-5 view  o open  y yank  t take  u up  f file  b back  s dictate  p approve  D discard  x delete  q quit"
 
 // onceCounts renders one "<state> <count>" line per real state directory;
 // the virtual memory hole never appears here.
