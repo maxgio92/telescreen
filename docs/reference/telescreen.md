@@ -22,6 +22,7 @@ telescreen [flags]
 * [telescreen minitrue](telescreen_minitrue.md)	 - run the producer once (poll Slack/GitHub/Linear, enqueue hits)
 * [telescreen speakwrite](telescreen_speakwrite.md)	 - run the drafting runner once (consume dictation intents, append drafts)
 * [telescreen thinkpol](telescreen_thinkpol.md)	 - run the acting layer once (execute publish approvals deterministically)
+* [telescreen update](telescreen_update.md)	 - swap this binary for a released one
 * [telescreen verify](telescreen_verify.md)	 - lint the queue against the RECDEP.md grammar
 * [telescreen version](telescreen_version.md)	 - print the version
 

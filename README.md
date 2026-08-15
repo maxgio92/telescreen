@@ -144,6 +144,8 @@ go install github.com/maxgio92/telescreen@main
 ```
 
 Prebuilt release archives return with the next release.
+Once releases exist, `telescreen update` swaps the installed binary
+for the latest release.
 
 Then enroll the whole stack, or one component at a time:
 
