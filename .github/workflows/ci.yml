@@ -56,6 +56,14 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: CLI reference is regenerated
         run: make docs-check
+      - name: no employer references
+        run: |
+          leak="chain''guard"
+          pattern=$(printf '%s' "$leak" | tr -d "'")
+          if grep -rniI "$pattern" . --exclude-dir=.git; then
+            echo "employer reference found; this repo stays neutral" >&2
+            exit 1
+          fi
 
   lint:
     runs-on: ubuntu-latest
