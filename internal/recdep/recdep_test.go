@@ -102,7 +102,7 @@ func TestParseEntryMarkers(t *testing.T) {
 
 // TestParseEntryMarkerKindsOnly pins that a "--- " line inside draft
 // text (a quoted unified diff, for example) is not a marker: only the
-// four kinds in RECDEP.md count.
+// four kinds in docs/contracts/recdep.md count.
 func TestParseEntryMarkerKindsOnly(t *testing.T) {
 	body := "[github] alice: please review\nhttps://github.com/o/r/pull/7\nseen 2026-08-12T10:00:00Z\n\nreview requested\n\n" +
 		"--- draft 2026-08-14T10:00:00Z\nSee the diff:\n--- a/entry.go\n+++ b/entry.go\n"

@@ -5,18 +5,28 @@
 
 <p align="center"><img src="assets/telescreen.png" alt="telescreen" width="640"></p>
 
-A screen for monitoring your daily job, in your terminal. Yes, Smith, I
-am looking at you.
+telescreen is a terminal dashboard for your work notifications: a
+producer agent polls Slack, GitHub, and Linear and files each event as
+a plain file; you triage in a TUI; a drafting agent writes replies you
+dictate; nothing posts without your double-key approval.
 
-telescreen is a TUI: a keyboard-and-mouse dashboard that runs where you
-already live, next to your editor and your shells. The telescreen in the
-book received and transmitted simultaneously, and there was no way of
-shutting it off. This one differs on a single point of doctrine: it
-works for you. Slack thread replies, GitHub reviews, mentions and review
-requests, Linear tickets; everything said about you and asked of you,
-watched, filed, and displayed.
+One binary.<br>
+Files are the only interface.<br>
+Agents draft, only you publish.
+
+[Install](#install) ·
+[Documentation](docs/README.md) ·
+[Getting started](docs/getting-started/install.md) ·
+[Design](docs/design/speakwrite.md)
 
 <p align="center"><img src="assets/screenshot.png" alt="the telescreen dashboard" width="900"></p>
+
+Your notifications live in three inboxes that all want you now: a Slack
+thread here, a review request there, a Linear ticket assigned while you
+were reading the other two. You switch contexts, lose the thread, and
+answer the loudest one instead of the oldest one. What you want is one
+local queue you can audit with `cat`, and agent drafts that never post
+a word on their own. That is this.
 
 ## Try it
 
@@ -34,105 +44,6 @@ That is the screen with one record in the tube: move it with `t`, `u`,
 `f`, read it in the detail pane, feed it to the memory hole. The real
 feed and the drafting need the agents enrolled (the Install section
 below); they run on systemd user units and require the claude CLI.
-
-## How it works
-
-Every component is named in Newspeak, after Orwell's 1984: the world
-where the machinery watches the human. Here the direction flips and
-the human runs the ministry. Four components, one direction of flow:
-
-```mermaid
-flowchart TB
-    minitrue["minitrue<br/>(produces)"] -->|files records| recdep["recdep<br/>(stores)"]
-    recdep -->|renders| telescreen["telescreen<br/>(displays)"]
-    telescreen -->|dictations, approvals| recdep
-    recdep -->|intents| speakwrite["speakwrite<br/>(drafts, posts on approval)"]
-    speakwrite -->|drafts| recdep
-```
-
-Files are the only interface between them. No sockets, no database, no
-shared process: the queue is a directory of markdown files, and each
-component reads or writes exactly its own part of it.
-
-<p><img src="assets/minitrue.png" alt="minitrue" height="170"></p>
-
-Minitrue is the Ministry of Truth, the branch that manufactures the
-news and the records. Fitting: this one manufactures your records.
-A headless agent on a systemd user timer (every 10 minutes). It polls
-Slack (channels, private channels, DMs and group DMs), GitHub (your
-PRs, mentions, review requests), and Linear (assigned tickets), and
-files one markdown record per event into the queue's `tube/`.
-
-It also revalidates: when a PR merges behind your back or you already
-filed the review, it stamps the record `stale <reason> <time>`, and the
-screen dims it and sinks it below the fresh ones. The producer stamps,
-you file.
-
-<p><img src="assets/recdep.png" alt="recdep" height="170"></p>
-
-RecDep is the Records Department, the section of Minitrue where
-Winston Smith files and rewrites the records. Here nothing is ever
-rewritten, only filed. A directory of plain files, `~/.local/state/recdep/`, with one drawer
-per state:
-
-| Drawer | In the cubicle | In plain terms |
-|---|---|---|
-| `tube/` | the pneumatic tube delivers a record | landed, unseen |
-| `desk/` | the record sits on your desk | seen, the next move is yours |
-| `upsub/` | submitted to higher authority | you acted, the other side owes the next move |
-| `files/` | filed away | closed |
-
-Three drawers are the cubicle's plain furniture: the pneumatic tube,
-the desk, the files. `upsub` is genuine Newspeak from the book's work
-orders, "upsub antefiling": submit to higher authority before filing.
-
-Record format (`<UTC>-<source>-<slug>.md`, chronology by filename):
-
-```
-[<source>] <who>: <one-line summary>
-<link>
-seen <produce-run-time>
-
-<preview>
-```
-
-The layout is a contract, [RECDEP.md](RECDEP.md): any producer that
-writes conforming records is a drop-in replacement, whether an agent
-with the model of your choice, a deterministic poller, or a webhook
-receiver.
-
-<p><img src="assets/telescreen-badge.png" alt="telescreen" height="170"></p>
-
-The telescreen is the two-way screen on every wall, watching and
-broadcasting at once. This one only broadcasts, and only to you.
-This program: a bubbletea TUI that renders the queue and moves records
-between drawers on single keys or mouse clicks. It never touches the
-network; every state change is a file rename, so the queue stays the
-single source of truth. New records appear the moment the producer
-files them (fsnotify).
-
-<p><img src="assets/speakwrite.png" alt="speakwrite" height="170"></p>
-
-The speakwrite is the dictation machine on Winston's desk at RecDep:
-he speaks the correction, the machine writes it into the record.
-A headless agent behind a systemd path unit on `recdep/intents/`.
-Press `s` on a record to dictate your stance in `$EDITOR`; the clerk
-researches the matter read-only, drafts the response into the record,
-and the row turns `[draft]`. Press `p` twice to approve publication:
-the clerk posts the draft upstream (GitHub PRs for now), stamps the
-record with the comment URL, and moves it to upsub. Press `D` to
-discard a draft into the record's history instead. The clerk never
-posts without a recorded double-key approval. Design in
-[SPEAKWRITE.md](SPEAKWRITE.md).
-
-<p><img src="assets/memoryhole.png" alt="the memory hole" height="170"></p>
-
-The memory hole is the slit in the wall that carries unwanted records
-to the incinerators. No metaphor drift here; it does exactly that.
-The fifth view, permanently empty, as intended. Press `x` on a filed
-record and the screen will challenge you by name; press it
-again and the record rides the warm draft to the incinerators. Nothing
-returns. The past was erased, the erasure was forgotten.
 
 ## Install
 
@@ -164,14 +75,82 @@ creates the state dirs, and enables the units. Identity lives in
 REPO). From source, for development or by choice, `make install`
 builds the binary into `~/.local/bin` and runs its installer.
 
-## Configuration
+## Documentation
 
-Everything a user can tune, and how, lives in [CONFIG.md](CONFIG.md):
-the dictation action map (`~/.config/recdep/config.yaml`), the
-per-component env files (identity, secrets, agent binary, tool
-allowlists, timeouts), and the systemd knobs. The short version: env
-files carry parameters and secrets, YAML carries tables, and choosing
-an implementation is enrollment, not configuration.
+| You need | Read |
+|---|---|
+| the index, with reading paths | [docs/README.md](docs/README.md) |
+| to install and see the screen | [getting-started/install.md](docs/getting-started/install.md) |
+| to enroll the agents | [getting-started/enroll.md](docs/getting-started/enroll.md) |
+| a first record, end to end | [getting-started/first-record.md](docs/getting-started/first-record.md) |
+| every knob you can turn | [guides/configuration.md](docs/guides/configuration.md) |
+| to write your own producer | [guides/write-a-producer.md](docs/guides/write-a-producer.md) |
+| to swap the posting actor | [guides/swap-the-actor.md](docs/guides/swap-the-actor.md) |
+| something is broken | [guides/troubleshooting.md](docs/guides/troubleshooting.md) |
+| the queue contract, normative | [contracts/recdep.md](docs/contracts/recdep.md) |
+| the actor contract, normative | [contracts/thinkpol.md](docs/contracts/thinkpol.md) |
+| why the drafting layer looks like this | [design/speakwrite.md](docs/design/speakwrite.md) |
+| the 1984 naming lore | [design/names.md](docs/design/names.md) |
+| the full CLI reference | [reference/telescreen.md](docs/reference/telescreen.md) |
+
+## How it works
+
+Four components, one direction of flow:
+
+```mermaid
+flowchart TB
+    minitrue["minitrue<br/>(produces)"] -->|files records| recdep["recdep<br/>(stores)"]
+    recdep -->|renders| telescreen["telescreen<br/>(displays)"]
+    telescreen -->|dictations, approvals| recdep
+    recdep -->|intents| speakwrite["speakwrite<br/>(drafts, posts on approval)"]
+    speakwrite -->|drafts| recdep
+```
+
+Files are the only interface between them. No sockets, no database, no
+shared process: the queue is a directory of markdown files, and each
+component reads or writes exactly its own part of it.
+
+The life of one record:
+
+1. An event lands in `tube/` as a file: the producer polled Slack,
+   GitHub, or Linear and filed it.
+2. You take it to `desk/`: seen, the next move is yours.
+3. You dictate a stance with `s`: your editor opens on an intent,
+   you write what you think in plain words.
+4. The clerk drafts the response into the record; the row turns
+   `[draft]`.
+5. You approve with `p` `p`: the double keypress is the recorded
+   consent.
+6. The actor posts the draft upstream, stamps the record with the
+   comment URL, and files it to `upsub/`.
+
+The drawers, one directory per state:
+
+| Drawer | In the cubicle | In plain terms |
+|---|---|---|
+| `tube/` | the pneumatic tube delivers a record | landed, unseen |
+| `desk/` | the record sits on your desk | seen, the next move is yours |
+| `upsub/` | submitted to higher authority | you acted, the other side owes the next move |
+| `files/` | filed away | closed |
+
+## The names
+
+Every component is named in Newspeak, after Orwell's 1984: the world
+where the machinery watches the human. Here the direction flips and
+the human runs the ministry.
+
+| Name | Role |
+|---|---|
+| minitrue | the producer: polls the sources, files the records |
+| recdep | the file store: one directory per state |
+| telescreen | the screen: this TUI |
+| speakwrite | the drafting agent: you dictate, it writes |
+| thinkpol | the actor: posts approved drafts, nothing else |
+| memoryhole | permanent delete: nothing returns |
+| tube, desk, upsub, files | the drawers |
+
+The full lore, with why each name is a precise metaphor, lives in
+[docs/design/names.md](docs/design/names.md).
 
 ## Usage
 
@@ -179,7 +158,7 @@ an implementation is enrollment, not configuration.
 telescreen          # the screen
 telescreen --once   # print per-drawer counts and exit
 telescreen export --output json   # every record in the four drawers as one JSON document
-telescreen verify   # lint the queue against the RECDEP.md grammar; exit 1 on findings
+telescreen verify   # lint the queue against the docs/contracts/recdep.md grammar; exit 1 on findings
 ```
 
 The full CLI reference, including the install, minitrue, speakwrite,

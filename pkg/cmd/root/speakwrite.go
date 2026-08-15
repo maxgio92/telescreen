@@ -83,7 +83,7 @@ func actionFor(e recdep.Entry) string {
 	return "respond"
 }
 
-// renderIntent renders the intent file per RECDEP.md: the entry path
+// renderIntent renders the intent file per docs/contracts/recdep.md: the entry path
 // line, the action line, and a guidance section pre-filled with the
 // previous guidance when re-dictating.
 func renderIntent(path string, e recdep.Entry, guidance string) string {
@@ -201,7 +201,7 @@ func (m *model) publish(armed string) {
 }
 
 // discard handles the D key: on a drafted entry it appends the
-// discarded marker, the one consumer content-write RECDEP.md sanctions.
+// discarded marker, the one consumer content-write docs/contracts/recdep.md sanctions.
 // The draft stays in the record but stops rendering as actionable.
 func (m *model) discard() {
 	if m.view >= len(recdep.States) {

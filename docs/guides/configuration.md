@@ -18,7 +18,7 @@ Three layers, from a file edit to a pull request:
 | Layer | What lives there | How to change it |
 |---|---|---|
 | configuration | the action map, identity, secrets, agent binary, prompts, allowlists, timeouts, cadence | edit the files below; no rebuild |
-| enrollment | which program plays each role: producer, drafting clerk, actor | enroll your own unit in place of a shipped one; the [RECDEP.md](RECDEP.md) contract is the interface |
+| enrollment | which program plays each role: producer, drafting clerk, actor | enroll your own unit in place of a shipped one; the [recdep.md](../contracts/recdep.md) contract is the interface |
 | the binary | the drawer names and record grammar, the keys, the double-key approval, the publisher match rules (which URL goes to GitHub, Slack, Linear) | a pull request to this repo |
 
 The skills are configuration too, despite living under `~/.claude/`:

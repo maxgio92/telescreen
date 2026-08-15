@@ -1,7 +1,6 @@
 # thinkpol: the acting layer
 
-Status: implemented (`telescreen thinkpol`, behind the thinkpol path
-unit).
+Read this to enroll or write an actor.
 
 In the book the Thought Police do not deliberate; they enforce decisions
 already taken. thinkpol is the acting role, defined by the `.publish`
@@ -12,7 +11,7 @@ own agent, your persona and tone, its MCP credentials, acting on the
 approved plan. The enrolled actor declares its semantics: verbatim
 (the draft is the post) or interpretive (the agent may adapt the text,
 and must then record what it actually posted in the published marker's
-section body, per RECDEP.md). Exactly one actor is enrolled at a time;
+section body, per [recdep.md](recdep.md)). Exactly one actor is enrolled at a time;
 two consumers of the same approvals would race into double-posting.
 
 ## Why a separate binary
@@ -32,8 +31,8 @@ files. Each is replaceable without touching the others.
 
 | Role | Component | Interface it honors | Requires |
 |---|---|---|---|
-| produce | minitrue | writes records into `tube/` (RECDEP.md) | claude CLI + gh; Slack/Linear MCP, degrading without |
-| store | recdep | plain files and renames (RECDEP.md) | a filesystem |
+| produce | minitrue | writes records into `tube/` ([recdep.md](recdep.md)) | claude CLI + gh; Slack/Linear MCP, degrading without |
+| store | recdep | plain files and renames ([recdep.md](recdep.md)) | a filesystem |
 | view | telescreen | reads records, renames between drawers | nothing else |
 | draft | speakwrite | consumes `.intent`, appends dictated/draft sections | claude CLI + gh for research; Slack/Linear MCP optional |
 | act | thinkpol | consumes `.publish`, posts, appends published, renames to upsub | per-publisher credentials (see the publisher table); no claude |
@@ -61,8 +60,8 @@ Two axes, both resolved at the edges rather than in the core:
   runtime that reads intents and appends sections; the actor can be
   this Go binary, a shell script, or anything that honors the approval
   semantics. The actor needs no model at all; the model is optional
-  everywhere except drafting. The contract files (RECDEP.md,
-  SPEAKWRITE.md, this one) are the only coupling.
+  everywhere except drafting. The contract files ([recdep.md](recdep.md),
+  [speakwrite.md](../design/speakwrite.md), this one) are the only coupling.
 
 ### Configuration
 
@@ -125,7 +124,7 @@ The file holds secrets; `chmod 600` it.
 - speakwrite loses its publish procedure and its `.publish` glob; its
   path unit narrows back to `*.intent`. Its guardrail becomes literal:
   it cannot post.
-- RECDEP.md reassigns the publish write and the single upsub rename
+- [recdep.md](recdep.md) reassigns the publish write and the single upsub rename
   from "the runner" to the actor.
 - The TUI is untouched: `p p` writes the same approval file, `D` still
   revokes it.
