@@ -11,6 +11,23 @@ Three mechanisms, split by what is being decided:
 Choosing an implementation is never a config key: you enroll a unit.
 Everything below configures the implementations this repo ships.
 
+## What you can change, and where it lives
+
+Three layers, from a file edit to a pull request:
+
+| Layer | What lives there | How to change it |
+|---|---|---|
+| configuration | the action map, identity, secrets, agent binary, prompts, allowlists, timeouts, cadence | edit the files below; no rebuild |
+| enrollment | which program plays each role: producer, drafting clerk, actor | enroll your own unit in place of a shipped one; the [RECDEP.md](RECDEP.md) contract is the interface |
+| the binary | the drawer names and record grammar, the keys, the double-key approval, the publisher match rules (which URL goes to GitHub, Slack, Linear) | a pull request to this repo |
+
+The skills are configuration too, despite living under `~/.claude/`:
+the agents read the installed files at run time, so editing
+`~/.claude/skills/speakwrite/SKILL.md` changes how drafts are written
+without touching Go. Anything the table's last row names is
+deliberately fixed: the grammar is what makes every component
+replaceable, so it moves by PR, not per user.
+
 The skills that `telescreen install` writes under `~/.claude/skills/`
 are seeds: edit them freely, the agents read the installed files at
 run time and re-installs keep your edits (`--force` restores the
@@ -20,9 +37,29 @@ shipped versions). No rebuild is ever needed to tweak a prompt.
 
 `~/.config/recdep/config.yaml` overrides the dictation action map, the
 table that picks the speakwrite action when you press `s` on a record.
-A non-empty `actions` list replaces the built-in table entirely; rules
-match top-down, first match wins, and every field except `action` is
-optional (an omitted field matches anything).
+
+An action is a verb: when you dictate, the screen writes it into the
+intent file as `action <verb>`, and the drafting clerk composes the
+draft that verb asks for. The shipped speakwrite skill knows `review`,
+`vet-findings`, `pr-reply`, `slack-reply`, `linear-comment`, and
+`respond` (its SKILL.md carries the verb-to-draft table); any other
+verb works as soon as your installed skill says what to draft for it.
+
+The map is a list of rules under one key, `actions`. Each rule:
+
+| Field | Matches when | Example |
+|---|---|---|
+| `source` | it equals the record's source tag, the `[<source>]` opening the first line | `github`, `slack`, `linear` |
+| `name_contains` | the record's filename contains it | `-review-requested-` |
+| `who_suffix` | the record's author (the `<who>` on the first line) ends with it | `[bot]` |
+| `action` | never; this is the verdict, the verb a matching record dictates | `review` |
+
+Rules match top-down and the first match wins; every field except
+`action` is optional, and an omitted field matches anything, so a rule
+with only `action` catches everything and belongs last. When no rule
+matches, the action is `respond`. A non-empty `actions` list replaces
+the built-in table entirely (bring every rule you still want); an
+empty or absent list keeps the built-ins.
 
 ```yaml
 actions:
