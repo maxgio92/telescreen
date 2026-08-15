@@ -12,3 +12,11 @@ install: build
 test:
 	go vet ./...
 	go test ./...
+
+.PHONY: docs
+docs:
+	go run . docs
+
+.PHONY: docs-check
+docs-check: docs
+	git diff --exit-code docs/reference
