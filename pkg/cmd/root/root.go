@@ -18,6 +18,7 @@ import (
 	"github.com/maxgio92/telescreen/pkg/cmd/minitrue"
 	"github.com/maxgio92/telescreen/pkg/cmd/speakwrite"
 	"github.com/maxgio92/telescreen/pkg/cmd/thinkpol"
+	"github.com/maxgio92/telescreen/pkg/cmd/update"
 	"github.com/maxgio92/telescreen/pkg/cmd/verify"
 	"github.com/maxgio92/telescreen/pkg/cmd/version"
 )
@@ -60,6 +61,7 @@ func New() *cobra.Command {
 		verify.New(),
 		demo.New(runTUI),
 		install.New(),
+		update.New(),
 		version.New(),
 		docs.New(),
 	)

@@ -11,6 +11,11 @@ import (
 // version is stamped by goreleaser through ldflags.
 var version = "dev"
 
+// Version returns the stamped version, "dev" on unstamped builds.
+func Version() string {
+	return version
+}
+
 // New returns the version subcommand.
 func New() *cobra.Command {
 	return &cobra.Command{
