@@ -43,6 +43,13 @@ startup. The consumer moves files between the four directories with plain
 renames and creates missing directories, `intents/` included, at startup.
 Files, not sockets or databases, are the whole interface.
 
+The store is private to the user: components create directories 0700
+and new files 0600 (recommended for existing ones too; `telescreen
+verify` warns otherwise but never chmods). Encryption at rest is a
+deployment choice (full-disk encryption, or a gocryptfs/fscrypt mount
+of the state root) rather than a component concern, because append-only
+plaintext is what keeps the store auditable by `cat`.
+
 ## Entry files
 
 One file per hit, named `<UTC>-<source>-<slug>.md`:

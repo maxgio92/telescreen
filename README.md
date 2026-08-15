@@ -191,6 +191,8 @@ an implementation is enrollment, not configuration.
 ```
 telescreen          # the screen
 telescreen --once   # print per-drawer counts and exit
+telescreen export --output json   # every record in the four drawers as one JSON document
+telescreen verify   # lint the queue against the RECDEP.md grammar; exit 1 on findings
 ```
 
 ### Keys

@@ -114,7 +114,7 @@ func Resolve(vars map[string]string, prefix, defaultPrompt, defaultTools, logPat
 var Exec = func(inv Invocation) error {
 	ctx, cancel := context.WithTimeout(context.Background(), inv.Timeout)
 	defer cancel()
-	log, err := os.OpenFile(inv.Log, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	log, err := os.OpenFile(inv.Log, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}
