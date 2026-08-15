@@ -42,8 +42,10 @@ An action is a verb: when you dictate, the screen writes it into the
 intent file as `action <verb>`, and the drafting clerk composes the
 draft that verb asks for. The shipped speakwrite skill knows `review`,
 `vet-findings`, `pr-reply`, `slack-reply`, `linear-comment`, and
-`respond` (its SKILL.md carries the verb-to-draft table); any other
-verb works as soon as your installed skill says what to draft for it.
+`respond`; the verb-to-draft table lives in the shipped
+[speakwrite skill](../../speakwrite/SKILL.md), step 3, and the clerk
+reads your installed copy at `~/.claude/skills/speakwrite/SKILL.md`.
+Any other verb works as soon as that file says what to draft for it.
 
 The map is a list of rules under one key, `actions`. Each rule:
 
