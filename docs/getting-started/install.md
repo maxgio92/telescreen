@@ -6,12 +6,17 @@ enrolled.
 ## The binary
 
 ```
-go install github.com/maxgio92/telescreen@main
+# Homebrew (macOS and Linux)
+brew install maxgio92/tap/telescreen
+
+# Go
+go install github.com/maxgio92/telescreen@latest
 ```
 
-Install from `@main` for now; prebuilt release archives return with the
-next release. Once releases exist, `telescreen update` swaps the
-installed binary for the latest one.
+Debian, Fedora, and Alpine packages and plain tar.gz archives sit on
+the [latest release](https://github.com/maxgio92/telescreen/releases/latest).
+Later, `telescreen update` swaps the installed binary for the newest
+release in place.
 
 ## First contact
 

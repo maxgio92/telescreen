@@ -33,12 +33,9 @@ a word on their own. That is this.
 The dashboard alone, no agents, no timers, nothing enrolled:
 
 ```
-go install github.com/maxgio92/telescreen@main
+go install github.com/maxgio92/telescreen@latest
 telescreen demo
 ```
-
-Install from `@main` for now; the released path returns with the next
-release.
 
 That is the screen with one record in the tube: move it with `t`, `u`,
 `f`, read it in the detail pane, feed it to the memory hole. The real
@@ -48,15 +45,23 @@ below); they run on systemd user units and require the claude CLI.
 ## Install
 
 One binary carries the screen, the agents, the actor, and the
-installer. Through Go:
+installer. Pick one:
 
 ```
-go install github.com/maxgio92/telescreen@main
+# Homebrew (macOS and Linux)
+brew install maxgio92/tap/telescreen
+
+# Go
+go install github.com/maxgio92/telescreen@latest
+
+# Fedora / RHEL (adjust version and arch)
+dnf install https://github.com/maxgio92/telescreen/releases/latest/download/telescreen_0.1.1_linux_amd64.rpm
 ```
 
-Prebuilt release archives return with the next release.
-Once releases exist, `telescreen update` swaps the installed binary
-for the latest release.
+Debian and Alpine packages and plain tar.gz archives sit on the
+[latest release](https://github.com/maxgio92/telescreen/releases/latest).
+Later, `telescreen update` swaps the installed binary for the newest
+release in place.
 
 Then enroll the whole stack, or one component at a time:
 
