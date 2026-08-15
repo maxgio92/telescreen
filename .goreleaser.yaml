@@ -16,6 +16,18 @@ archives:
     ids: [telescreen]
     name_template: "telescreen_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
+nfpms:
+  - id: telescreen
+    ids: [telescreen]
+    package_name: telescreen
+    file_name_template: "telescreen_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    vendor: maxgio92
+    homepage: https://github.com/maxgio92/telescreen
+    maintainer: Massimiliano Giovagnoli <maxgio92@pm.me>
+    description: A screen for monitoring your daily job, in your terminal.
+    formats: [deb, rpm, apk]
+    bindir: /usr/bin
+
 checksum:
   name_template: "checksums.txt"
 
