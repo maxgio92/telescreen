@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -32,6 +33,9 @@ type Entry struct {
 	URL     string
 	Body    string
 	TS      time.Time
+	// Seen is the value of the third line's "seen <time>" marker, verbatim;
+	// empty when the line is missing or misplaced.
+	Seen string
 	// Stale is the reason from a trailing "stale <reason> <time>" marker
 	// appended by the producer's revalidation pass; empty when fresh.
 	// StaleLine keeps the raw marker line for the detail pane.
@@ -57,10 +61,10 @@ var markerKinds = map[string]bool{
 	"discarded": true,
 }
 
-// markerKind returns the marker kind when line is a speakwrite marker
+// MarkerKind returns the marker kind when line is a speakwrite marker
 // line, and "" otherwise. The preview quotes third-party text verbatim,
 // so a marker also needs a parseable RFC 3339 time to count.
-func markerKind(line string) string {
+func MarkerKind(line string) string {
 	if !strings.HasPrefix(line, "--- ") {
 		return ""
 	}
@@ -99,10 +103,15 @@ func ParseEntry(name, body string) Entry {
 			e.Summary = head
 		}
 	}
+	if len(lines) > 2 {
+		if v, ok := strings.CutPrefix(lines[2], "seen "); ok {
+			e.Seen = v
+		}
+	}
 	// Everything from the first "--- " line onward is marker sections,
 	// not preview. The last marker wins for presentation.
 	for _, line := range lines {
-		if kind := markerKind(line); kind != "" {
+		if kind := MarkerKind(line); kind != "" {
 			e.Mark, e.MarkTime = kind, ""
 			if f := strings.Fields(line); len(f) >= 3 {
 				e.MarkTime = f[2]
@@ -114,7 +123,7 @@ func ParseEntry(name, body string) Entry {
 	staleAt := len(lines) - 1
 	if !strings.HasPrefix(lines[staleAt], "stale ") {
 		for i, line := range lines {
-			if markerKind(line) != "" {
+			if MarkerKind(line) != "" {
 				for staleAt = i - 1; staleAt > 0 && lines[staleAt] == ""; staleAt-- {
 				}
 				break
@@ -129,7 +138,7 @@ func ParseEntry(name, body string) Entry {
 	}
 	// The URL line can collide with the stale marker or a speakwrite
 	// marker on a minimal entry; the marker wins and the entry has no URL.
-	if len(lines) > 1 && lines[1] != e.StaleLine && markerKind(lines[1]) == "" {
+	if len(lines) > 1 && lines[1] != e.StaleLine && MarkerKind(lines[1]) == "" {
 		e.URL = strings.TrimSpace(lines[1])
 	}
 	return e
@@ -159,7 +168,7 @@ func LastSection(body, kind string) (text string, ok bool) {
 	lines := strings.Split(body, "\n")
 	start := -1
 	for i, line := range lines {
-		if markerKind(line) == kind {
+		if MarkerKind(line) == kind {
 			start = i + 1
 		}
 	}
@@ -168,7 +177,7 @@ func LastSection(body, kind string) (text string, ok bool) {
 	}
 	end := len(lines)
 	for i := start; i < len(lines); i++ {
-		if markerKind(lines[i]) != "" {
+		if MarkerKind(lines[i]) != "" {
 			end = i
 			break
 		}
@@ -181,7 +190,9 @@ func LastSection(body, kind string) (text string, ok bool) {
 }
 
 // StateRoot returns the queue root and creates the four state dirs plus
-// the intents dir the speakwrite dictation writes into.
+// the intents dir the speakwrite dictation writes into. New dirs are
+// 0700: the store is private to the user. Existing dirs keep their
+// modes (verify warns instead of chmodding).
 func StateRoot() (string, error) {
 	base := os.Getenv("XDG_STATE_HOME")
 	if base == "" {
@@ -192,13 +203,10 @@ func StateRoot() (string, error) {
 		base = filepath.Join(home, ".local", "state")
 	}
 	root := filepath.Join(base, "recdep")
-	for _, s := range States {
-		if err := os.MkdirAll(filepath.Join(root, s), 0o755); err != nil {
+	for _, s := range append(slices.Clone(States), IntentsDir) {
+		if err := os.MkdirAll(filepath.Join(root, s), 0o700); err != nil {
 			return "", err
 		}
-	}
-	if err := os.MkdirAll(filepath.Join(root, IntentsDir), 0o755); err != nil {
-		return "", err
 	}
 	return root, nil
 }
@@ -214,7 +222,7 @@ func MoveEntry(root, name, from, to string) error {
 func DraftDiscarded(body string) bool {
 	lastDraft, lastDiscarded := -1, -1
 	for i, line := range strings.Split(body, "\n") {
-		switch markerKind(line) {
+		switch MarkerKind(line) {
 		case "draft":
 			lastDraft = i
 		case "discarded":
@@ -235,7 +243,7 @@ func AppendMarker(path, marker string) error {
 	if len(body) > 0 && !bytes.HasSuffix(body, []byte("\n")) {
 		marker = "\n" + marker
 	}
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0) // no O_CREATE: the mode is unused
 	if err != nil {
 		return err
 	}

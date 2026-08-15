@@ -140,7 +140,7 @@ func (m model) dictate() (tea.Model, tea.Cmd) {
 	}
 	entryPath := filepath.Join(m.root, recdep.States[m.view], e.Name)
 	tmp := filepath.Join(m.root, recdep.IntentsDir, e.Name+".intent.tmp")
-	if err := os.WriteFile(tmp, []byte(renderIntent(entryPath, e, guidanceFor(m.root, e))), 0o644); err != nil {
+	if err := os.WriteFile(tmp, []byte(renderIntent(entryPath, e, guidanceFor(m.root, e))), 0o600); err != nil {
 		m.status = err.Error()
 		return m, nil
 	}
@@ -189,7 +189,7 @@ func (m *model) publish(armed string) {
 	approval := filepath.Join(m.root, recdep.IntentsDir, e.Name+".publish")
 	// tmp plus rename, like the dictation submit: the runner globs the
 	// final name and must never see a half-written approval.
-	if err := os.WriteFile(approval+".tmp", []byte("entry "+entryPath+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(approval+".tmp", []byte("entry "+entryPath+"\n"), 0o600); err != nil {
 		m.status = err.Error()
 		return
 	}

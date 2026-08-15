@@ -11,10 +11,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/maxgio92/telescreen/internal/recdep"
+	"github.com/maxgio92/telescreen/pkg/cmd/export"
 	"github.com/maxgio92/telescreen/pkg/cmd/install"
 	"github.com/maxgio92/telescreen/pkg/cmd/minitrue"
 	"github.com/maxgio92/telescreen/pkg/cmd/speakwrite"
 	"github.com/maxgio92/telescreen/pkg/cmd/thinkpol"
+	"github.com/maxgio92/telescreen/pkg/cmd/verify"
 	"github.com/maxgio92/telescreen/pkg/cmd/version"
 )
 
@@ -49,6 +51,8 @@ func New() *cobra.Command {
 		minitrue.New(),
 		speakwrite.New(),
 		thinkpol.New(),
+		export.New(),
+		verify.New(),
 		install.New(),
 		version.New(),
 	)

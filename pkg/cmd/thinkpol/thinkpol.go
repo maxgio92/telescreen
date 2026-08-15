@@ -42,7 +42,7 @@ func New() *cobra.Command {
 func logLine(root, format string, args ...any) {
 	line := time.Now().UTC().Format(time.RFC3339) + " " + fmt.Sprintf(format, args...)
 	fmt.Println(line)
-	f, err := os.OpenFile(filepath.Join(root, "publish.log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(filepath.Join(root, "publish.log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return
