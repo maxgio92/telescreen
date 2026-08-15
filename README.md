@@ -56,32 +56,38 @@ One binary carries the screen, the agents, the actor, and the
 installer. Pick your method; adjust version and arch in the package
 URLs (`amd64` or `arm64`).
 
-Homebrew (macOS and Linux):
+### Homebrew (macOS and Linux)
 
 ```
 brew install maxgio92/tap/telescreen
 ```
 
-Go:
+### Go
 
 ```
 go install github.com/maxgio92/telescreen@latest
 ```
 
-Fedora and RHEL (dnf installs straight from a URL):
+### Fedora and RHEL
+
+dnf installs straight from a URL:
 
 ```
 dnf install https://github.com/maxgio92/telescreen/releases/latest/download/telescreen_0.1.1_linux_amd64.rpm
 ```
 
-Debian and Ubuntu (apt needs the file on disk first):
+### Debian and Ubuntu
+
+apt needs the file on disk first:
 
 ```
 curl -sLO https://github.com/maxgio92/telescreen/releases/latest/download/telescreen_0.1.1_linux_amd64.deb
 apt install ./telescreen_0.1.1_linux_amd64.deb
 ```
 
-Alpine (the package is unsigned, so apk needs the flag):
+### Alpine
+
+The package is unsigned, so apk needs the flag:
 
 ```
 wget -q https://github.com/maxgio92/telescreen/releases/latest/download/telescreen_0.1.1_linux_amd64.apk

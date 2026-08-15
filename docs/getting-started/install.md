@@ -5,13 +5,13 @@ enrolled.
 
 ## The binary
 
-Homebrew (macOS and Linux):
+### Homebrew (macOS and Linux)
 
 ```
 brew install maxgio92/tap/telescreen
 ```
 
-Go:
+### Go
 
 ```
 go install github.com/maxgio92/telescreen@latest
