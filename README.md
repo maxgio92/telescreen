@@ -23,21 +23,12 @@ watched, filed, and displayed.
 The dashboard alone, no agents, no timers, nothing enrolled:
 
 ```
-OS=$(uname -s | tr '[:upper:]' '[:lower:]'); ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-gh release download --repo maxgio92/telescreen --pattern "telescreen_*_${OS}_${ARCH}.tar.gz"
-tar xzf telescreen_*_${OS}_${ARCH}.tar.gz telescreen
-
-mkdir -p ~/.local/state/recdep/tube
-cat > ~/.local/state/recdep/tube/$(date -u +%Y%m%dT%H%M%SZ)-github-demo-42.md <<'RECORD'
-[github] julia: review requested on demo#42: feat(ministry): ration the chocolate
-https://github.com/example/demo/pull/42
-seen 2026-08-14T09:05:00Z
-
-the ration goes from 30 grammes to 20. the announcement says it went up.
-RECORD
-
-./telescreen
+go install github.com/maxgio92/telescreen@main
+telescreen demo
 ```
+
+Install from `@main` for now; the released path returns with the next
+release.
 
 That is the screen with one record in the tube: move it with `t`, `u`,
 `f`, read it in the detail pane, feed it to the memory hole. The real
@@ -145,20 +136,14 @@ returns. The past was erased, the erasure was forgotten.
 
 ## Install
 
-From a release, no build required: one binary carries the screen, the
-agents, the actor, and the installer.
+One binary carries the screen, the agents, the actor, and the
+installer. Through Go:
 
 ```
-OS=$(uname -s | tr '[:upper:]' '[:lower:]'); ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
-gh release download --repo maxgio92/telescreen --pattern "telescreen_*_${OS}_${ARCH}.tar.gz"
-tar xzf telescreen_*_${OS}_${ARCH}.tar.gz -C ~/.local/bin telescreen
+go install github.com/maxgio92/telescreen@main
 ```
 
-Or through Go:
-
-```
-go install github.com/maxgio92/telescreen@latest
-```
+Prebuilt release archives return with the next release.
 
 Then enroll the whole stack, or one component at a time:
 

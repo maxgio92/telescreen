@@ -16,6 +16,7 @@ telescreen [flags]
 ### SEE ALSO
 
 * [telescreen completion](telescreen_completion.md)	 - Generate the autocompletion script for the specified shell
+* [telescreen demo](telescreen_demo.md)	 - seed one sample record and open the screen
 * [telescreen export](telescreen_export.md)	 - write every record in the four drawers to stdout as one JSON document
 * [telescreen install](telescreen_install.md)	 - enroll the stack, or one component (minitrue, speakwrite, thinkpol)
 * [telescreen minitrue](telescreen_minitrue.md)	 - run the producer once (poll Slack/GitHub/Linear, enqueue hits)

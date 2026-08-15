@@ -21,8 +21,8 @@ var States = []string{"tube", "desk", "upsub", "files"}
 // next to the states.
 const IntentsDir = "intents"
 
-// stampLayout is the UTC timestamp prefix of entry filenames.
-const stampLayout = "20060102T150405Z"
+// StampLayout is the UTC timestamp prefix of entry filenames.
+const StampLayout = "20060102T150405Z"
 
 // Entry is one parsed queue entry file.
 type Entry struct {
@@ -83,8 +83,8 @@ func MarkerKind(line string) string {
 // line 3 "seen <time>". Missing pieces degrade to empty fields.
 func ParseEntry(name, body string) Entry {
 	e := Entry{Name: name, Body: strings.TrimRight(body, "\n")}
-	if len(name) >= len(stampLayout) {
-		if ts, err := time.Parse(stampLayout, name[:len(stampLayout)]); err == nil {
+	if len(name) >= len(StampLayout) {
+		if ts, err := time.Parse(StampLayout, name[:len(StampLayout)]); err == nil {
 			e.TS = ts
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/maxgio92/telescreen/internal/recdep"
+	"github.com/maxgio92/telescreen/pkg/cmd/demo"
 	"github.com/maxgio92/telescreen/pkg/cmd/docs"
 	"github.com/maxgio92/telescreen/pkg/cmd/export"
 	"github.com/maxgio92/telescreen/pkg/cmd/install"
@@ -57,6 +58,7 @@ func New() *cobra.Command {
 		thinkpol.New(),
 		export.New(),
 		verify.New(),
+		demo.New(runTUI),
 		install.New(),
 		version.New(),
 		docs.New(),
