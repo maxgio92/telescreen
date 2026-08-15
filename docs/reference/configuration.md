@@ -26,38 +26,15 @@ guidance.
 
 ### Rule fields
 
-| Field | Type | Required | Matched against / produces | Example |
-|---|---|---|---|---|
-| `source` | string, matcher | no | equality against the record's `[<source>]` tag on the first line | `github` |
-| `name_contains` | string, matcher | no | substring test against the record's filename | `-review-requested-` |
-| `who_suffix` | string, matcher | no | suffix test against the record's `<who>` (the author on the first line) | `[bot]` |
-| `author` | string, matcher | no | equality against the record's `<who>` | `alice` |
-| `url_prefix` | string, matcher | no | literal prefix test against the record's URL line, scheme and host included | `https://github.com/acme/` |
-| `action` | string, output | yes | the verb written into the intent's `action` line | `review` |
-| `guidance` | string, output | no | default stance text prepended to the dictated stance in the intent's guidance section | `professional register` |
-
-Field definitions:
-
-- `action`: the verb the drafting clerk receives. The clerk's skill
-  maps verbs to draft types
-  ([speakwrite skill](../../speakwrite/SKILL.md), read from your
-  installed copy at `~/.claude/skills/speakwrite/SKILL.md`). The
-  shipped skill knows six verbs: `review`, `vet-findings`, `pr-reply`,
-  `slack-reply`, `linear-comment`, `respond`. Any other verb works
-  once that file says what to draft for it.
-- `url_prefix`: a plain string prefix test, no globs. The prefix
-  scopes by URL shape: `https://github.com/acme/` matches a GitHub
-  org, `https://github.com/acme/widgets/` a repo,
-  `https://acme.enterprise.slack.com/` a Slack workspace,
-  `https://acme.enterprise.slack.com/archives/C012345/` a channel.
-- `author` and `who_suffix`: `author` is an exact match on the whole
-  `<who>`; `who_suffix` matches its ending, useful for `[bot]`.
-- `name_contains`: substring of the record's filename
-  (`<UTC>-<source>-<slug>.md`), so it can match the slug.
-- `guidance`: the rule sets the register; the dictated stance refines
-  or overrides it.
-- `source`: equality against the record's `[<source>]` tag, such as
-  `github`, `slack`, `linear`.
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `source` | string, matcher | no | Equality against the record's `[<source>]` tag on the first line, such as `github`, `slack`, `linear`. |
+| `name_contains` | string, matcher | no | Substring test against the record's filename (`<UTC>-<source>-<slug>.md`), so it can match the slug. Example: `-review-requested-`. |
+| `who_suffix` | string, matcher | no | Suffix test against the record's `<who>`, the author on the first line. Example: `[bot]`. |
+| `author` | string, matcher | no | Equality against the whole `<who>`. Example: `alice`. |
+| `url_prefix` | string, matcher | no | Plain string prefix test against the record's URL line, scheme and host included, no globs. The prefix scopes by URL shape: `https://github.com/acme/` matches a GitHub org, `https://github.com/acme/widgets/` a repo, `https://acme.enterprise.slack.com/` a Slack workspace, `https://acme.enterprise.slack.com/archives/C012345/` a channel. |
+| `action` | string, output | yes | The verb written into the intent's `action` line; the drafting clerk's skill maps verbs to draft types ([speakwrite skill](../../speakwrite/SKILL.md), read from your installed copy at `~/.claude/skills/speakwrite/SKILL.md`). The shipped skill knows `review`, `vet-findings`, `pr-reply`, `slack-reply`, `linear-comment`, `respond`; any other verb works once that file says what to draft for it. |
+| `guidance` | string, output | no | Default stance text prepended to the dictated stance in the intent's guidance section: the rule sets the register, the dictation refines or overrides it. Example: `professional register`. |
 
 ### Built-in action map
 
