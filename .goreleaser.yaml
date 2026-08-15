@@ -25,8 +25,24 @@ nfpms:
     homepage: https://github.com/maxgio92/telescreen
     maintainer: Massimiliano Giovagnoli <maxgio92@pm.me>
     description: A screen for monitoring your daily job, in your terminal.
+    license: MIT
     formats: [deb, rpm, apk]
     bindir: /usr/bin
+
+brews:
+  - name: telescreen
+    ids: [telescreen]
+    repository:
+      owner: maxgio92
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://github.com/maxgio92/telescreen
+    description: A screen for monitoring your daily job, in your terminal.
+    license: MIT
+    install: |
+      bin.install "telescreen"
+    test: |
+      system "#{bin}/telescreen", "version"
 
 checksum:
   name_template: "checksums.txt"
