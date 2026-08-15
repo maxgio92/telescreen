@@ -345,3 +345,50 @@ func TestAppendMarkerWithoutTrailingNewline(t *testing.T) {
 		t.Errorf("parser missed the appended marker:\n%s", b)
 	}
 }
+
+func TestStateRoot(t *testing.T) {
+	base := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", base)
+
+	root, err := StateRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(base, "recdep"); root != want {
+		t.Errorf("root = %q, want %q", root, want)
+	}
+	for _, d := range append(slices.Clone(States), IntentsDir) {
+		info, err := os.Stat(filepath.Join(root, d))
+		if err != nil {
+			t.Fatalf("%s: %v", d, err)
+		}
+		if !info.IsDir() {
+			t.Errorf("%s is not a directory", d)
+		}
+		if mode := info.Mode().Perm(); mode != 0o700 {
+			t.Errorf("%s mode = %04o, want 0700", d, mode)
+		}
+	}
+}
+
+func TestDraftDiscarded(t *testing.T) {
+	head := "[github] alice: hi\nhttps://github.com/o/r/pull/7\nseen 2026-08-15T10:00:00Z\n\npreview\n"
+	draft := "--- draft 2026-08-15T11:00:00Z\nthe draft\n"
+	discarded := "--- discarded 2026-08-15T12:00:00Z\n"
+	cases := []struct {
+		name string
+		body string
+		want bool
+	}{
+		{"discarded after draft", head + draft + discarded, true},
+		{"draft alone", head + draft, false},
+		{"discarded before a later draft", head + discarded + draft, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := DraftDiscarded(c.body); got != c.want {
+				t.Errorf("DraftDiscarded = %v, want %v", got, c.want)
+			}
+		})
+	}
+}

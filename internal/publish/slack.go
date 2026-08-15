@@ -11,9 +11,19 @@ import (
 	"strings"
 )
 
-// slackPostMessageURL is the Slack Web API endpoint that posts a
-// message. Tests reroute it by swapping HTTPClient's transport.
-const slackPostMessageURL = "https://slack.com/api/chat.postMessage"
+// slackAPIBase is the Slack Web API root. Unit tests reroute by
+// swapping HTTPClient's transport; e2e tests point the built binary at
+// a local server through SLACK_API_BASE.
+const slackAPIBase = "https://slack.com/api"
+
+// slackPostMessageURL resolves the chat.postMessage endpoint, honoring
+// a SLACK_API_BASE override from the environment.
+func slackPostMessageURL() string {
+	if v := os.Getenv("SLACK_API_BASE"); v != "" {
+		return v + "/chat.postMessage"
+	}
+	return slackAPIBase + "/chat.postMessage"
+}
 
 // slackMessagePath matches the path of a Slack message archives URL:
 // /archives/<CHANNEL>/p<digits>.
@@ -45,7 +55,7 @@ var slackThread = Publisher{
 		if err != nil {
 			return "", err
 		}
-		req, err := http.NewRequest(http.MethodPost, slackPostMessageURL, bytes.NewReader(body))
+		req, err := http.NewRequest(http.MethodPost, slackPostMessageURL(), bytes.NewReader(body))
 		if err != nil {
 			return "", err
 		}

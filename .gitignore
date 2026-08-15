@@ -1,3 +1,6 @@
 telescreen
 pw-tui
 dist/
+unit.out
+e2e.out
+covdata/

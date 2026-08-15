@@ -195,3 +195,30 @@ func setAPIBase(t *testing.T, url string) {
 	apiBase = url
 	t.Cleanup(func() { apiBase = old })
 }
+
+func TestSwapUnwritableDirPermissionHint(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root writes anywhere; the permission failure cannot happen")
+	}
+	dir := t.TempDir()
+	exe := filepath.Join(dir, "telescreen")
+	if err := os.WriteFile(exe, []byte("old binary"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+	err := swap(exe, []byte("new binary"))
+	if err == nil {
+		t.Fatal("swap succeeded in an unwritable directory")
+	}
+	hinted := permissionHint(exe, err)
+	if !strings.Contains(hinted.Error(), "package manager") {
+		t.Errorf("hint = %q, want a package manager mention", hinted.Error())
+	}
+	if !strings.Contains(hinted.Error(), exe) {
+		t.Errorf("hint = %q, want the executable path %q", hinted.Error(), exe)
+	}
+}

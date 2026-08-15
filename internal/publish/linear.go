@@ -11,9 +11,19 @@ import (
 	"strings"
 )
 
-// linearGraphQLURL is the Linear GraphQL endpoint. Tests reroute it by
-// swapping HTTPClient's transport.
-const linearGraphQLURL = "https://api.linear.app/graphql"
+// linearAPIBase is the Linear API root. Unit tests reroute it by
+// swapping HTTPClient's transport; e2e tests point the built binary at
+// a local server through LINEAR_API_BASE.
+const linearAPIBase = "https://api.linear.app"
+
+// linearGraphQLURL resolves the GraphQL endpoint, honoring a
+// LINEAR_API_BASE override from the environment.
+func linearGraphQLURL() string {
+	if v := os.Getenv("LINEAR_API_BASE"); v != "" {
+		return v + "/graphql"
+	}
+	return linearAPIBase + "/graphql"
+}
 
 // linearIssueKey matches an issue identifier path segment such as
 // FUL-123.
@@ -86,7 +96,7 @@ func linearQuery(key, query string, variables map[string]any, out any) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest(http.MethodPost, linearGraphQLURL, bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, linearGraphQLURL(), bytes.NewReader(body))
 	if err != nil {
 		return err
 	}

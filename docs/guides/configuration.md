@@ -137,6 +137,11 @@ The github-pr publisher uses your authenticated `gh` and needs no
 entry here. A missing token fails the post gracefully: the draft
 survives, the approval is consumed, `publish.log` names the reason.
 
+Two testing knobs, read from the environment when set:
+
+- `SLACK_API_BASE` replaces the Slack Web API root (default `https://slack.com/api`).
+- `LINEAR_API_BASE` replaces the Linear API root (default `https://api.linear.app`).
+
 ## Everything else
 
 - The state root honors `XDG_STATE_HOME` (default

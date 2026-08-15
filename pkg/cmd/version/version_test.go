@@ -26,3 +26,24 @@ func TestResolve(t *testing.T) {
 		})
 	}
 }
+
+func TestVersion(t *testing.T) {
+	got := Version()
+	if got == "" {
+		t.Fatal("Version() returned an empty string")
+	}
+	if want := resolve(version, buildInfoVersion()); got != want {
+		t.Errorf("Version() = %q, want %q", got, want)
+	}
+}
+
+func TestBuildInfoVersion(t *testing.T) {
+	// Test binaries carry build info, but the module version depends on
+	// how the build was invoked: "(devel)" on a source build, a real
+	// version on a stamped one. Either resolves through Version without
+	// panicking; the exact value is the toolchain's call.
+	got := buildInfoVersion()
+	if got != "" && got != "(devel)" && resolve("", got) == "" {
+		t.Errorf("buildInfoVersion() = %q, resolve maps it to nothing", got)
+	}
+}
