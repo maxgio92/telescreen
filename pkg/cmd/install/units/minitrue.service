@@ -1,5 +1,5 @@
 [Unit]
-Description=minitrue, the personal-watch producer (poll Slack/GitHub/Linear, enqueue hits)
+Description=minitrue, the producer (poll Slack/GitHub/Linear, enqueue hits)
 
 [Service]
 Type=oneshot

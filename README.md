@@ -195,6 +195,10 @@ telescreen export --output json   # every record in the four drawers as one JSON
 telescreen verify   # lint the queue against the RECDEP.md grammar; exit 1 on findings
 ```
 
+The full CLI reference, including the install, minitrue, speakwrite,
+thinkpol, and version subcommands, lives at
+[docs/reference/telescreen.md](docs/reference/telescreen.md).
+
 ### Keys
 
 | Key | Effect |
@@ -208,14 +212,14 @@ telescreen verify   # lint the queue against the RECDEP.md grammar; exit 1 on fi
 | `f` | file it (any open drawer to files) |
 | `b` | back, one drawer |
 | `s` | dictate into the speakwrite (tube, desk, upsub) |
-| `p` `p` | approve publishing a draft (GitHub PR records only) |
+| `p` `p` | approve publishing a draft (records with a matching publisher: GitHub PRs, Slack threads, Linear issues) |
 | `D` | discard a draft |
 | `x` `x` | the memory hole (files only; the screen barks first) |
 | `q` | switch off the telescreen, a luxury Smith never had |
 
-The detail pane shows the selected record in full: content, preview,
-the labeled path (one `cat` away, or one agent handle) and url, the
-link, and when it was seen.
+The detail pane shows the selected record in full: the content line,
+the preview, then the labeled path (one `cat` away, or one agent
+handle), url, and seen lines.
 
 Under no circumstances does this screen watch you back. That would be
 doubleplusungood.

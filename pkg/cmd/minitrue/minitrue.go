@@ -1,4 +1,4 @@
-// Package minitrue runs the personal-watch producer: poll the watches,
+// Package minitrue runs the producer: poll the watches,
 // enqueue hits. The systemd timer runs it every 10 minutes; the agent,
 // prompt, tool allowlist, and timeout come from ~/.config/minitrue.env
 // with the defaults below.
@@ -24,7 +24,7 @@ const (
 func New() *cobra.Command {
 	return &cobra.Command{
 		Use:   "minitrue",
-		Short: "run the personal-watch producer once (poll Slack/GitHub/Linear, enqueue hits)",
+		Short: "run the producer once (poll Slack/GitHub/Linear, enqueue hits)",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return run()
