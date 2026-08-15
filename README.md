@@ -125,6 +125,7 @@ builds the binary into `~/.local/bin` and runs its installer.
 | to enroll the agents | [getting-started/enroll.md](docs/getting-started/enroll.md) |
 | a first record, end to end | [getting-started/first-record.md](docs/getting-started/first-record.md) |
 | every knob you can turn | [guides/configuration.md](docs/guides/configuration.md) |
+| every config field, as a table | [reference/configuration.md](docs/reference/configuration.md) |
 | to write your own producer | [guides/write-a-producer.md](docs/guides/write-a-producer.md) |
 | to swap the posting actor | [guides/swap-the-actor.md](docs/guides/swap-the-actor.md) |
 | something is broken | [guides/troubleshooting.md](docs/guides/troubleshooting.md) |

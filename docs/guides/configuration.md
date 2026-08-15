@@ -1,17 +1,11 @@
 # Configuration
 
-Three mechanisms, split by what is being decided:
+For operators who want to change how the screen behaves: this page
+tells you which file to edit for which wish, with one worked example
+per task. Every key and field is defined in the
+[configuration reference](../reference/configuration.md).
 
-| Mechanism | Decides | Examples |
-|---|---|---|
-| env files (`~/.config/*.env`) | parameters and secrets of a chosen implementation | identity handles, tokens, agent binary, tool allowlists, timeouts |
-| YAML (`~/.config/recdep/config.yaml`) | structured, human-edited tables | the dictation action map |
-| systemd enrollment | which implementation runs each role | `telescreen install minitrue`, or your own producer's unit |
-
-Choosing an implementation is never a config key: you enroll a unit.
-Everything below configures the implementations this repo ships.
-
-## What you can change, and where it lives
+## Which layer to change
 
 Three layers, from a file edit to a pull request:
 
@@ -21,151 +15,73 @@ Three layers, from a file edit to a pull request:
 | enrollment | which program plays each role: producer, drafting clerk, actor | enroll your own unit in place of a shipped one; the [recdep.md](../contracts/recdep.md) contract is the interface |
 | the binary | the drawer names and record grammar, the keys, the double-key approval, the publisher match rules (which URL goes to GitHub, Slack, Linear) | a pull request to this repo |
 
-The skills are configuration too, despite living under `~/.claude/`:
-the agents read the installed files at run time, so editing
-`~/.claude/skills/speakwrite/SKILL.md` changes how drafts are written
-without touching Go. Anything the table's last row names is
-deliberately fixed: the grammar is what makes every component
-replaceable, so it moves by PR, not per user.
+Choosing an implementation is never a config key: you enroll a unit.
+The last row is deliberately fixed: the grammar is what makes every
+component replaceable, so it moves by PR, not per user.
 
-The skills that `telescreen install` writes under `~/.claude/skills/`
-are seeds: edit them freely, the agents read the installed files at
-run time and re-installs keep your edits (`--force` restores the
-shipped versions). No rebuild is ever needed to tweak a prompt.
+## Add a rule to the action map
 
-## config.yaml: the action map
+Edit `~/.config/recdep/config.yaml`. A rule pairs matchers with an
+action verb and optional guidance; rules match top-down, first match
+wins. A non-empty `actions` list replaces the built-ins entirely, so
+bring every rule you still want. Full field definitions and the
+built-in map: [config.yaml reference](../reference/configuration.md#configyaml).
 
-`~/.config/recdep/config.yaml` overrides the dictation action map, the
-table that picks the speakwrite action when you press `s` on a record.
-
-An action is a verb: when you dictate, the screen writes it into the
-intent file as `action <verb>`, and the drafting clerk composes the
-draft that verb asks for. The shipped speakwrite skill knows `review`,
-`vet-findings`, `pr-reply`, `slack-reply`, `linear-comment`, and
-`respond`; the verb-to-draft table lives in the shipped
-[speakwrite skill](../../speakwrite/SKILL.md), step 3, and the clerk
-reads your installed copy at `~/.claude/skills/speakwrite/SKILL.md`.
-Any other verb works as soon as that file says what to draft for it.
-
-The map is a list of rules under one key, `actions`. Each rule:
-
-| Field | Matches when | Example |
-|---|---|---|
-| `source` | it equals the record's source tag, the `[<source>]` opening the first line | `github`, `slack`, `linear` |
-| `name_contains` | the record's filename contains it | `-review-requested-` |
-| `who_suffix` | the record's author (the `<who>` on the first line) ends with it | `[bot]` |
-| `url_prefix` | the record's URL (the second line) starts with it; include the scheme and host | `https://github.com/acme/` |
-| `author` | it equals the record's author exactly | `alice` |
-| `action` | never; this is the verdict, the verb a matching record dictates | `review` |
-| `guidance` | never; this is output, a stance the rule attaches to every dictation it matches | `professional register` |
-
-Rules match top-down and the first match wins; every field except
-`action` is optional, and an omitted field matches anything, so a rule
-with only `action` catches everything and belongs last. When no rule
-matches, the action is `respond`. A non-empty `actions` list replaces
-the built-in table entirely (bring every rule you still want); an
-empty or absent list keeps the built-ins.
+Example: two Slack workspaces, two registers.
 
 ```yaml
 actions:
-  - source: github            # exact match on the record's source tag
-    name_contains: -review-requested-   # substring of the filename
-    action: review
-  - url_prefix: https://github.com/acme/   # one GitHub org
-    action: pr-reply
-    guidance: professional register, cite the relevant code
   - url_prefix: https://acme.enterprise.slack.com/   # the work workspace
     action: slack-reply
     guidance: professional register
   - url_prefix: https://friends.slack.com/           # the personal workspace
     action: slack-reply
     guidance: casual register, first names
-  - source: slack
+  - source: slack            # any other workspace
     action: slack-reply
-  - who_suffix: "[bot]"       # suffix of the author
+  - source: github           # keep the built-in GitHub routing
+    name_contains: -review-requested-
+    action: review
+  - source: github
+    who_suffix: "[bot]"
     action: vet-findings
+  - source: github
+    action: pr-reply
+  - source: linear
+    action: linear-comment
 ```
 
-A rule's `guidance` is prepended to the stance you dictate, so the
-clerk follows both: the rule sets the register and your dictation
-refines or overrides it.
+The rule's guidance is prepended to the stance you dictate: the rule
+sets the register, your dictation refines or overrides it.
 
-The built-in table (applied when the file is absent or the list empty):
+## Change the agent or the prompt
 
-| source | name contains | who suffix | action |
-|---|---|---|---|
-| github-review-requested | | | review |
-| github | -review-requested- | | review |
-| github | | [bot] | vet-findings |
-| github | | | pr-reply |
-| slack | | | slack-reply |
-| linear | | | linear-comment |
-| (anything else) | | | respond |
+The agent binary and its headless prompt are env-file keys: set
+`MINITRUE_AGENT` and `MINITRUE_PROMPT` in `~/.config/minitrue.env`
+for the producer, the `SPEAKWRITE_*` twins in
+`~/.config/speakwrite.env` for the drafting clerk. Use an absolute
+path when the binary is not on the unit's PATH, and carry your
+environment's MCP tool identifiers in the allowlist key. All keys and
+defaults: [env file reference](../reference/configuration.md#minitrueenv).
 
-Action names are free-form verbs: the drafting agent interprets them,
-so a custom action like `summarize` works as soon as your speakwrite
-prompt knows what to do with it. The YAML is parsed strictly: an
-unknown key is a startup error shown once in the status line, and the
-built-ins stand.
+The prompts themselves are skills. `telescreen install` writes seeds
+under `~/.claude/skills/`; the agents read the installed files at run
+time, so editing `~/.claude/skills/speakwrite/SKILL.md` changes how
+drafts are written without touching Go. Re-installs keep your edits
+(`--force` restores the shipped versions).
 
-## minitrue.env: the producer
+New action verbs live in the same file: the clerk drafts whatever the
+skill says a verb means, so a custom `summarize` action works as soon
+as your speakwrite skill defines it.
 
-`~/.config/minitrue.env`, plain `KEY=value` lines.
+## Set credentials
 
-| Key | Meaning | Default |
-|---|---|---|
-| SLACK_USER_ID | your Slack user id, the person being watched | required |
-| GH_LOGIN | your GitHub login; `gh` must resolve `@me` to it | required |
-| LINEAR_ASSIGNEE | the Linear assignee to watch | `me` |
-| REPO | the GitHub repo to scope PR watches to | required |
-| BOT_LOGINS | bot logins to skip, besides `[bot]` suffixes | empty |
-| MINITRUE_AGENT | the agent binary the subcommand runs | `claude` |
-| MINITRUE_PROMPT | the headless prompt | `/minitrue produce` |
-| MINITRUE_ALLOWED_TOOLS | the agent's tool allowlist | the subcommand's default |
-| MINITRUE_TIMEOUT | seconds before the subcommand kills the run | `600` |
-
-Swapping the LLM agent is `MINITRUE_AGENT` (an absolute path when it
-is not on the unit's PATH) plus a prompt of your own; the allowlist
-carries your environment's MCP tool identifiers. A timeout above 900
-also needs `TimeoutStartSec` raised in the unit, or systemd kills the
-run first.
-
-## speakwrite.env: the drafting clerk
-
-`~/.config/speakwrite.env`, same pattern:
-
-| Key | Meaning | Default |
-|---|---|---|
-| SPEAKWRITE_AGENT | the agent binary | `claude` |
-| SPEAKWRITE_PROMPT | the headless prompt | `/speakwrite draft` |
-| SPEAKWRITE_ALLOWED_TOOLS | the agent's tool allowlist | the subcommand's default |
-| SPEAKWRITE_TIMEOUT | seconds before the subcommand kills the run | `600` |
-
-## thinkpol.env: the actor's credentials
-
-`~/.config/thinkpol.env`, loaded by the service unit; it holds
-secrets, so `chmod 600` it.
-
-| Key | Meaning | Needed for |
-|---|---|---|
-| SLACK_TOKEN | a user token with `chat:write`; posts as you | the slack-thread publisher |
-| LINEAR_API_KEY | a Linear API key | the linear-issue publisher |
-
+The actor's tokens live in `~/.config/thinkpol.env`; `chmod 600` it.
 The github-pr publisher uses your authenticated `gh` and needs no
-entry here. A missing token fails the post gracefully: the draft
-survives, the approval is consumed, `publish.log` names the reason.
+token there. Keys and failure behavior:
+[thinkpol.env reference](../reference/configuration.md#thinkpolenv).
 
-Two testing knobs, read from the environment when set:
+## Change the cadence
 
-- `SLACK_API_BASE` replaces the Slack Web API root (default `https://slack.com/api`).
-- `LINEAR_API_BASE` replaces the Linear API root (default `https://api.linear.app`).
-
-## Everything else
-
-- The state root honors `XDG_STATE_HOME` (default
-  `~/.local/state/recdep`).
-- Dictation opens `$VISUAL`, else `$EDITOR`, else `vi`; values may
-  carry flags (`code -w`).
-- Producer cadence (10 minutes) and the path units' trigger bounds are
-  systemd settings: override with `systemctl --user edit
-  minitrue.timer` rather than a config file.
+The producer cadence and the path units' trigger bounds are systemd
+settings: `systemctl --user edit minitrue.timer`, not a config file.

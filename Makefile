@@ -13,6 +13,8 @@ test:
 	go vet ./...
 	go test ./...
 
+# Regenerates the telescreen_*.md CLI pages under docs/reference.
+# docs/reference/configuration.md is hand-written and untouched.
 .PHONY: docs
 docs:
 	go run . docs
