@@ -160,3 +160,38 @@ func TestInstallRejectsUnknownComponent(t *testing.T) {
 		t.Error("install accepted an unknown component")
 	}
 }
+
+// TestInstallKeepsEditedSkill pins that a re-install never clobbers a
+// user-edited skill without --force.
+func TestInstallKeepsEditedSkill(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	t.Setenv("XDG_STATE_HOME", filepath.Join(home, ".local", "state"))
+	systemctl = func(...string) error { return nil }
+
+	var out strings.Builder
+	if err := run(&out, []string{"minitrue"}, false, false); err != nil {
+		t.Fatal(err)
+	}
+	skill := filepath.Join(home, ".claude", "skills", "minitrue", "SKILL.md")
+	if err := os.WriteFile(skill, []byte("my tweaked skill\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(&out, []string{"minitrue"}, false, false); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(skill)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != "my tweaked skill\n" {
+		t.Error("re-install clobbered the edited skill")
+	}
+	if err := run(&out, []string{"minitrue"}, false, true); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ = os.ReadFile(skill); string(b) == "my tweaked skill\n" {
+		t.Error("--force kept the edited skill, want the embedded one restored")
+	}
+}
