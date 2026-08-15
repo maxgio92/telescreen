@@ -1,6 +1,7 @@
 package root
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -413,5 +414,127 @@ func TestHandleKeyMovesOnce(t *testing.T) {
 				t.Errorf("after %q from %s: entry in %v, want [%s]", tt.key, tt.from, got, tt.want)
 			}
 		})
+	}
+}
+
+// heightModel builds a model with n entries in the tube view; every entry
+// carries a multi-line preview so the detail pane would overflow uncapped.
+func heightModel(n, width, height int) model {
+	m := model{width: width, height: height}
+	preview := strings.Repeat("preview line that runs on and on to test the detail budget\n", 8)
+	for i := 0; i < n; i++ {
+		name := fmt.Sprintf("e-%03d.md", i)
+		body := fmt.Sprintf("[slack] wes: summary-%03d\nhttps://example.com/%d\nseen 2026-08-15\n%s", i, i, preview)
+		m.lists[0] = append(m.lists[0], recdep.ParseEntry(name, body))
+	}
+	return m
+}
+
+// TestViewNeverExceedsHeight pins the overflow bug: a full list plus a
+// tall detail preview used to render more lines than the terminal, which
+// clips from the top and hides row zero.
+func TestViewNeverExceedsHeight(t *testing.T) {
+	m := heightModel(200, 80, 20)
+	view := m.View()
+	if got := strings.Count(view, "\n") + 1; got > m.height {
+		t.Errorf("view has %d lines, want <= %d:\n%s", got, m.height, view)
+	}
+	lines := strings.Split(view, "\n")
+	if !strings.Contains(lines[headerLines], "summary-000") {
+		t.Errorf("first list row with cursor 0 = %q, want summary-000", lines[headerLines])
+	}
+}
+
+// TestViewShowsFirstRowAfterScrollBack scrolls deep into the list, walks
+// the cursor back to zero, and expects row zero on screen.
+func TestViewShowsFirstRowAfterScrollBack(t *testing.T) {
+	m := heightModel(200, 80, 20)
+	for range 150 {
+		m = press(t, m, key("j"))
+	}
+	for range 150 {
+		m = press(t, m, key("k"))
+	}
+	if m.cursor[0] != 0 {
+		t.Fatalf("cursor = %d, want 0", m.cursor[0])
+	}
+	view := m.View()
+	if !strings.Contains(view, "summary-000") {
+		t.Errorf("view with cursor 0 lacks the first record:\n%s", view)
+	}
+	if got := strings.Count(view, "\n") + 1; got > m.height {
+		t.Errorf("view has %d lines, want <= %d", got, m.height)
+	}
+}
+
+// TestViewStatusRowIsConstant keeps the line count identical with and
+// without a status message so the list never jumps.
+func TestViewStatusRowIsConstant(t *testing.T) {
+	m := heightModel(200, 80, 20)
+	without := strings.Count(m.View(), "\n") + 1
+	m.status = strings.Repeat("a long status message ", 3)
+	with := strings.Count(m.View(), "\n") + 1
+	if with != without {
+		t.Errorf("line count with status = %d, without = %d, want equal", with, without)
+	}
+	if with > m.height {
+		t.Errorf("view has %d lines, want <= %d", with, m.height)
+	}
+}
+
+// TestViewFitsStateMatrix sweeps the states that once broke the budget:
+// tiny terminal, empty list, memory hole, status on and off.
+func TestViewFitsStateMatrix(t *testing.T) {
+	tests := []struct {
+		name string
+		m    model
+	}{
+		{"tiny terminal full list", heightModel(200, 40, 10)},
+		{"tiny terminal with status", func() model {
+			m := heightModel(200, 40, 10)
+			m.status = "something happened"
+			return m
+		}()},
+		{"empty list", model{width: 80, height: 20}},
+		{"memory hole", model{width: 80, height: 20, view: memoryHoleView, status: "gone"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := strings.Count(tt.m.View(), "\n") + 1; got > tt.m.height {
+				t.Errorf("view has %d lines, want <= %d", got, tt.m.height)
+			}
+		})
+	}
+}
+
+// TestCapDetailCutsPreviewFirst keeps the summary and the path, url, and
+// seen tail while the preview absorbs the cut.
+func TestCapDetailCutsPreviewFirst(t *testing.T) {
+	content := "summary line\npreview 1\npreview 2\npreview 3\npreview 4\npath /tmp/x\nurl https://example.com\nseen 2026-08-15"
+	got := capDetail(content, 80, 5)
+	if h := strings.Count(got, "\n") + 1; h > 5 {
+		t.Errorf("capDetail height = %d, want <= 5", h)
+	}
+	for _, want := range []string{"summary line", "path /tmp/x", "url https://example.com", "seen 2026-08-15"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("capDetail dropped %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "preview 2") {
+		t.Errorf("capDetail kept a preview line past the budget:\n%s", got)
+	}
+}
+
+// TestViewRowsNeverWiderThanTerminal guards the width side of the height
+// invariant: a row wider than the terminal wraps visually and clips the
+// top even when the newline count fits.
+func TestViewRowsNeverWiderThanTerminal(t *testing.T) {
+	m := model{width: 80, height: 20}
+	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "slack", Summary: "s"}}
+	m.status = strings.Repeat("e", 200)
+	for _, line := range strings.Split(m.View(), "\n") {
+		if w := lipgloss.Width(line); w > m.width {
+			t.Errorf("row is %d columns at width %d: %q", w, m.width, line)
+		}
 	}
 }

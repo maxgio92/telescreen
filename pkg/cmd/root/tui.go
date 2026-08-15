@@ -367,11 +367,9 @@ func (m model) View() string {
 
 	if m.view == memoryHoleView {
 		b.WriteString(tabInactive.Render("  "+epitaph) + "\n")
-		if m.status != "" {
-			b.WriteString(m.status + "\n")
-		}
-		b.WriteString(helpStyle.Render(helpLine))
-		return b.String()
+		b.WriteString(fitWidth(m.status, m.width) + "\n")
+		b.WriteString(helpStyle.Render(fitWidth(helpLine, m.width)))
+		return clampHeight(b.String(), m.height)
 	}
 
 	list := m.lists[m.view]
@@ -429,13 +427,80 @@ func (m model) View() string {
 	b.WriteString("\n")
 	if e, ok := m.selected(); ok {
 		path := filepath.Join(m.root, recdep.States[m.view], e.Name)
-		b.WriteString(detailStyle.Width(max(20, m.width)).Render(e.Detail(path)) + "\n")
+		w := max(20, m.width)
+		detail := detailStyle.Width(w).Render(capDetail(e.Detail(path), w, detailLines-1))
+		if dl := strings.Split(detail, "\n"); len(dl) > detailLines {
+			detail = strings.Join(dl[:detailLines], "\n")
+		}
+		b.WriteString(detail + "\n")
 	}
-	if m.status != "" {
-		b.WriteString(m.status + "\n")
+	// The status row always renders, blank when empty, so the list never
+	// jumps when a message comes and goes and the height budget is constant.
+	b.WriteString(fitWidth(m.status, m.width) + "\n")
+	b.WriteString(helpStyle.Render(fitWidth(helpLine, m.width)))
+	return clampHeight(b.String(), m.height)
+}
+
+// fitWidth truncates s to one terminal row. clampHeight counts newline
+// lines, so a row wider than the terminal would still wrap visually and
+// clip the top of the screen.
+func fitWidth(s string, width int) string {
+	if width <= 0 {
+		return s
 	}
-	b.WriteString(helpStyle.Render(helpLine))
-	return b.String()
+	if r := []rune(s); len(r) > width {
+		return string(r[:width])
+	}
+	return s
+}
+
+// clampHeight drops trailing lines past height. The terminal clips from
+// the top when the view overflows, hiding the first list row; cutting the
+// bottom keeps the list and cursor visible instead.
+func clampHeight(view string, height int) string {
+	if height <= 0 {
+		return view
+	}
+	lines := strings.Split(view, "\n")
+	if len(lines) <= height {
+		return view
+	}
+	return strings.Join(lines[:height], "\n")
+}
+
+// capDetail bounds the detail content to rows rendered lines at width,
+// counting lipgloss wrapping. Preview lines get cut first: the summary line
+// and the path, url, and seen tail carry the most and survive as long as
+// they fit.
+func capDetail(content string, width, rows int) string {
+	wrap := lipgloss.NewStyle().Width(width)
+	h := func(s string) int { return lipgloss.Height(wrap.Render(s)) }
+	if h(content) <= rows {
+		return content
+	}
+	lines := strings.Split(content, "\n")
+	tail := len(lines)
+	for tail > 1 {
+		l := lines[tail-1]
+		if !strings.HasPrefix(l, "path ") && !strings.HasPrefix(l, "url ") && !strings.HasPrefix(l, "seen ") {
+			break
+		}
+		tail--
+	}
+	out := []string{lines[0]}
+	used := h(lines[0])
+	for _, l := range lines[tail:] {
+		used += h(l)
+	}
+	for _, l := range lines[1:tail] {
+		lh := h(l)
+		if used+lh > rows {
+			break
+		}
+		used += lh
+		out = append(out, l)
+	}
+	return strings.Join(append(out, lines[tail:]...), "\n")
 }
 
 const helpLine = "j/k move  tab/1-5 view  o open  y yank  t take  u up  f file  b back  s dictate  p publish  D discard  x incinerate  q quit"
