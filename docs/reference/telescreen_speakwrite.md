@@ -1,6 +1,6 @@
 ## telescreen speakwrite
 
-run the drafting runner once (consume dictation intents, append drafts)
+run the speakwrite agent once (consume dictation intents, append drafts)
 
 ```
 telescreen speakwrite [flags]

@@ -1,5 +1,5 @@
 // Package publish is the single publisher table docs/contracts/thinkpol.md calls for:
-// the one place that knows which URL shapes the acting layer can post
+// the one place that knows which URL shapes the actor can post
 // to and how. The TUI gates the p key with Match and thinkpol posts
 // with Post, so the view can never approve what the actor would refuse.
 package publish

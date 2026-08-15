@@ -1,6 +1,6 @@
 ## telescreen thinkpol
 
-run the acting layer once (execute publish approvals deterministically)
+run the actor once (execute publish approvals deterministically)
 
 ```
 telescreen thinkpol [flags]

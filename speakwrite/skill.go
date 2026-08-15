@@ -1,4 +1,4 @@
-// Package speakwrite embeds the drafting runner's agent skill so
+// Package speakwrite embeds the speakwrite agent's skill so
 // telescreen install can write it without the repo checkout.
 package speakwrite
 

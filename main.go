@@ -1,6 +1,6 @@
 // Command telescreen is the single binary of the pipeline: the
 // dashboard on the bare command, the minitrue producer, the speakwrite
-// drafting runner, the thinkpol actor, and the installer as
+// agent, the thinkpol actor, and the installer as
 // subcommands. See pkg/cmd for each command.
 package main
 

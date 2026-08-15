@@ -3,7 +3,7 @@
 Lookup page for everything configurable through files: the dictation
 action map in `config.yaml` and the per-role env files. Everything else
 is a systemd setting or a pull request; the how-to lives in the
-[configuration guide](../guides/configuration.md).
+[Configuration guide](../guides/configuration.md).
 
 ## config.yaml
 
@@ -33,7 +33,7 @@ guidance.
 | `who_suffix` | string, matcher | no | Suffix test against the record's `<who>`, the author on the first line. Example: `[bot]`. |
 | `author` | string, matcher | no | Equality against the whole `<who>`. Example: `alice`. |
 | `url_prefix` | string, matcher | no | Plain string prefix test against the record's URL line, scheme and host included, no globs. The prefix scopes by URL shape: `https://github.com/acme/` matches a GitHub org, `https://github.com/acme/widgets/` a repo, `https://acme.enterprise.slack.com/` a Slack workspace, `https://acme.enterprise.slack.com/archives/C012345/` a channel. |
-| `action` | string, output | yes | The verb written into the intent's `action` line; the drafting clerk's skill maps verbs to draft types ([speakwrite skill](../../speakwrite/SKILL.md), read from your installed copy at `~/.claude/skills/speakwrite/SKILL.md`). The shipped skill knows `review`, `vet-findings`, `pr-reply`, `slack-reply`, `linear-comment`, `respond`; any other verb works once that file says what to draft for it. |
+| `action` | string, output | yes | The verb written into the intent's `action` line; the speakwrite skill maps verbs to draft types ([speakwrite skill](../../speakwrite/SKILL.md), read from your installed copy at `~/.claude/skills/speakwrite/SKILL.md`). The shipped skill knows `review`, `vet-findings`, `pr-reply`, `slack-reply`, `linear-comment`, `respond`; any other verb works once that file says what to draft for it. The action selects what speakwrite writes; how an approved draft is posted is chosen separately by the actor's publisher table matching the record URL ([Actor contract](../contracts/thinkpol.md#the-publisher-table)). |
 | `guidance` | string, output | no | Default stance text prepended to the dictated stance in the intent's guidance section: the rule sets the register, the dictation refines or overrides it. Example: `professional register`. |
 
 ### Built-in action map
@@ -93,7 +93,7 @@ holds secrets, so `chmod 600` it.
 | LINEAR_API_BASE | replaces the Linear API root (default `https://api.linear.app`) | testing |
 
 The github-pr publisher uses your authenticated `gh` and needs no
-entry here. A missing token fails the post gracefully: the draft
+key here. A missing token fails the post gracefully: the draft
 survives, the approval is consumed, `publish.log` names the reason.
 
 ## Other settings

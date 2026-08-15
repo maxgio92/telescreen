@@ -5,7 +5,8 @@ where the machinery watches the human. Here the direction flips and the
 human runs the ministry. The names are not decoration; each one is a
 precise metaphor for what the component does, chosen so the metaphor
 never drifts from the mechanism. This page is the lore. The mechanisms
-live in the [contracts](../contracts/recdep.md) and the
+live in the [Queue contract](../contracts/recdep.md), the
+[Actor contract](../contracts/thinkpol.md), and the
 [README](../../README.md).
 
 ## minitrue
@@ -44,7 +45,7 @@ book's work orders, "upsub antefiling": submit to higher authority
 before filing. That is exactly the drawer's meaning: you acted, the
 matter went up, the other side owes the next move.
 
-The layout is a contract, [recdep.md](../contracts/recdep.md): any
+The layout is a contract, the [Queue contract](../contracts/recdep.md): any
 producer that writes conforming records is a drop-in replacement,
 whether an agent with the model of your choice, a deterministic poller,
 or a webhook receiver.
@@ -73,13 +74,13 @@ files them (fsnotify).
 The speakwrite is the dictation machine on Winston's desk at RecDep:
 he speaks the correction, the machine writes it into the record.
 A headless agent behind a systemd path unit on `recdep/intents/`.
-Press `s` on a record to dictate your stance in `$EDITOR`; the clerk
-researches the matter read-only, drafts the response into the record,
-and the row turns `[draft]`. Press `p` twice to approve publication:
-the actor posts the draft upstream, stamps the record with the comment
-URL, and moves it to upsub. Press `D` to discard a draft into the
-record's history instead. Nothing posts without a recorded double-key
-approval. Design in [speakwrite.md](speakwrite.md).
+Press `s` on a record to dictate your stance in `$EDITOR`; the agent
+researches the matter read-only, writes the draft into the record,
+and the row turns `[draft]`. Press `p` twice to approve: the actor
+posts the draft upstream, stamps the record with the comment URL, and
+moves it to upsub. Press `D` to discard a draft into the record's
+history instead. Nothing posts without a recorded double-key approval.
+Design in [Design: speakwrite](speakwrite.md).
 
 ## thinkpol
 
@@ -87,8 +88,8 @@ The Thought Police do not deliberate; they enforce decisions already
 taken. That is the whole job description: the actor composes nothing,
 judges nothing, and executes exactly the approvals the human already
 recorded. The one component with outward reach is the one with zero
-judgment, ordinary Go, unit-tested line by line. Contract in
-[thinkpol.md](../contracts/thinkpol.md).
+judgment, ordinary Go, unit-tested line by line. Contract in the
+[Actor contract](../contracts/thinkpol.md).
 
 ## memoryhole
 

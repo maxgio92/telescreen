@@ -6,13 +6,14 @@
 <p align="center"><img src="assets/telescreen.png" alt="telescreen" width="640"></p>
 
 telescreen is a terminal dashboard for your work notifications: a
-producer agent polls Slack, GitHub, and Linear and files each event as
-a plain file; you triage in a TUI; a drafting agent writes replies you
-dictate; nothing posts without your double-key approval.
+producer polls Slack, GitHub, and Linear and files each event as a
+record, one plain file; you triage in a TUI; an agent writes a draft
+reaction for each stance you dictate; nothing posts without your
+double-key approval.
 
 One binary.<br>
 Files are the only interface.<br>
-Agents draft, only you publish.
+Agents draft, only you approve.
 
 [Install](#install) ·
 [Documentation](docs/README.md) ·
@@ -38,9 +39,9 @@ telescreen demo
 ```
 
 That is the screen with one record in the tube: move it with `t`, `u`,
-`f`, read it in the detail pane, feed it to the memory hole. The real
-feed and the drafting need the agents enrolled (the Install section
-below); they run on systemd user units and require the claude CLI.
+`f`, read it in the detail pane, delete it. Real records and draft
+reactions need the agents enrolled (the Install section below); they
+run on systemd user units and require the claude CLI.
 
 ## Install
 
@@ -118,34 +119,35 @@ builds the binary into `~/.local/bin` and runs its installer.
 
 ## Documentation
 
-| You need | Read |
-|---|---|
-| the index, with reading paths | [docs/README.md](docs/README.md) |
-| to install and see the screen | [getting-started/install.md](docs/getting-started/install.md) |
-| to enroll the agents | [getting-started/enroll.md](docs/getting-started/enroll.md) |
-| a first record, end to end | [getting-started/first-record.md](docs/getting-started/first-record.md) |
-| every knob you can turn | [guides/configuration.md](docs/guides/configuration.md) |
-| every config field, as a table | [reference/configuration.md](docs/reference/configuration.md) |
-| to write your own producer | [guides/write-a-producer.md](docs/guides/write-a-producer.md) |
-| to swap the posting actor | [guides/swap-the-actor.md](docs/guides/swap-the-actor.md) |
-| something is broken | [guides/troubleshooting.md](docs/guides/troubleshooting.md) |
-| the queue contract, normative | [contracts/recdep.md](docs/contracts/recdep.md) |
-| the actor contract, normative | [contracts/thinkpol.md](docs/contracts/thinkpol.md) |
-| why the drafting layer looks like this | [design/speakwrite.md](docs/design/speakwrite.md) |
-| the 1984 naming lore | [design/names.md](docs/design/names.md) |
-| the full CLI reference | [reference/telescreen.md](docs/reference/telescreen.md) |
+- [Documentation index](docs/README.md)
+- [Getting started](docs/getting-started/install.md)
+- [Enroll the agents](docs/getting-started/enroll.md)
+- [Your first record](docs/getting-started/first-record.md)
+- [Configuration guide](docs/guides/configuration.md)
+- [Configuration reference](docs/reference/configuration.md)
+- [Write a producer](docs/guides/write-a-producer.md)
+- [Swap the actor](docs/guides/swap-the-actor.md)
+- [Troubleshooting](docs/guides/troubleshooting.md)
+- [Queue contract](docs/contracts/recdep.md)
+- [Actor contract](docs/contracts/thinkpol.md)
+- [Design: speakwrite](docs/design/speakwrite.md)
+- [Design: the names](docs/design/names.md)
+- [Vocabulary](docs/reference/vocabulary.md)
+- [CLI reference](docs/reference/telescreen.md)
 
 ## How it works
 
-Four components, one direction of flow:
+Five components, files as every edge:
 
 ```mermaid
 flowchart TB
-    minitrue["minitrue<br/>(produces)"] -->|files records| recdep["recdep<br/>(stores)"]
-    recdep -->|renders| telescreen["telescreen<br/>(displays)"]
-    telescreen -->|dictations, approvals| recdep
-    recdep -->|intents| speakwrite["speakwrite<br/>(drafts, posts on approval)"]
+    minitrue["minitrue<br/>(producer: polls the sources)"] -->|files records| recdep["recdep<br/>(the queue)"]
+    recdep -->|renders| telescreen["telescreen<br/>(the screen)"]
+    telescreen -->|intents, approvals| recdep
+    recdep -->|intents| speakwrite["speakwrite<br/>(writes draft reactions)"]
     speakwrite -->|drafts| recdep
+    recdep -->|approvals| thinkpol["thinkpol<br/>(actor: posts approved drafts)"]
+    thinkpol -->|published records| recdep
 ```
 
 Files are the only interface between them. No sockets, no database, no
@@ -159,8 +161,8 @@ The life of one record:
 2. You take it to `desk/`: seen, the next move is yours.
 3. You dictate a stance with `s`: your editor opens on an intent,
    you write what you think in plain words.
-4. The clerk drafts the response into the record; the row turns
-   `[draft]`.
+4. The speakwrite agent writes the draft into the record; the row
+   turns `[draft]`.
 5. You approve with `p` `p`: the double keypress is the recorded
    consent.
 6. The actor posts the draft upstream, stamps the record with the
@@ -168,31 +170,33 @@ The life of one record:
 
 The drawers, one directory per state:
 
-| Drawer | In the cubicle | In plain terms |
-|---|---|---|
-| `tube/` | the pneumatic tube delivers a record | landed, unseen |
-| `desk/` | the record sits on your desk | seen, the next move is yours |
-| `upsub/` | submitted to higher authority | you acted, the other side owes the next move |
-| `files/` | filed away | closed |
+| Drawer | Meaning |
+|---|---|
+| `tube/` | landed, unseen |
+| `desk/` | seen, the next move is yours |
+| `upsub/` | you acted, the other side owes the next move |
+| `files/` | closed |
 
 ## The names
 
 Every component is named in Newspeak, after Orwell's 1984: the world
 where the machinery watches the human. Here the direction flips and
-the human runs the ministry.
+the machinery works for you.
 
 | Name | Role |
 |---|---|
 | minitrue | the producer: polls the sources, files the records |
-| recdep | the file store: one directory per state |
+| recdep | the queue: one drawer per state |
 | telescreen | the screen: this TUI |
-| speakwrite | the drafting agent: you dictate, it writes |
+| speakwrite | the agent that writes draft reactions: you dictate, it writes |
 | thinkpol | the actor: posts approved drafts, nothing else |
 | memoryhole | permanent delete: nothing returns |
 | tube, desk, upsub, files | the drawers |
 
 The full lore, with why each name is a precise metaphor, lives in
-[docs/design/names.md](docs/design/names.md).
+[Design: the names](docs/design/names.md). The domain terms (record,
+queue, intent, draft, approval, and the rest) are defined once in the
+[Vocabulary](docs/reference/vocabulary.md).
 
 ## Usage
 
@@ -200,12 +204,13 @@ The full lore, with why each name is a precise metaphor, lives in
 telescreen          # the screen
 telescreen --once   # print per-drawer counts and exit
 telescreen export --output json   # every record in the four drawers as one JSON document
-telescreen verify   # lint the queue against the docs/contracts/recdep.md grammar; exit 1 on findings
+telescreen verify   # lint the queue against the record grammar; exit 1 on findings
 ```
 
 The full CLI reference, including the install, minitrue, speakwrite,
-thinkpol, and version subcommands, lives at
-[docs/reference/telescreen.md](docs/reference/telescreen.md).
+thinkpol, and version subcommands, lives in the
+[CLI reference](docs/reference/telescreen.md). `telescreen verify`
+lints against the [Queue contract](docs/contracts/recdep.md).
 
 ### Keys
 
@@ -220,10 +225,10 @@ thinkpol, and version subcommands, lives at
 | `f` | file it (any open drawer to files) |
 | `b` | back, one drawer |
 | `s` | dictate into the speakwrite (tube, desk, upsub) |
-| `p` `p` | approve publishing a draft (records with a matching publisher: GitHub PRs, Slack threads, Linear issues) |
+| `p` `p` | approve a draft for posting (records with a matching publisher: GitHub PRs, Slack threads, Linear issues) |
 | `D` | discard a draft |
-| `x` `x` | the memory hole (files only; the screen barks first) |
-| `q` | switch off the telescreen, a luxury Smith never had |
+| `x` `x` | delete the record permanently (files only; the first press asks by name) |
+| `q` | quit |
 
 The detail pane shows the selected record in full: the content line,
 the preview, then the labeled path (one `cat` away, or one agent

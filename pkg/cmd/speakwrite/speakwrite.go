@@ -1,4 +1,4 @@
-// Package speakwrite runs the drafting runner: consume dictation
+// Package speakwrite runs the speakwrite agent: consume dictation
 // intents and append drafts; publishing is thinkpol's job. The systemd
 // path unit runs it when an intent lands; the agent, prompt, tool
 // allowlist, and timeout come from ~/.config/speakwrite.env with the
@@ -26,7 +26,7 @@ const (
 func New() *cobra.Command {
 	return &cobra.Command{
 		Use:   "speakwrite",
-		Short: "run the drafting runner once (consume dictation intents, append drafts)",
+		Short: "run the speakwrite agent once (consume dictation intents, append drafts)",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return run()

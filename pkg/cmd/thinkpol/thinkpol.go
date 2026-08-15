@@ -24,7 +24,7 @@ import (
 func New() *cobra.Command {
 	return &cobra.Command{
 		Use:   "thinkpol",
-		Short: "run the acting layer once (execute publish approvals deterministically)",
+		Short: "run the actor once (execute publish approvals deterministically)",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			root, err := recdep.StateRoot()

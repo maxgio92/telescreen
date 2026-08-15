@@ -25,7 +25,7 @@ about the chocolate ration.
 ## Dictate
 
 With the record selected in tube, desk, or upsub, press `s`. Your
-editor opens on a pre-filled intent: the entry path, the mapped action
+editor opens on a pre-filled intent: the record path, the mapped action
 (`review`, since the filename says review-requested), and an empty
 guidance section. Write your stance in plain words:
 
@@ -38,8 +38,8 @@ Save to submit; abort the editor to cancel. The row gains `[dictated]`.
 
 ## Draft
 
-The speakwrite runner (if enrolled) picks up the intent, researches the
-entry read-only, and appends a dictated section and a draft section to
+The speakwrite agent (if enrolled) picks up the intent, researches the
+record read-only, and appends a dictated marker and a draft marker to
 the record file. The row turns `[draft]` and the detail pane shows the
 draft, because the draft is part of the file. Press `s` again to
 re-dictate; the new draft supersedes the old.
@@ -57,5 +57,6 @@ and `publish.log` names the reason. Working as intended.
 
 ## Next
 
-Enroll the real feed ([enroll.md](enroll.md)) and tune the action map
-and the env files ([configuration](../guides/configuration.md)).
+[Enroll the agents](enroll.md) for real records, then tune the action
+map and the env files with the
+[Configuration guide](../guides/configuration.md).

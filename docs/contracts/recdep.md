@@ -3,56 +3,59 @@
 Read this to write a producer or a consumer.
 
 telescreen consumes a filesystem queue. Anything that writes conforming
-files is a valid producer: an LLM agent, a deterministic poller in Go or
-shell, a webhook receiver. This document is the normative contract between
-the two sides.
+records is a valid producer: an LLM agent, a deterministic poller in Go
+or shell, a webhook receiver. This document is the normative contract
+between the two sides. Terms are defined in the
+[Vocabulary](../reference/vocabulary.md).
 
 ## Roles
 
-- Producer (reference implementation: minitrue, a headless agent run on a
-  systemd timer): polls upstream sources, writes entry files into `tube/`,
-  owns `since`.
-- Consumer (telescreen, this repo): renders the queue and renames entries
-  between state directories. Never touches the network, never writes entry
-  content, never advances `since`.
+- Producer (reference implementation: minitrue, a headless agent run on
+  a systemd timer): polls upstream sources, writes records into
+  `tube/`, owns `since`.
+- Consumer (telescreen, this repo): renders the queue and renames
+  records between drawers. Never touches the network, never writes
+  record content, never advances `since`.
 
 ## Layout
 
 State root: `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`
 
-- `since`: an ISO-8601 UTC instant, the moment the producer last polled
-  through. Producer-owned. The consumer never reads or writes it.
-- `tube/`: landed, unseen entries. Presence means unseen.
-- `desk/`: seen, still needs action.
-- `upsub/`: acted on, the other side's move is pending.
-- `files/`: closed, nothing more expected.
-- `intents/`: speakwrite dictation intents, one file per intent named
-  after the entry (`<entry-name>.intent`). Written only by the consumer
-  (the TUI); the drafting runner consumes each intent and removes the
-  file. Format: an `entry <absolute entry path>` line, an
-  `action <mapped action>` line, then a `guidance:` section with free
-  text, possibly empty. The directory also holds publish approvals
-  (`<entry-name>.publish`): a single `entry <absolute entry path>` line,
-  written only by the consumer after an explicit double-key approval on
-  a drafted entry. The actor (thinkpol) consumes each approval, posts
-  the draft, and removes the file; the approval is the recorded consent
-  for the one outward write. The consumer may also remove a pending
-  approval when the human discards the draft: the revocation of that
-  consent.
+| Path | Contents |
+|---|---|
+| `since` | An ISO-8601 UTC instant, the moment the producer last polled through. Producer-owned; the consumer never reads or writes it. |
+| `tube/` | Landed, unseen records. Presence means unseen. |
+| `desk/` | Seen, still needs action. |
+| `upsub/` | Acted on, the other side's move is pending. |
+| `files/` | Closed, nothing more expected. |
+| `intents/` | Intents and approvals, written only by the consumer (the TUI). |
 
-The producer writes only into `tube/` and creates missing directories at
-startup. The consumer moves files between the four directories with plain
-renames and creates missing directories, `intents/` included, at startup.
-Files, not sockets or databases, are the whole interface.
+An intent (`<record-name>.intent`) records one dictation: an
+`entry <absolute record path>` line, an `action <mapped action>` line,
+then a `guidance:` section with free text, possibly empty. The
+speakwrite agent consumes each intent and removes the file.
 
-The store is private to the user: components create directories 0700
+An approval (`<record-name>.publish`) is a single
+`entry <absolute record path>` line, written only after an explicit
+double-key approval on a drafted record: the recorded consent for the
+one outward write. The actor (thinkpol) consumes each approval, posts
+the draft, and removes the file. The consumer may also remove a pending
+approval when the human discards the draft: the revocation of that
+consent.
+
+The producer writes only into `tube/` and creates missing directories
+at startup. The consumer moves files between the four drawers with
+plain renames and creates missing directories, `intents/` included, at
+startup. Files, not sockets or databases, are the whole interface.
+
+The queue is private to the user: components create directories 0700
 and new files 0600 (recommended for existing ones too; `telescreen
 verify` warns otherwise but never chmods). Encryption at rest is a
 deployment choice (full-disk encryption, or a gocryptfs/fscrypt mount
 of the state root) rather than a component concern, because append-only
-plaintext is what keeps the store auditable by `cat`.
+plaintext is what keeps the queue auditable by `cat`.
 
-## Entry files
+## Records
 
 One file per hit, named `<UTC>-<source>-<slug>.md`:
 
@@ -70,43 +73,42 @@ seen <produce-run-time>
 <preview>
 ```
 
-- Line 1: `[<source>]` tag, the actor, a colon, and a one-line summary.
+- Line 1: `[<source>]` tag, the author, a colon, and a one-line summary.
 - Line 2: the canonical URL of the triggering event.
 - Line 3: `seen <ISO-8601 instant>`, when the producer observed it.
-- Preview (optional): after one blank line, the triggering content quoted
-  verbatim (a Slack reply, a review comment body, a Linear comment). Cap it
-  at roughly 15 lines or 1000 characters and append `[...]` when truncated.
+- Preview (optional): after one blank line, the triggering content
+  quoted verbatim (a Slack reply, a review comment body, a Linear
+  comment). Cap it at roughly 15 lines or 1000 characters and append
+  `[...]` when truncated.
 
-The consumer parses lines 1 and 2 for the list view and shows the full body
-in the detail pane. Unknown or missing pieces degrade to empty fields, so a
-minimal producer can emit only line 1 and still render.
+The consumer parses lines 1 and 2 for the list view and shows the full
+body in the detail pane. Unknown or missing pieces degrade to empty
+fields, so a minimal producer can emit only line 1 and still render.
 
 ## Producer obligations
 
-1. Write each hit exactly once. Dedupe across polls is the producer's job
-   (for example, a seen-list file next to `since`).
-2. Enqueue activity strictly after `since`, then advance `since` to the
+1. Write each hit exactly once. Dedupe across polls is the producer's
+   job (for example, a seen-list file next to `since`).
+2. File activity strictly after `since`, then advance `since` to the
    poll's start time.
 3. Skip activity authored by the watched person; the queue is for what
    others did.
-4. On a partial outage (an auth-less source, a failed poll), enqueue a
-   degraded entry naming the gap rather than failing silently.
-5. Entries are append-only once written, with one sanctioned addition: a
-   revalidation pass may append a single marker line
+4. On a partial outage (an auth-less source, a failed poll), file a
+   degraded record naming the gap rather than failing silently.
+5. Records are append-only once written, with one sanctioned addition:
+   a revalidation pass may append a single marker line
    `stale <reason> <ISO-8601 time>` (kebab-case reason, e.g. `merged`,
-   `closed`, `already-reviewed`) to entries in `tube/`, `desk/`, or
+   `closed`, `already-reviewed`) to records in `tube/`, `desk/`, or
    `upsub/`. The marker must start on its own line: prepend a newline
-   when the file lacks a trailing one. Never mark an entry twice; never
-   touch `files/`. Never
-   delete entries; states beyond `tube/` belong to the consumer. The
-   producer marks, the human files.
+   when the file lacks a trailing one. Never mark a record twice; never
+   touch `files/`. Never delete records; drawers beyond `tube/` belong
+   to the consumer. The producer marks, the human files.
 
-## Entry marker sections
+## Markers
 
-The speakwrite drafting runner records its work as marker sections
-appended to entry files. Each marker starts with `--- ` on its own line,
-the same discipline as the stale marker: prepend a newline when the file
-lacks a trailing one.
+A marker is an appended section in a record. Each marker starts with
+`--- ` on its own line, the same discipline as the stale marker:
+prepend a newline when the file lacks a trailing one.
 
 ```
 --- dictated <ISO-8601 time>
@@ -120,40 +122,35 @@ lacks a trailing one.
 --- discarded <ISO-8601 time>
 ```
 
-The drafting runner appends dictated and draft. The actor (thinkpol)
-appends published. The consumer appends only discarded: that append is
-the one consumer write to entry content besides renames. These four kinds are the only recognized
-markers: a `--- ` line with any other kind is section text (a quoted
-diff, for example), not a marker. Markers accumulate append-only; the
-last marker wins for presentation.
+| Marker | Appended by | Meaning |
+|---|---|---|
+| `dictated` | the speakwrite agent | The guidance from the consumed intent, kept so the draft can be audited against what was asked. |
+| `draft` | the speakwrite agent | The draft text. A new draft supersedes earlier ones. |
+| `published` | the actor | The post happened; the URL is the resulting permalink. May carry a section body: the text actually posted, required whenever the enrolled actor adapted the draft rather than posting it verbatim, so the record never lies about what went out. A verbatim actor omits it (the draft is the post). |
+| `discarded` | the consumer | The draft is rejected. This append is the one consumer write to record content besides renames. |
 
-The published marker may carry a section body: the text actually
-posted, required whenever the enrolled actor adapted the draft rather
-than posting it verbatim, so the record never lies about what went
-out. A verbatim actor omits it (the draft is the post).
+These four kinds are the only recognized markers: a `--- ` line with
+any other kind is section text (a quoted diff, for example), not a
+marker. Markers accumulate append-only; the last marker wins for
+presentation.
 
 The published marker records the actor's publish write, the one
-outward-facing action in the whole system: on a `.publish` approval the
-actor (thinkpol) posts the last draft upstream through its publisher
-table ([thinkpol.md](thinkpol.md)), appends the published marker with the resulting
-URL, moves the entry file to `upsub/` unless it already sits in
-`upsub/` or `files/`, and removes the approval. That single rename is
-the actor's only move between state directories; every other move
-belongs to the consumer. On a failed post the actor leaves the entry
-untouched and removes the approval, so the draft stays approvable and
-nothing retries silently.
-The drafting runner's writes are the dictated and draft sections and
-the intent removals; it never posts, renames, or touches approvals.
+outward-facing action in the whole system. The publish procedure, the
+actor's single rename to `upsub/`, and the failure behavior (record
+untouched, approval removed, nothing retries silently) are normative in
+the [Actor contract](thinkpol.md); every other move between drawers
+belongs to the consumer. The speakwrite agent's writes are the dictated
+and draft markers and the intent removals; it never posts, renames, or
+touches approvals.
 
 ## Consumer obligations
 
-1. Read and rename only, with two exceptions: the incinerate removal in
-   point 4 and the discarded marker append in the entry marker sections
-   above. Never otherwise edit entry content. Stale markers are rendered,
-   not written, by the consumer.
+1. Read and rename only, with two exceptions: the delete in point 4 and
+   the discarded marker append above. Never otherwise edit record
+   content. Stale markers are rendered, not written, by the consumer.
 2. Never call the upstream sources; the queue is the only input.
-3. Treat a failed read as a race with a concurrent move and retry on the
-   next refresh.
-4. One destructive action exists: incinerate, which removes an entry file
-   from `files/` only, behind a double keypress on the same entry. The
+3. Treat a failed read as a race with a concurrent move and retry on
+   the next refresh.
+4. One destructive action exists: delete, which removes a record from
+   `files/` only, behind a double keypress on the same record. The
    removal is permanent; nothing returns from the memory hole.

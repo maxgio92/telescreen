@@ -1,18 +1,19 @@
-# thinkpol: the acting layer
+# thinkpol: the actor contract
 
 Read this to enroll or write an actor.
 
-In the book the Thought Police do not deliberate; they enforce decisions
-already taken. thinkpol is the acting role, defined by the `.publish`
-contract rather than by any particular executable. This repo ships a
-deterministic reference actor (ordinary Go: it never composes a word,
-posts the draft verbatim); an agentic actor is equally welcome: your
-own agent, your persona and tone, its MCP credentials, acting on the
-approved plan. The enrolled actor declares its semantics: verbatim
+In the book the Thought Police do not deliberate; they enforce
+decisions already taken. thinkpol is the actor role, defined by the
+`.publish` contract rather than by any particular executable. This repo
+enrolls a deterministic reference actor (ordinary Go: it never composes
+a word, posts the draft verbatim); an agentic actor is equally welcome:
+your own agent, your persona and tone, its MCP credentials, acting on
+the approved draft. The enrolled actor declares its semantics: verbatim
 (the draft is the post) or interpretive (the agent may adapt the text,
 and must then record what it actually posted in the published marker's
-section body, per [recdep.md](recdep.md)). Exactly one actor is enrolled at a time;
-two consumers of the same approvals would race into double-posting.
+section body, per the [Queue contract](recdep.md)). Exactly one actor
+is enrolled at a time; two consumers of the same approvals would race
+into double-posting.
 
 ## Why a separate binary
 
@@ -20,9 +21,9 @@ Publishing needs zero judgment: parse the approval, extract the draft,
 post it, stamp the record. Keeping it inside the speakwrite agent made
 the least deterministic component the only one with outward reach, and
 its "never post without approval" rule was a sentence in a prompt.
-After the split it is structure: the agent has nothing to post with,
-and the one component that can post is ordinary Go, unit-tested line by
-line.
+As a separate binary it is structure: the agent has nothing to post
+with, and the one component that can post is ordinary Go, unit-tested
+line by line.
 
 ## Responsibilities, and what each one requires
 
@@ -31,16 +32,16 @@ files. Each is replaceable without touching the others.
 
 | Role | Component | Interface it honors | Requires |
 |---|---|---|---|
-| produce | minitrue | writes records into `tube/` ([recdep.md](recdep.md)) | claude CLI + gh; Slack/Linear MCP, degrading without |
-| store | recdep | plain files and renames ([recdep.md](recdep.md)) | a filesystem |
+| produce | minitrue | writes records into `tube/` ([Queue contract](recdep.md)) | claude CLI + gh; Slack/Linear MCP, degrading without |
+| queue | recdep | plain files and renames ([Queue contract](recdep.md)) | a filesystem |
 | view | telescreen | reads records, renames between drawers | nothing else |
-| draft | speakwrite | consumes `.intent`, appends dictated/draft sections | claude CLI + gh for research; Slack/Linear MCP optional |
+| draft | speakwrite | consumes `.intent`, appends dictated/draft markers | claude CLI + gh for research; Slack/Linear MCP optional |
 | act | thinkpol | consumes `.publish`, posts, appends published, renames to upsub | per-publisher credentials (see the publisher table); no claude |
 
-The model is optional at every layer except drafting. A deterministic
+The model is optional at every role except draft. A deterministic
 producer plus telescreen plus thinkpol is a complete, LLM-free system;
-the speakwrite is the one place judgment lives, and dictation is how
-the human injects it.
+speakwrite is the one place judgment lives, and dictation is how the
+human injects it.
 
 ## Agnosticism
 
@@ -48,20 +49,20 @@ Two axes, both resolved at the edges rather than in the core:
 
 - Source-agnostic. A record carries a source tag, a URL, content, and
   markers; nothing else about Slack, GitHub, or Linear leaks into the
-  store, the view, or the flow. The three places that know sources are
+  queue, the view, or the flow. The three places that know sources are
   declared tables, not logic: the producer's watches (prose in its
-  skill), the dictation action map (a data table in the TUI), and the
-  publisher table (`internal/publish`, a dispatch table from URL shape
-  to posting call; the TUI's p gate and the actor both read it). Adding
-  a source touches those three tables and nothing else.
+  skill), the action map (a data table in the TUI), and the publisher
+  table (`internal/publish`, a dispatch table from URL shape to posting
+  call; the TUI's p gate and the actor both read it). Adding a source
+  touches those three tables and nothing else.
 - Technology-agnostic. Every seam is a file format, so every component
   is swappable per role: the producer can be an agent, a deterministic
-  poller, or a webhook receiver; the drafting layer can be any agent
-  runtime that reads intents and appends sections; the actor can be
-  this Go binary, a shell script, or anything that honors the approval
-  semantics. The actor needs no model at all; the model is optional
-  everywhere except drafting. The contract files ([recdep.md](recdep.md),
-  [speakwrite.md](../design/speakwrite.md), this one) are the only coupling.
+  poller, or a webhook receiver; the draft role can be filled by any
+  agent runtime that reads intents and appends markers; the actor can
+  be this Go binary, a shell script, or anything that honors the
+  approval semantics. The contract files (the
+  [Queue contract](recdep.md), [Design: speakwrite](../design/speakwrite.md),
+  this one) are the only coupling.
 
 ### Configuration
 
@@ -70,28 +71,27 @@ Environment details live outside the code, split by shape. Env files
 `~/.config/thinkpol.env`) hold flat parameters and secrets, the agent
 binary, the prompt, and the MCP tool allowlists included.
 `~/.config/recdep/config.yaml` holds structured tables, such as the
-dictation action map. Systemd enrollment chooses implementations:
-swapping a component means enabling a different unit. The subcommand
-defaults reproduce a plain claude setup, so an absent config is a
-working one.
+action map. Systemd enrollment chooses implementations: swapping a
+component means enabling a different unit. The subcommand defaults
+reproduce a plain claude setup, so an absent config is a working one.
 
 ## Procedure
 
 Triggered by a systemd path unit on `recdep/intents/*.publish`
 (trigger-bounded like the others). For each approval, oldest first:
 
-1. Parse the `entry <absolute path>` line. Resolve the entry: the
+1. Parse the `entry <absolute path>` line. Resolve the record: the
    recorded path, else search the four drawers for the basename, else
    remove the approval and log the orphan.
-2. Extract the last draft section. No draft, or a discarded marker
+2. Extract the last draft marker. No draft, or a discarded marker
    after it: remove the approval, log why, touch nothing.
 3. Dispatch on the URL through the publisher table below. A URL no
    publisher matches: remove the approval, log why.
 4. On success: append `--- published <ISO-8601 time> <comment URL>` to
-   the entry (contract newline discipline), rename the entry to
+   the record (contract newline discipline), rename the record to
    `upsub/` unless it already sits in `upsub/` or `files/`, remove the
    approval, log one line.
-5. On failure: leave the entry untouched (the draft tag survives, the
+5. On failure: leave the record untouched (the draft tag survives, the
    human can re-approve), remove the approval so nothing retries
    silently, log the error.
 
@@ -118,13 +118,3 @@ human, which matches drafts written in first person.
 The service unit loads the tokens from `~/.config/thinkpol.env`
 (`EnvironmentFile=-`, so a missing file is fine, gh alone still works).
 The file holds secrets; `chmod 600` it.
-
-## What changes elsewhere
-
-- speakwrite loses its publish procedure and its `.publish` glob; its
-  path unit narrows back to `*.intent`. Its guardrail becomes literal:
-  it cannot post.
-- [recdep.md](recdep.md) reassigns the publish write and the single upsub rename
-  from "the runner" to the actor.
-- The TUI is untouched: `p p` writes the same approval file, `D` still
-  revokes it.

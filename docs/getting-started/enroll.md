@@ -1,9 +1,10 @@
 # Enroll the agents
 
-The screen alone shows files. The feed, the drafting, and the posting
-come from three enrolled components: minitrue (produces), speakwrite
-(drafts), thinkpol (posts). They run on systemd user units and require
-the claude CLI (thinkpol excepted; it is plain Go).
+The screen alone shows files. Records, draft reactions, and posts
+come from three enrolled components: minitrue files records,
+speakwrite writes drafts, thinkpol posts approved drafts. They run on
+systemd user units and require the claude CLI (thinkpol excepted; it
+is plain Go).
 
 ## Enroll
 
@@ -40,14 +41,15 @@ REPO=owner/repo             # the GitHub repo to scope PR watches to
 
 Two more env files exist, both optional at first:
 
-- `~/.config/speakwrite.env`: the drafting agent's binary, prompt,
+- `~/.config/speakwrite.env`: the speakwrite agent's binary, prompt,
   allowlist, timeout. Absent means a plain claude setup.
 - `~/.config/thinkpol.env`: posting credentials (SLACK_TOKEN,
   LINEAR_API_KEY). Secrets; `chmod 600` it. GitHub posting uses your
-  authenticated `gh` and needs no entry.
+  authenticated `gh` and needs no key here.
 
-Every key, default, and knob lives in the
-[configuration guide](../guides/configuration.md).
+Every key and default lives in the
+[Configuration reference](../reference/configuration.md); the
+[Configuration guide](../guides/configuration.md) covers the tasks.
 
 ## From source
 
