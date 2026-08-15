@@ -13,7 +13,7 @@ Only the producer touches Slack, GitHub, or Linear.
 dashboard consumes.
 
 The queue format is a producer-agnostic contract, documented normatively in
-RECDEP.md of github.com/maxgio92/telescreen. This skill is one producer
+docs/contracts/recdep.md of github.com/maxgio92/telescreen. This skill is one producer
 implementation (agentic, via a headless Claude run); any program that writes
 conforming entry files works as a drop-in replacement.
 

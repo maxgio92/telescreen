@@ -1,6 +1,6 @@
 // Package export dumps every record in the four drawers to stdout as
 // one JSON document, so scripts and agents read the queue without
-// reimplementing the RECDEP.md grammar. All parsing stays in
+// reimplementing the docs/contracts/recdep.md grammar. All parsing stays in
 // internal/recdep; export only shapes the result.
 package export
 
@@ -20,7 +20,7 @@ import (
 )
 
 // sectionKinds are the marker sections a record can carry, per the
-// RECDEP.md grammar.
+// docs/contracts/recdep.md grammar.
 var sectionKinds = []string{"dictated", "draft", "published", "discarded"}
 
 // record is one drawer entry in the export document.

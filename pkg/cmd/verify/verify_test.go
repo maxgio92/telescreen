@@ -183,7 +183,7 @@ func TestVerifyPreviewQuotesStayClean(t *testing.T) {
 func TestVerifySectionTextStaysClean(t *testing.T) {
 	root := seed(t)
 	// A drafted diff reply: the section text quotes "--- a/file" lines
-	// and a "stale ..." line. RECDEP.md sanctions those as section text,
+	// and a "stale ..." line. docs/contracts/recdep.md sanctions those as section text,
 	// so verify must not flag them.
 	write(t, root, "desk", "20260814T090000Z-github-alice-diff.md",
 		cleanBody+"\n--- draft 2026-08-14T10:00:00Z\nquoting the change:\n--- a/main.go\n+++ b/main.go\nstale comment kept for context\nstale two\n")

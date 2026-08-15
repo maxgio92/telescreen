@@ -1,4 +1,4 @@
-// Package recdep implements the queue contract in RECDEP.md: the state
+// Package recdep implements the queue contract in docs/contracts/recdep.md: the state
 // directories, the entry file format with its marker sections, and the
 // two writes the contract sanctions (the marker append and the rename
 // between states). The telescreen TUI and the thinkpol actor both build
@@ -50,7 +50,7 @@ type Entry struct {
 	MarkTime string
 }
 
-// markerKinds are the only speakwrite marker kinds RECDEP.md recognizes.
+// markerKinds are the only speakwrite marker kinds docs/contracts/recdep.md recognizes.
 // Draft and guidance text is appended verbatim and can contain "--- "
 // lines of its own (unified diffs quote "--- a/file"), so a "--- " line
 // counts as a marker only when its kind is one of these.

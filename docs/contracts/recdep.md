@@ -1,5 +1,7 @@
 # recdep: the queue contract
 
+Read this to write a producer or a consumer.
+
 telescreen consumes a filesystem queue. Anything that writes conforming
 files is a valid producer: an LLM agent, a deterministic poller in Go or
 shell, a webhook receiver. This document is the normative contract between
@@ -133,7 +135,7 @@ out. A verbatim actor omits it (the draft is the post).
 The published marker records the actor's publish write, the one
 outward-facing action in the whole system: on a `.publish` approval the
 actor (thinkpol) posts the last draft upstream through its publisher
-table (THINKPOL.md), appends the published marker with the resulting
+table ([thinkpol.md](thinkpol.md)), appends the published marker with the resulting
 URL, moves the entry file to `upsub/` unless it already sits in
 `upsub/` or `files/`, and removes the approval. That single rename is
 the actor's only move between state directories; every other move

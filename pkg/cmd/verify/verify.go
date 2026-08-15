@@ -1,4 +1,4 @@
-// Package verify lints the queue against the RECDEP.md grammar without
+// Package verify lints the queue against the docs/contracts/recdep.md grammar without
 // writing anything: one line per finding, exit code 1 when findings
 // exist. Loose permissions and look-alike marker or stale lines in the
 // verbatim preview are reported as warnings and leave the exit code
@@ -28,7 +28,7 @@ const abandonedAge = 24 * time.Hour
 func New() *cobra.Command {
 	return &cobra.Command{
 		Use:   "verify",
-		Short: "lint the queue against the RECDEP.md grammar",
+		Short: "lint the queue against the docs/contracts/recdep.md grammar",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			root, err := recdep.StateRoot()

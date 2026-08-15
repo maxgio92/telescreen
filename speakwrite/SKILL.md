@@ -5,12 +5,12 @@ description: The drafting runner for the telescreen queue. Consume speakwrite di
 
 # speakwrite
 
-The drafting half of the flow defined in SPEAKWRITE.md of
+The drafting half of the flow defined in docs/design/speakwrite.md of
 github.com/maxgio92/telescreen. The TUI's `s` key writes an intent file;
 this runner consumes it, researches the entry, and appends the draft to
 the entry file. Publishing belongs to thinkpol, the deterministic actor
-defined in THINKPOL.md; this runner has no publish procedure. The queue
-and marker contract is normative in RECDEP.md; this skill is one runner
+defined in docs/contracts/thinkpol.md; this runner has no publish procedure. The queue
+and marker contract is normative in docs/contracts/recdep.md; this skill is one runner
 implementation, and any program that appends conforming marker sections
 is a drop-in replacement.
 
@@ -97,5 +97,5 @@ For each `intents/*.intent`, oldest first:
 Research is read-only against Slack, GitHub, and Linear. The only
 writes are the marker appends to entry files and the intent removals.
 This runner cannot post: publishing is thinkpol's job, executed per
-THINKPOL.md only on an explicit double-key approval. Every move between
+docs/contracts/thinkpol.md only on an explicit double-key approval. Every move between
 states belongs to the human at the TUI.

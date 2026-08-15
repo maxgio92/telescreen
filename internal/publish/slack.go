@@ -21,7 +21,7 @@ var slackMessagePath = regexp.MustCompile(`^/archives/([A-Z0-9]+)/p(\d+)$`)
 
 // slackThread posts drafts as thread replies via the Slack Web API
 // chat.postMessage, authorized by SLACK_TOKEN. The token choice and the
-// thread_ts derivation are documented in THINKPOL.md's publisher table.
+// thread_ts derivation are documented in docs/contracts/thinkpol.md's publisher table.
 var slackThread = Publisher{
 	Name: "slack-thread",
 	Match: func(rawURL string) bool {

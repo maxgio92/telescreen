@@ -1,6 +1,6 @@
 ## telescreen verify
 
-lint the queue against the RECDEP.md grammar
+lint the queue against the docs/contracts/recdep.md grammar
 
 ```
 telescreen verify [flags]

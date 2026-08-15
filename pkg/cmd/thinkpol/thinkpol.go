@@ -1,5 +1,5 @@
 // Package thinkpol executes recorded publish approvals, the acting
-// layer defined in THINKPOL.md. It drains recdep/intents/*.publish
+// layer defined in docs/contracts/thinkpol.md. It drains recdep/intents/*.publish
 // oldest first, posts each approved draft through its publisher,
 // appends the published marker, and renames the entry to upsub/. It
 // never composes text and never judges a draft; the human approved,
@@ -84,7 +84,7 @@ func resolve(root, recorded string) (state, path string, ok bool) {
 	return "", "", false
 }
 
-// execute runs one approval file per the THINKPOL.md procedure. The
+// execute runs one approval file per the docs/contracts/thinkpol.md procedure. The
 // approval is always removed: posted, refused, or failed, nothing
 // retries silently. Only an unreadable approval or entry returns an
 // error and leaves the file for the next run.
