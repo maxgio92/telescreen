@@ -44,21 +44,51 @@ below); they run on systemd user units and require the claude CLI.
 
 ## Install
 
+<p>
+  <img src="https://img.shields.io/badge/homebrew-macOS_and_Linux-2e2a24?style=flat&logo=homebrew" alt="Homebrew">
+  <img src="https://img.shields.io/badge/go-install-00ADD8?style=flat&logo=go&logoColor=white" alt="Go">
+  <img src="https://img.shields.io/badge/fedora-rpm-51A2DA?style=flat&logo=fedora&logoColor=white" alt="Fedora">
+  <img src="https://img.shields.io/badge/debian-deb-A81D33?style=flat&logo=debian&logoColor=white" alt="Debian">
+  <img src="https://img.shields.io/badge/alpine-apk-0D597F?style=flat&logo=alpinelinux&logoColor=white" alt="Alpine">
+</p>
+
 One binary carries the screen, the agents, the actor, and the
-installer. Pick one:
+installer. Pick your method; adjust version and arch in the package
+URLs (`amd64` or `arm64`).
+
+Homebrew (macOS and Linux):
 
 ```
-# Homebrew (macOS and Linux)
 brew install maxgio92/tap/telescreen
+```
 
-# Go
+Go:
+
+```
 go install github.com/maxgio92/telescreen@latest
+```
 
-# Fedora / RHEL (adjust version and arch)
+Fedora and RHEL (dnf installs straight from a URL):
+
+```
 dnf install https://github.com/maxgio92/telescreen/releases/latest/download/telescreen_0.1.1_linux_amd64.rpm
 ```
 
-Debian and Alpine packages and plain tar.gz archives sit on the
+Debian and Ubuntu (apt needs the file on disk first):
+
+```
+curl -sLO https://github.com/maxgio92/telescreen/releases/latest/download/telescreen_0.1.1_linux_amd64.deb
+apt install ./telescreen_0.1.1_linux_amd64.deb
+```
+
+Alpine (the package is unsigned, so apk needs the flag):
+
+```
+wget -q https://github.com/maxgio92/telescreen/releases/latest/download/telescreen_0.1.1_linux_amd64.apk
+apk add --allow-untrusted ./telescreen_0.1.1_linux_amd64.apk
+```
+
+Plain tar.gz archives sit on the
 [latest release](https://github.com/maxgio92/telescreen/releases/latest).
 Later, `telescreen update` swaps the installed binary for the newest
 release in place.
