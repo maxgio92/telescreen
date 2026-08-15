@@ -37,8 +37,68 @@ func TestActionFor(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := actionFor(tt.e); got != tt.want {
+			got, guidance := actionFor(tt.e)
+			if got != tt.want {
 				t.Errorf("actionFor(%q, %q) = %q, want %q", tt.e.Source, tt.e.Who, got, tt.want)
+			}
+			if guidance != "" {
+				t.Errorf("built-in rule carries guidance %q", guidance)
+			}
+		})
+	}
+}
+
+func TestActionForProviderScopes(t *testing.T) {
+	builtin := actionRules
+	t.Cleanup(func() { actionRules = builtin })
+	applyConfig(config.Config{Actions: []config.Action{
+		{URLPrefix: "https://github.com/acme/widgets/", Action: "review", Guidance: "cite the module owner"},
+		{URLPrefix: "https://github.com/acme/", Action: "pr-reply", Guidance: "professional register"},
+		{URLPrefix: "https://acme.enterprise.slack.com/", Action: "slack-reply", Guidance: "professional register"},
+		{URLPrefix: "https://friends.slack.com/", Action: "slack-reply", Guidance: "casual register"},
+		{URLPrefix: "https://linear.app/acme/", Action: "linear-comment"},
+		{Author: "alice", Action: "vet-findings", Guidance: "alice pre-vets"},
+		{Source: "github", Action: "github-generic"},
+	}})
+	tests := []struct {
+		name         string
+		e            recdep.Entry
+		wantAction   string
+		wantGuidance string
+	}{
+		{"repo-scoped prefix wins over org prefix",
+			recdep.Entry{Source: "github", Who: "bob", URL: "https://github.com/acme/widgets/pull/1"},
+			"review", "cite the module owner"},
+		{"org prefix",
+			recdep.Entry{Source: "github", Who: "bob", URL: "https://github.com/acme/gadgets/pull/2"},
+			"pr-reply", "professional register"},
+		{"other org falls to the broader source rule",
+			recdep.Entry{Source: "github", Who: "bob", URL: "https://github.com/other-org/repo/pull/3"},
+			"github-generic", ""},
+		{"enterprise slack workspace",
+			recdep.Entry{Source: "slack", Who: "wes", URL: "https://acme.enterprise.slack.com/archives/C0A86EX00GH/p1"},
+			"slack-reply", "professional register"},
+		{"plain slack workspace",
+			recdep.Entry{Source: "slack", Who: "wes", URL: "https://friends.slack.com/archives/C123/p2"},
+			"slack-reply", "casual register"},
+		{"linear workspace",
+			recdep.Entry{Source: "linear", Who: "chuck", URL: "https://linear.app/acme/issue/FUL-1/fix"},
+			"linear-comment", ""},
+		{"author exact match",
+			recdep.Entry{Source: "linear", Who: "alice", URL: "https://linear.app/other/issue/X-1/y"},
+			"vet-findings", "alice pre-vets"},
+		{"author is exact, not a suffix",
+			recdep.Entry{Source: "linear", Who: "malice", URL: "https://linear.app/other/issue/X-2/y"},
+			"respond", ""},
+		{"no rule matches",
+			recdep.Entry{Source: "carrier-pigeon", Who: "bob", URL: "https://example.com/1"},
+			"respond", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			action, guidance := actionFor(tt.e)
+			if action != tt.wantAction || guidance != tt.wantGuidance {
+				t.Errorf("actionFor(%+v) = %q, %q, want %q, %q", tt.e, action, guidance, tt.wantAction, tt.wantGuidance)
 			}
 		})
 	}
@@ -51,22 +111,22 @@ func TestActionForCustomTable(t *testing.T) {
 		{Source: "slack", Action: "respond"},
 		{Source: "github", WhoSuffix: "[bot]", Action: "review"},
 	}})
-	if got := actionFor(recdep.Entry{Source: "slack", Who: "wes"}); got != "respond" {
+	if got, _ := actionFor(recdep.Entry{Source: "slack", Who: "wes"}); got != "respond" {
 		t.Errorf("actionFor(slack) = %q, want %q", got, "respond")
 	}
-	if got := actionFor(recdep.Entry{Source: "github", Who: "dastardly[bot]"}); got != "review" {
+	if got, _ := actionFor(recdep.Entry{Source: "github", Who: "dastardly[bot]"}); got != "review" {
 		t.Errorf("actionFor(github bot) = %q, want %q", got, "review")
 	}
 	// The custom table replaces the built-ins entirely: a source only
 	// the built-ins knew falls to the default.
-	if got := actionFor(recdep.Entry{Source: "linear", Who: "chuck"}); got != "respond" {
+	if got, _ := actionFor(recdep.Entry{Source: "linear", Who: "chuck"}); got != "respond" {
 		t.Errorf("actionFor(linear) = %q, want %q", got, "respond")
 	}
 	// An empty config keeps the current table: the custom rule must
 	// survive, distinguishing kept-custom from a wiped table (respond)
 	// and from the built-ins (vet-findings).
 	applyConfig(config.Config{})
-	if got := actionFor(recdep.Entry{Source: "github", Who: "dastardly[bot]"}); got != "review" {
+	if got, _ := actionFor(recdep.Entry{Source: "github", Who: "dastardly[bot]"}); got != "review" {
 		t.Errorf("actionFor(github bot) after empty config = %q, want %q", got, "review")
 	}
 }
@@ -106,6 +166,44 @@ func TestRenderIntentPrefillsLastGuidance(t *testing.T) {
 	}
 }
 
+func TestComposeGuidance(t *testing.T) {
+	tests := []struct {
+		name        string
+		rule, typed string
+		want        string
+	}{
+		{"both", "professional register", "agree with the finding", "professional register\nagree with the finding"},
+		{"rule only", "professional register", "", "professional register"},
+		{"typed only", "", "agree with the finding", "agree with the finding"},
+		{"neither", "", "", ""},
+		{"re-dictation pre-fill already carries the rule", "professional register", "professional register\nagree", "professional register\nagree"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := composeGuidance(tt.rule, tt.typed); got != tt.want {
+				t.Errorf("composeGuidance(%q, %q) = %q, want %q", tt.rule, tt.typed, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRenderIntentPrependsRuleGuidance(t *testing.T) {
+	builtin := actionRules
+	t.Cleanup(func() { actionRules = builtin })
+	applyConfig(config.Config{Actions: []config.Action{
+		{Source: "slack", Action: "slack-reply", Guidance: "casual register"},
+	}})
+	e := recdep.ParseEntry("a.md", "[slack] wes: go for it\nhttps://friends.slack.com/archives/C1/p1\nseen now\n")
+	if got, want := renderIntent("/q/tube/a.md", e, "say yes"),
+		"entry /q/tube/a.md\naction slack-reply\n\nguidance:\ncasual register\nsay yes\n"; got != want {
+		t.Errorf("combined intent = %q, want %q", got, want)
+	}
+	if got, want := renderIntent("/q/tube/a.md", e, ""),
+		"entry /q/tube/a.md\naction slack-reply\n\nguidance:\ncasual register\n"; got != want {
+		t.Errorf("rule-only intent = %q, want %q", got, want)
+	}
+}
+
 func TestGuidanceForPrefersPendingIntent(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
 	root := t.TempDir()
@@ -130,14 +228,14 @@ func TestActionForReviewRequestedNeedsGitHub(t *testing.T) {
 		"20260813T172742Z-slack-review-requested-foo.md",
 		"[slack] wes: review requested: foo\nhttps://example.com\nseen now\n",
 	)
-	if got := actionFor(slack); got != "slack-reply" {
+	if got, _ := actionFor(slack); got != "slack-reply" {
 		t.Errorf("slack entry with a review-requested slug = %q, want slack-reply", got)
 	}
 	tagged := recdep.ParseEntry(
 		"20260813T131405Z-github-review-requested-77.md",
 		"[github-review-requested] ampleforth: review requested on PR 77\nhttps://example.com/pr/77\nseen now\n",
 	)
-	if got := actionFor(tagged); got != "review" {
+	if got, _ := actionFor(tagged); got != "review" {
 		t.Errorf("github-review-requested header = %q, want review", got)
 	}
 }

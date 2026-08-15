@@ -25,8 +25,14 @@ type Action struct {
 	NameContains string `yaml:"name_contains"`
 	// WhoSuffix matches when the entry author ends with it.
 	WhoSuffix string `yaml:"who_suffix"`
+	// URLPrefix matches when the entry URL starts with it.
+	URLPrefix string `yaml:"url_prefix"`
+	// Author matches when it equals the entry author.
+	Author string `yaml:"author"`
 	// Action is required.
 	Action string `yaml:"action"`
+	// Guidance travels with the action into the dictation intent.
+	Guidance string `yaml:"guidance"`
 }
 
 // Config is the config.yaml schema, version 1. A non-empty Actions list

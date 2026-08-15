@@ -52,7 +52,10 @@ The map is a list of rules under one key, `actions`. Each rule:
 | `source` | it equals the record's source tag, the `[<source>]` opening the first line | `github`, `slack`, `linear` |
 | `name_contains` | the record's filename contains it | `-review-requested-` |
 | `who_suffix` | the record's author (the `<who>` on the first line) ends with it | `[bot]` |
+| `url_prefix` | the record's URL (the second line) starts with it; include the scheme and host | `https://github.com/acme/` |
+| `author` | it equals the record's author exactly | `alice` |
 | `action` | never; this is the verdict, the verb a matching record dictates | `review` |
+| `guidance` | never; this is output, a stance the rule attaches to every dictation it matches | `professional register` |
 
 Rules match top-down and the first match wins; every field except
 `action` is optional, and an omitted field matches anything, so a rule
@@ -66,11 +69,24 @@ actions:
   - source: github            # exact match on the record's source tag
     name_contains: -review-requested-   # substring of the filename
     action: review
+  - url_prefix: https://github.com/acme/   # one GitHub org
+    action: pr-reply
+    guidance: professional register, cite the relevant code
+  - url_prefix: https://acme.enterprise.slack.com/   # the work workspace
+    action: slack-reply
+    guidance: professional register
+  - url_prefix: https://friends.slack.com/           # the personal workspace
+    action: slack-reply
+    guidance: casual register, first names
   - source: slack
     action: slack-reply
   - who_suffix: "[bot]"       # suffix of the author
     action: vet-findings
 ```
+
+A rule's `guidance` is prepended to the stance you dictate, so the
+clerk follows both: the rule sets the register and your dictation
+refines or overrides it.
 
 The built-in table (applied when the file is absent or the list empty):
 

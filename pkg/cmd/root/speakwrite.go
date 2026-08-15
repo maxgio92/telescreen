@@ -30,7 +30,10 @@ type actionRule struct {
 	nameSubstring string // matches when the filename contains this
 	source        string // matches when the source equals this
 	whoSuffix     string // matches when who ends with this
+	urlPrefix     string // matches when the URL starts with this
+	author        string // matches when who equals this
 	action        string
+	guidance      string // travels with the action into the intent
 }
 
 // actionRules is the source-action map, in match order. It stays a data
@@ -59,15 +62,18 @@ func applyConfig(c config.Config) {
 			nameSubstring: a.NameContains,
 			source:        a.Source,
 			whoSuffix:     a.WhoSuffix,
+			urlPrefix:     a.URLPrefix,
+			author:        a.Author,
 			action:        a.Action,
+			guidance:      a.Guidance,
 		}
 	}
 	actionRules = rules
 }
 
-// actionFor returns the speakwrite action for an entry, "respond" when
-// no rule matches.
-func actionFor(e recdep.Entry) string {
+// actionFor returns the speakwrite action for an entry and the matching
+// rule's guidance, "respond" with no guidance when no rule matches.
+func actionFor(e recdep.Entry) (action, guidance string) {
 	for _, r := range actionRules {
 		if r.nameSubstring != "" && !strings.Contains(e.Name, r.nameSubstring) {
 			continue
@@ -78,16 +84,41 @@ func actionFor(e recdep.Entry) string {
 		if r.whoSuffix != "" && !strings.HasSuffix(e.Who, r.whoSuffix) {
 			continue
 		}
-		return r.action
+		if r.urlPrefix != "" && !strings.HasPrefix(e.URL, r.urlPrefix) {
+			continue
+		}
+		if r.author != "" && e.Who != r.author {
+			continue
+		}
+		return r.action, r.guidance
 	}
-	return "respond"
+	return "respond", ""
+}
+
+// composeGuidance prepends the rule guidance to the dictated stance so
+// the live dictation reads as refining it. A stance already starting
+// with the rule guidance as its own line (a re-dictation pre-fill) is
+// kept as is; the guard is line-level so a fresh stance that merely
+// begins with the same words still gets the prefix. A pre-fill carrying
+// an older rule text after a config edit keeps both, newest first.
+func composeGuidance(rule, typed string) string {
+	switch {
+	case rule == "":
+		return typed
+	case typed == "":
+		return rule
+	case typed == rule || strings.HasPrefix(typed, rule+"\n"):
+		return typed
+	}
+	return rule + "\n" + typed
 }
 
 // renderIntent renders the intent file per docs/contracts/recdep.md: the entry path
-// line, the action line, and a guidance section pre-filled with the
-// previous guidance when re-dictating.
+// line, the action line, and a guidance section holding the matched
+// rule's guidance followed by the previous guidance when re-dictating.
 func renderIntent(path string, e recdep.Entry, guidance string) string {
-	return "entry " + path + "\naction " + actionFor(e) + "\n\nguidance:\n" + guidance + "\n"
+	action, rule := actionFor(e)
+	return "entry " + path + "\naction " + action + "\n\nguidance:\n" + composeGuidance(rule, guidance) + "\n"
 }
 
 // intentGuidance extracts the text under an intent's "guidance:" line.

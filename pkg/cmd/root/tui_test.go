@@ -65,7 +65,7 @@ func TestNewModelMalformedConfigFallsBack(t *testing.T) {
 	if m.status == "" {
 		t.Error("malformed config left no trace in the status line")
 	}
-	if got := actionFor(recdep.Entry{Source: "slack", Who: "wes"}); got != "slack-reply" {
+	if got, _ := actionFor(recdep.Entry{Source: "slack", Who: "wes"}); got != "slack-reply" {
 		t.Errorf("actionFor(slack) = %q, want the built-in slack-reply", got)
 	}
 }

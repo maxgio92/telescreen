@@ -28,6 +28,10 @@ func TestLoadValid(t *testing.T) {
   - source: slack
     who_suffix: "[bot]"
     action: respond
+  - url_prefix: https://github.com/acme/
+    author: alice
+    action: pr-reply
+    guidance: professional register
 `)
 	c, err := Load()
 	if err != nil {
@@ -36,6 +40,7 @@ func TestLoadValid(t *testing.T) {
 	want := Config{Actions: []Action{
 		{Source: "github", NameContains: "-review-requested-", Action: "review"},
 		{Source: "slack", WhoSuffix: "[bot]", Action: "respond"},
+		{URLPrefix: "https://github.com/acme/", Author: "alice", Action: "pr-reply", Guidance: "professional register"},
 	}}
 	if len(c.Actions) != len(want.Actions) {
 		t.Fatalf("Load() = %+v, want %+v", c, want)
