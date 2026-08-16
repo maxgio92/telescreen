@@ -121,7 +121,7 @@ builds the binary into `~/.local/bin` and runs its installer.
 ## Documentation
 
 The same pages render as a website at
-[blog.maxgio.me/telescreen](https://blog.maxgio.me/telescreen/).
+[telescreen.maxgio.me](https://telescreen.maxgio.me/).
 
 - [Documentation index](docs/hub.md)
 - [Getting started](docs/getting-started/install.md)
