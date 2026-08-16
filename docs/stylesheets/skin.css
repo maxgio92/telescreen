@@ -7,9 +7,13 @@
   --md-default-fg-color: #ebdbb2;
   --md-default-fg-color--light: #bdae93;
   --md-default-fg-color--lighter: #928374;
-  --md-primary-fg-color: #1d2021;
+  --md-primary-fg-color: #161819;
+  --md-primary-fg-color--light: #282828;
+  --md-primary-fg-color--dark: #101213;
   --md-primary-bg-color: #fbf1c7;
+  --md-primary-bg-color--light: #d5c4a1;
   --md-accent-fg-color: #fabd2f;
+  --md-accent-fg-color--transparent: rgba(250, 189, 47, 0.1);
   --md-typeset-color: #ebdbb2;
   --md-typeset-a-color: #fabd2f;
   --md-code-bg-color: #282828;
@@ -33,8 +37,10 @@
 }
 
 /* 2. The left menu's section titles carry the style's red. */
-.md-nav--primary .md-nav__title,
-.md-nav__item--section > .md-nav__link {
+[data-md-color-scheme="slate"] .md-nav--primary .md-nav__title,
+[data-md-color-scheme="slate"] .md-nav__item--section > .md-nav__link,
+[data-md-color-scheme="default"] .md-nav--primary .md-nav__title,
+[data-md-color-scheme="default"] .md-nav__item--section > .md-nav__link {
   color: #c42524;
 }
 
@@ -56,7 +62,11 @@
 
 [data-md-color-scheme="default"] {
   --md-primary-fg-color: #9d0006;
+  --md-primary-fg-color--light: #c42524;
   --md-primary-fg-color--dark: #7c0004;
+  --md-primary-bg-color: #fbf1c7;
+  --md-primary-bg-color--light: #f5e5c9;
+  --md-accent-fg-color--transparent: rgba(196, 37, 36, 0.1);
   --md-typeset-a-color: #9d0006;
   --md-accent-fg-color: #c42524;
 }
