@@ -29,6 +29,9 @@ The installer also enables the units: a timer for minitrue (every 10
 minutes) and path units for speakwrite (`intents/*.intent`) and
 thinkpol (`intents/*.publish`).
 
+Editing the seeded skills is how you extend what the producer
+watches: [Add a watch](../guides/add-a-watch.md).
+
 ## Identity
 
 minitrue needs to know who you are. Create `~/.config/minitrue.env`

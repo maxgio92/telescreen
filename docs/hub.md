@@ -25,6 +25,8 @@ audit with `ls` and `cat`.
   edit for which wish, task by task.
 - [Configuration reference](reference/configuration.md) (2 min per
   lookup): every telescreen.yaml field and env key, as tables.
+- [Add a watch](guides/add-a-watch.md) (2 min): make the shipped
+  producer watch something new.
 - [Write a producer](guides/write-a-producer.md) (3 min): file records
   from anything.
 - [Swap the actor](guides/swap-the-actor.md) (3 min): enroll your own

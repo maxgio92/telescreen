@@ -45,6 +45,7 @@ nav:
       - Your first record: getting-started/first-record.md
   - Guides:
       - Configuration: guides/configuration.md
+      - Add a watch: guides/add-a-watch.md
       - Use another agent: guides/use-another-agent.md
       - Write a producer: guides/write-a-producer.md
       - Swap the actor: guides/swap-the-actor.md
