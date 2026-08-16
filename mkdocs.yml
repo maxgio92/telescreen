@@ -77,4 +77,4 @@ nav:
       - The names: design/names.md
 
 extra_css:
-  - stylesheets/telescreen.css
+  - stylesheets/skin.css

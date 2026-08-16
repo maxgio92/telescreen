@@ -29,6 +29,12 @@
 [data-md-color-scheme="slate"] .md-typeset h2,
 [data-md-color-scheme="slate"] .md-typeset h3 {
   font-family: var(--md-code-font-family, monospace);
+  color: #ebdbb2;
+}
+
+/* 2. The left menu's section titles carry the style's red. */
+.md-nav--primary .md-nav__title,
+.md-nav__item--section > .md-nav__link {
   color: #c42524;
 }
 
