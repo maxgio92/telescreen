@@ -1,29 +1,28 @@
-/* The 1984 skin: near-black with quiet green reserved for links and
-   code; headings wear the logo's red and the chrome its parchment
-   cream, both sampled from the artwork. The light scheme stays stock
-   Material. */
+/* The 1984 skin on gruvbox dark: warm dirty whites for text and
+   chrome, the logo's red for headings, gruvbox green only for links.
+   The light scheme stays stock Material. */
 
 [data-md-color-scheme="slate"] {
-  --md-default-bg-color: #0a0e0a;
-  --md-default-fg-color: #ddd6c6;
-  --md-default-fg-color--light: #b0a996;
-  --md-default-fg-color--lighter: #837c6b;
-  --md-primary-fg-color: #0a0e0a;
-  --md-primary-bg-color: #f5e5c9;
-  --md-accent-fg-color: #3ecf5a;
-  --md-typeset-color: #ddd6c6;
-  --md-typeset-a-color: #3ecf5a;
-  --md-code-bg-color: #101810;
-  --md-code-fg-color: #a5d6a7;
-  --md-footer-bg-color: #060a06;
-  --md-footer-bg-color--dark: #040704;
+  --md-default-bg-color: #1d2021;
+  --md-default-fg-color: #ebdbb2;
+  --md-default-fg-color--light: #bdae93;
+  --md-default-fg-color--lighter: #928374;
+  --md-primary-fg-color: #1d2021;
+  --md-primary-bg-color: #fbf1c7;
+  --md-accent-fg-color: #b8bb26;
+  --md-typeset-color: #ebdbb2;
+  --md-typeset-a-color: #b8bb26;
+  --md-code-bg-color: #282828;
+  --md-code-fg-color: #d5c4a1;
+  --md-footer-bg-color: #161819;
+  --md-footer-bg-color--dark: #101213;
 }
 
 [data-md-color-scheme="slate"] .md-header,
 [data-md-color-scheme="slate"] .md-tabs {
-  background-color: #060a06;
-  color: #f5e5c9;
-  border-bottom: 1px solid #1d331d;
+  background-color: #161819;
+  color: #fbf1c7;
+  border-bottom: 1px solid #3c3836;
 }
 
 [data-md-color-scheme="slate"] .md-typeset h1,
@@ -34,14 +33,14 @@
 }
 
 [data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
-  background-color: #101810;
-  color: #f5e5c9;
+  background-color: #282828;
+  color: #fbf1c7;
 }
 
 [data-md-color-scheme="slate"] .md-typeset code {
-  border: 1px solid #1d331d;
+  border: 1px solid #3c3836;
 }
 
 [data-md-color-scheme="slate"] .md-search__form {
-  background-color: #101810;
+  background-color: #282828;
 }
