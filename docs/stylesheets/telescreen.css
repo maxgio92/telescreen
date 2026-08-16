@@ -7,10 +7,10 @@
   --md-default-fg-color--light: #9ccc9e;
   --md-default-fg-color--lighter: #6b8f6d;
   --md-primary-fg-color: #0a0e0a;
-  --md-primary-bg-color: #4af626;
-  --md-accent-fg-color: #4af626;
+  --md-primary-bg-color: #3ecf5a;
+  --md-accent-fg-color: #3ecf5a;
   --md-typeset-color: #c8e6c9;
-  --md-typeset-a-color: #4af626;
+  --md-typeset-a-color: #3ecf5a;
   --md-code-bg-color: #101810;
   --md-code-fg-color: #a5d6a7;
   --md-footer-bg-color: #060a06;
@@ -20,7 +20,7 @@
 [data-md-color-scheme="slate"] .md-header,
 [data-md-color-scheme="slate"] .md-tabs {
   background-color: #060a06;
-  color: #4af626;
+  color: #3ecf5a;
   border-bottom: 1px solid #1d331d;
 }
 
@@ -28,16 +28,12 @@
 [data-md-color-scheme="slate"] .md-typeset h2,
 [data-md-color-scheme="slate"] .md-typeset h3 {
   font-family: var(--md-code-font-family, monospace);
-  color: #4af626;
-}
-
-[data-md-color-scheme="slate"] .md-typeset h1 {
-  text-shadow: 0 0 8px rgba(74, 246, 38, 0.35);
+  color: #3ecf5a;
 }
 
 [data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
   background-color: #101810;
-  color: #4af626;
+  color: #3ecf5a;
 }
 
 [data-md-color-scheme="slate"] .md-typeset code {
