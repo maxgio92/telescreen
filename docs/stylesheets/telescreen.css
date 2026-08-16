@@ -1,6 +1,6 @@
 /* The 1984 skin on gruvbox dark: warm dirty whites for text and
-   chrome, the logo's red for headings, gruvbox green only for links.
-   The light scheme stays stock Material. */
+   chrome, the logo's red for headings, gruvbox amber for links and
+   hovers. The light scheme stays stock Material. */
 
 [data-md-color-scheme="slate"] {
   --md-default-bg-color: #1d2021;
@@ -9,9 +9,9 @@
   --md-default-fg-color--lighter: #928374;
   --md-primary-fg-color: #1d2021;
   --md-primary-bg-color: #fbf1c7;
-  --md-accent-fg-color: #b8bb26;
+  --md-accent-fg-color: #fabd2f;
   --md-typeset-color: #ebdbb2;
-  --md-typeset-a-color: #b8bb26;
+  --md-typeset-a-color: #fabd2f;
   --md-code-bg-color: #282828;
   --md-code-fg-color: #d5c4a1;
   --md-footer-bg-color: #161819;
