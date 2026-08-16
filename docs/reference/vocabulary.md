@@ -4,7 +4,7 @@ Lookup page for the domain terms. Every page uses exactly these words,
 one term per concept. The 1984 proper names (minitrue, recdep,
 telescreen, speakwrite, thinkpol, memoryhole; the drawers tube, desk,
 upsub, files) are mapped to their roles in the
-[README glossary](../../README.md#the-names) and in
+[README component table](../../README.md#components) and in
 [the names](../design/names.md).
 
 ## Terms
