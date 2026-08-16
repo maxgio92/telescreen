@@ -66,12 +66,16 @@ audit with `ls` and `cat`.
   `~/.config/thinkpol.env`; units in `~/.config/systemd/user/`;
   skills in `~/.claude/skills/`.
 
-## Three things that surprise people
+## FAQ
 
-1. The screen works with no agents at all. Any process that writes
-   conforming records is a producer; the contract is the
-   [Queue contract](contracts/recdep.md).
-2. Nothing is ever posted without a double-key approval recorded on
-   disk, and discarding a draft revokes a pending approval.
-3. Deleting is real: the memory hole removes the file. There is no
-   trash.
+Does the screen need the agents?
+No. It works on the queue alone, and any process that writes
+conforming records is a producer; the contract is the
+[Queue contract](contracts/recdep.md).
+
+Can an agent post something on its own?
+No. Nothing posts without a double-key approval recorded on disk, and
+discarding a draft revokes a pending approval.
+
+Is there a trash?
+No. Deleting is real: the memory hole removes the file.
