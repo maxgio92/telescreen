@@ -12,6 +12,8 @@ One binary.<br>
 Files are the only interface.<br>
 Agents draft, only you approve.
 
+![the telescreen dashboard](assets/screenshot.png)
+
 ## Install
 
 Homebrew (macOS and Linux):
