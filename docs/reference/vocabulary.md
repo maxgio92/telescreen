@@ -25,7 +25,7 @@ upsub, files) are mapped to their roles in the
 | draft | A reaction not yet approved. |
 | approval | The recorded double-key consent to post a draft. |
 | actor | The program that posts approved drafts. thinkpol is the shipped actor. |
-| publisher | The actor's per-provider posting backend: github-pr, slack-thread, or linear-issue. |
+| publisher | The actor's per-provider posting backend: github-pr, slack-thread, linear-issue, or a configured exec command; routing rules in `telescreen.yaml` pick which one takes a URL. |
 | marker | An appended section in a record: dictated, draft, published, or discarded. |
 | stale | A record whose event resolved without you. |
 | rule, action map | The config rules picking a record's action and guidance. |

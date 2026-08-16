@@ -232,6 +232,62 @@ func TestThinkpolRefusesDiscardedDraft(t *testing.T) {
 	}
 }
 
+// TestExecPublish publishes through a configured exec publisher: a
+// telescreen.yaml routing rule points the record's URL shape at a stub
+// script, which receives the URL as an argument and the draft on
+// stdin, and prints the permalink.
+func TestExecPublish(t *testing.T) {
+	s := newScratch(t)
+	name := "20260816T100000Z-forum-carol-question.md"
+	rawURL := "https://forum.example.com/t/42"
+	body := "[forum] carol: a question\n" +
+		rawURL + "\n" +
+		"seen 2026-08-16T10:00:00Z\n" +
+		"\n" +
+		"a forum question\n" +
+		"--- draft 2026-08-16T10:30:00Z\n" +
+		"the forum draft\n"
+	entryPath := s.writeRecord(t, "desk", name, body)
+	s.writeIntent(t, name+".publish", "entry "+entryPath+"\n")
+
+	argvFile := filepath.Join(t.TempDir(), "post-argv")
+	stdinFile := filepath.Join(t.TempDir(), "post-stdin")
+	script := s.writeScript(t, "forum-post", `printf '%s\n' "$@" >"$POST_ARGV_FILE"
+cat >"$POST_STDIN_FILE"
+printf 'https://forum.example.com/t/42/reply/7\n'
+`)
+	s.extraEnv = []string{"POST_ARGV_FILE=" + argvFile, "POST_STDIN_FILE=" + stdinFile}
+	if err := writeFile(filepath.Join(s.configDir, "telescreen.yaml"),
+		"thinkpol:\n  publishers:\n    - publisher: exec\n      url_prefix: https://forum.example.com/\n      command: "+script+" --to {url}\n"); err != nil {
+		t.Fatal(err)
+	}
+
+	out, code := s.run(t, "thinkpol")
+	if code != 0 {
+		t.Fatalf("thinkpol exited %d:\n%s", code, out)
+	}
+	upsubPath := filepath.Join(s.root, "upsub", name)
+	if exists(entryPath) || !exists(upsubPath) {
+		t.Fatalf("record did not move to upsub (desk: %v, upsub: %v)", exists(entryPath), exists(upsubPath))
+	}
+	published := readFile(t, upsubPath)
+	permalink := "https://forum.example.com/t/42/reply/7"
+	if !strings.Contains(published, "--- published ") || !strings.Contains(published, permalink) {
+		t.Errorf("no published marker with the permalink:\n%s", published)
+	}
+	argv := splitLines(readFile(t, argvFile))
+	if strings.Join(argv, " ") != "--to "+rawURL {
+		t.Errorf("script argv = %v, want [--to %s]", argv, rawURL)
+	}
+	if got := readFile(t, stdinFile); !strings.Contains(got, "the forum draft") {
+		t.Errorf("script stdin = %q, want the draft text", got)
+	}
+	log := readFile(t, filepath.Join(s.root, "publish.log"))
+	if !strings.Contains(log, "published "+name+".publish via exec") {
+		t.Errorf("publish.log does not name the exec publisher:\n%s", log)
+	}
+}
+
 // splitLines splits the stub's one-argument-per-line record without
 // mangling arguments that contain spaces.
 func splitLines(s string) []string {

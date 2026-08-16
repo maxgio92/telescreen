@@ -28,7 +28,13 @@ var GHRun = func(args []string, stdin string) (string, error) {
 // line.
 var githubPR = Publisher{
 	Name: "github-pr",
+	// The built-in match is github.com only; a routing rule can point
+	// other hosts (GitHub Enterprise) here, and Post handles them.
 	Match: func(rawURL string) bool {
+		u, err := url.Parse(rawURL)
+		if err != nil || u.Hostname() != "github.com" {
+			return false
+		}
 		_, _, ok := githubPRParts(rawURL)
 		return ok
 	},
@@ -49,11 +55,12 @@ var githubPR = Publisher{
 	},
 }
 
-// githubPRParts parses a github.com pull request URL into its owner/repo
-// and PR number.
+// githubPRParts parses a pull request URL into a gh --repo value and
+// the PR number. gh takes HOST/OWNER/REPO for hosts other than
+// github.com, so a routed enterprise URL posts to its own host.
 func githubPRParts(rawURL string) (repo, number string, ok bool) {
 	u, err := url.Parse(rawURL)
-	if err != nil || u.Hostname() != "github.com" {
+	if err != nil || u.Hostname() == "" {
 		return "", "", false
 	}
 	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
@@ -63,5 +70,9 @@ func githubPRParts(rawURL string) (repo, number string, ok bool) {
 	if _, err := strconv.Atoi(parts[3]); err != nil {
 		return "", "", false
 	}
-	return parts[0] + "/" + parts[1], parts[3], true
+	repo = parts[0] + "/" + parts[1]
+	if h := u.Hostname(); h != "github.com" {
+		repo = h + "/" + repo
+	}
+	return repo, parts[3], true
 }

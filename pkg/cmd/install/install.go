@@ -31,7 +31,8 @@ var units embed.FS
 
 // component is one enrollable role: its unit files, the unit systemctl
 // enables, its agent skill when it has one, and whether it owns a
-// telescreen.yaml key (thinkpol does not: the actor is deterministic).
+// telescreen.yaml key to seed (thinkpol's key is optional routing
+// rules, never seeded).
 type component struct {
 	name      string
 	units     []string

@@ -10,9 +10,10 @@ else is a systemd setting or a pull request; the how-to lives in the
 Location: `<user config dir>/telescreen.yaml`
 (`~/.config/telescreen.yaml` on Linux).
 
-One file for the whole pipeline, keyed by component: a `minitrue` key
-and a `speakwrite` key. thinkpol has no key; the actor is
-deterministic and its secrets stay in `thinkpol.env`.
+One file for the whole pipeline, keyed by component: a `minitrue`
+key, a `speakwrite` key, and an optional `thinkpol` key. The actor is
+deterministic and its secrets stay in `thinkpol.env`; its key carries
+publisher routing only.
 
 Parse rules:
 
@@ -67,6 +68,20 @@ omitted matcher matches anything. When no rule matches, the action is
 | `url_prefix` | string, matcher | no | Plain string prefix test against the record's URL line, scheme and host included, no globs. The prefix scopes by URL shape: `https://github.com/acme/` matches a GitHub org, `https://github.com/acme/widgets/` a repo, `https://acme.enterprise.slack.com/` a Slack workspace, `https://acme.enterprise.slack.com/archives/C012345/` a channel. |
 | `action` | string, output | yes | The verb written into the intent's `action` line; the speakwrite skill maps verbs to draft types ([speakwrite skill](../../speakwrite/SKILL.md), read from your installed copy at `~/.claude/skills/speakwrite/SKILL.md`). The shipped skill knows `review`, `vet-findings`, `pr-reply`, `slack-reply`, `linear-comment`, `respond`; any other verb works once that file says what to draft for it. The action selects what speakwrite writes; how an approved draft is posted is chosen separately by the actor's publisher table matching the record URL ([Actor contract](../contracts/thinkpol.md#the-publisher-table)). |
 | `guidance` | string, output | no | Default stance text prepended to the dictated stance in the intent's guidance section: the rule sets the register, the dictation refines or overrides it. Example: `professional register`. |
+
+### thinkpol
+
+One field, `publishers`: a list of routing rules for the actor's
+publisher table. Rules are consulted top-down and the first match
+wins; when no rule matches, the built-in URL matching runs, skipping
+publishers a bare `enabled: false` rule disabled.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `publisher` | string | yes | The backend the rule routes to: `github-pr`, `slack-thread`, `linear-issue`, or `exec`. |
+| `url_prefix` | string, matcher | no | Plain string prefix test against the record URL, as in the action-map rule field; absent matches every URL. |
+| `enabled` | bool | no | Defaults to true. `false` with no `url_prefix` disables the named publisher entirely, built-in matching included; a `false` rule never routes. |
+| `command` | string | for exec | The exec publisher's argv template, split on whitespace; an element that is exactly `{url}` becomes the record URL as one argument, no shell. The draft arrives on stdin. Exit 0 is success; the first non-empty stdout line becomes the published permalink when it parses as a URL, else the record URL stands in. Non-zero exit fails the post with stderr's tail. The command inherits the unit's environment, `thinkpol.env` included. Forbidden on the other publishers. |
 
 ### Built-in action map
 

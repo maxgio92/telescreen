@@ -53,6 +53,9 @@ var actionRules = []actionRule{
 // An empty list keeps the built-ins: override is all or nothing, never
 // a merge.
 func applyConfig(c config.Config) {
+	// The p gate reads the same routing rules the actor posts with, so
+	// the view keeps offering exactly what the actor can do.
+	publish.Rules = c.Thinkpol.Publishers
 	if len(c.Speakwrite.Actions) == 0 {
 		return
 	}

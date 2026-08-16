@@ -16,6 +16,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/maxgio92/telescreen/internal/config"
 	"github.com/maxgio92/telescreen/internal/publish"
 	"github.com/maxgio92/telescreen/internal/recdep"
 )
@@ -27,6 +28,13 @@ func New() *cobra.Command {
 		Short: "run the actor once (execute publish approvals deterministically)",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
+			// A malformed config fails the run: the actor must never
+			// post with routing rules it could not read.
+			cfg, err := config.Load()
+			if err != nil {
+				return err
+			}
+			publish.Rules = cfg.Thinkpol.Publishers
 			root, err := recdep.StateRoot()
 			if err != nil {
 				return err

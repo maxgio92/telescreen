@@ -11,9 +11,9 @@ Three layers, from a file edit to a pull request:
 
 | Layer | What lives there | How to change it |
 |---|---|---|
-| configuration | the per-component choices in `telescreen.yaml` (agent, args, instructions, allowlist, timeout, action map); identity and secrets in the env files; cadence | edit the files below; no rebuild |
+| configuration | the per-component choices in `telescreen.yaml` (agent, args, instructions, allowlist, timeout, action map, publisher routing); identity and secrets in the env files; cadence | edit the files below; no rebuild |
 | enrollment | which program plays each role: producer, speakwrite agent, actor | enroll your own unit in place of a shipped one; the [Queue contract](../contracts/recdep.md) is the interface |
-| the binary | the drawer names and record grammar, the keys, the double-key approval, the publisher match rules (which URL goes to GitHub, Slack, Linear) | a pull request to this repo |
+| the binary | the drawer names and record grammar, the keys, the double-key approval, the built-in publisher match rules (which URL goes to GitHub, Slack, Linear by default) | a pull request to this repo |
 
 Choosing an implementation is never a config key: you enroll a unit.
 The last row is deliberately fixed: the grammar is what makes every
@@ -47,6 +47,13 @@ speakwrite:
       guidance: professional register
     - source: slack
       action: slack-reply
+thinkpol:
+  publishers:                        # routing for the actor's publisher table
+    - publisher: github-pr
+      url_prefix: https://github.example.com/   # an enterprise host
+    - publisher: exec                # a custom backend as a script
+      url_prefix: https://forum.example.com/
+      command: forum-post {url}      # draft on stdin, permalink on stdout
 ```
 
 Every field is optional except `action` inside a rule; an absent field
@@ -108,6 +115,33 @@ drafts are written without touching Go. Re-installs keep your edits
 New action verbs live in the same file: speakwrite drafts whatever the
 skill says a verb means, so a custom `summarize` action works as soon
 as your speakwrite skill defines it.
+
+## Route or add a publisher
+
+Edit `~/.config/telescreen.yaml` under `thinkpol.publishers`. Rules
+route by URL prefix to a named publisher, disable one, or define an
+exec backend; unmatched URLs fall back to the built-in matching. The
+fields and the routing order are defined in the
+[Configuration reference](../reference/configuration.md#thinkpol).
+
+Example: an enterprise GitHub, no Slack posting, a forum script.
+
+```yaml
+thinkpol:
+  publishers:
+    - publisher: github-pr
+      url_prefix: https://github.example.com/   # route the enterprise host
+    - publisher: slack-thread
+      enabled: false                             # never post to Slack
+    - publisher: exec
+      url_prefix: https://forum.example.com/
+      command: forum-post {url}
+```
+
+The exec command runs without a shell, gets the record URL as one
+argument and the draft on stdin, and prints the permalink as its first
+stdout line. Any token the script needs goes in `thinkpol.env`, never
+in the YAML.
 
 ## Set credentials
 

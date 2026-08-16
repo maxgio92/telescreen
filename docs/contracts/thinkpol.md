@@ -102,7 +102,15 @@ disappeared approval is always explained somewhere.
 ## The publisher table
 
 `internal/publish` declares the table; the TUI's p gate and the actor
-both read it, so the view offers exactly what the actor can do.
+both read it, so the view offers exactly what the actor can do. The
+table is extensible by configuration: `thinkpol.publishers` in
+`telescreen.yaml` routes URL prefixes to a named publisher, disables
+one, or defines an exec backend (a command getting the record URL as
+an argument and the draft on stdin) for custom targets. Rules apply in
+order, first match wins; the built-in matching below is the fallback
+when no rule matches. The obligations are unchanged: whatever takes
+the URL posts the draft, returns the permalink, and honors the
+procedure above.
 
 | Publisher | URL shape | Posts via | Requires |
 |---|---|---|---|

@@ -13,6 +13,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -63,12 +64,42 @@ type Speakwrite struct {
 	Actions   []Action `yaml:"actions"`
 }
 
-// Config is the telescreen.yaml schema, keyed by component. thinkpol
-// has no key: the actor is deterministic and its secrets stay in
+// PublisherRule is one row of the actor's publisher routing list.
+// Rules are consulted in order and the first match wins; when none
+// matches, the built-in URL matching runs, skipping publishers a
+// bare enabled: false rule disabled.
+type PublisherRule struct {
+	// Publisher names the backend: github-pr, slack-thread,
+	// linear-issue, or exec.
+	Publisher string `yaml:"publisher"`
+	// URLPrefix matches when the record URL starts with it; empty
+	// matches every URL.
+	URLPrefix string `yaml:"url_prefix"`
+	// Enabled defaults to true. false with no url_prefix disables the
+	// publisher entirely, built-in matching included.
+	Enabled *bool `yaml:"enabled"`
+	// Command is the exec publisher's argv template: whitespace-split,
+	// an element that is exactly {url} becomes the record URL as one
+	// argument. Required for exec, forbidden otherwise.
+	Command string `yaml:"command"`
+}
+
+// On reports the rule's enabled value, defaulting to true.
+func (r PublisherRule) On() bool { return r.Enabled == nil || *r.Enabled }
+
+// Thinkpol is the actor's key: routing rules only. Secrets stay in
 // thinkpol.env.
+type Thinkpol struct {
+	Publishers []PublisherRule `yaml:"publishers"`
+}
+
+// Config is the telescreen.yaml schema, keyed by component. The
+// thinkpol key is optional: the actor is deterministic and only its
+// publisher routing is configurable.
 type Config struct {
 	Minitrue   Component  `yaml:"minitrue"`
 	Speakwrite Speakwrite `yaml:"speakwrite"`
+	Thinkpol   Thinkpol   `yaml:"thinkpol"`
 }
 
 // Load reads telescreen.yaml from the user config directory. A missing
@@ -98,6 +129,9 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("%s: speakwrite.timeout must not be negative: %d", path, c.Speakwrite.Timeout)
 	}
 	if err := validateActions(c.Speakwrite.Actions); err != nil {
+		return Config{}, fmt.Errorf("%s: %w", path, err)
+	}
+	if err := validatePublishers(c.Thinkpol.Publishers); err != nil {
 		return Config{}, fmt.Errorf("%s: %w", path, err)
 	}
 	return c, nil
@@ -138,6 +172,36 @@ func validateActions(actions []Action) error {
 	for i, a := range actions {
 		if a.Action == "" {
 			return fmt.Errorf("actions[%d]: action is required", i)
+		}
+	}
+	return nil
+}
+
+// publisherNames is the closed set a routing rule may name; exec is
+// the configured backend, the rest are built-ins.
+var publisherNames = map[string]bool{
+	"github-pr":    true,
+	"slack-thread": true,
+	"linear-issue": true,
+	"exec":         true,
+}
+
+func validatePublishers(rules []PublisherRule) error {
+	for i, r := range rules {
+		if !publisherNames[r.Publisher] {
+			return fmt.Errorf("thinkpol.publishers[%d]: unknown publisher %q", i, r.Publisher)
+		}
+		if r.Publisher == "exec" && len(strings.Fields(r.Command)) == 0 {
+			return fmt.Errorf("thinkpol.publishers[%d]: exec requires a command", i)
+		}
+		if r.Publisher != "exec" && r.Command != "" {
+			return fmt.Errorf("thinkpol.publishers[%d]: command is only for exec, not %s", i, r.Publisher)
+		}
+		// A disabled rule with a prefix would be inert: skipped in the
+		// rule phase yet not disabling the built-in phase, so the
+		// publisher the user believes off would still post.
+		if r.Enabled != nil && !*r.Enabled && r.URLPrefix != "" {
+			return fmt.Errorf("thinkpol.publishers[%d]: enabled: false cannot carry url_prefix; disable the publisher outright or drop the rule", i)
 		}
 	}
 	return nil

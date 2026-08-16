@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -119,9 +120,68 @@ func TestLoadAbsentFiles(t *testing.T) {
 }
 
 func TestLoadUnknownTopLevelKey(t *testing.T) {
-	write(t, "thinkpol:\n  agent: claude\n")
+	write(t, "actor:\n  agent: claude\n")
 	if _, err := Load(); err == nil {
 		t.Fatal("Load() = nil error, want unknown-key error")
+	}
+}
+
+// TestLoadThinkpolIsNotAnAgent pins that the actor's key carries
+// routing only, no agent fields.
+func TestLoadThinkpolIsNotAnAgent(t *testing.T) {
+	write(t, "thinkpol:\n  agent: claude\n")
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() = nil error, want unknown-field error")
+	}
+}
+
+func TestLoadPublishers(t *testing.T) {
+	write(t, `thinkpol:
+  publishers:
+    - publisher: github-pr
+      url_prefix: https://github.example.com/
+    - publisher: slack-thread
+      enabled: false
+    - publisher: exec
+      command: post-anywhere --to {url}
+`)
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+	rules := c.Thinkpol.Publishers
+	if len(rules) != 3 {
+		t.Fatalf("publishers = %+v, want 3 rules", rules)
+	}
+	if rules[0].Publisher != "github-pr" || rules[0].URLPrefix != "https://github.example.com/" || !rules[0].On() {
+		t.Errorf("publishers[0] = %+v, want an enabled github-pr routing rule", rules[0])
+	}
+	if rules[1].Publisher != "slack-thread" || rules[1].On() {
+		t.Errorf("publishers[1] = %+v, want a disabled slack-thread rule", rules[1])
+	}
+	if rules[2].Publisher != "exec" || rules[2].Command != "post-anywhere --to {url}" || !rules[2].On() {
+		t.Errorf("publishers[2] = %+v, want the exec rule", rules[2])
+	}
+}
+
+func TestLoadPublisherCommandOnBuiltin(t *testing.T) {
+	write(t, "thinkpol:\n  publishers:\n    - publisher: github-pr\n      command: post {url}\n")
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() = nil error, want a command-forbidden error")
+	}
+}
+
+func TestLoadExecWithoutCommand(t *testing.T) {
+	write(t, "thinkpol:\n  publishers:\n    - publisher: exec\n")
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() = nil error, want a command-required error")
+	}
+}
+
+func TestLoadUnknownPublisher(t *testing.T) {
+	write(t, "thinkpol:\n  publishers:\n    - publisher: mastodon\n")
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() = nil error, want an unknown-publisher error")
 	}
 }
 
@@ -195,5 +255,19 @@ func TestLoadMalformed(t *testing.T) {
 	write(t, "speakwrite: [\n")
 	if _, err := Load(); err == nil {
 		t.Fatal("Load() = nil error, want parse error")
+	}
+}
+
+// TestLoadRejectsDisabledRuleWithPrefix pins that enabled: false plus
+// url_prefix errors at load instead of sitting inert.
+func TestLoadRejectsDisabledRuleWithPrefix(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	yamlBody := "thinkpol:\n  publishers:\n    - publisher: slack-thread\n      enabled: false\n      url_prefix: https://x.example.com/\n"
+	if err := os.WriteFile(filepath.Join(dir, "telescreen.yaml"), []byte(yamlBody), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "enabled: false cannot carry url_prefix") {
+		t.Errorf("Load() error = %v, want the disabled-with-prefix rejection", err)
 	}
 }
