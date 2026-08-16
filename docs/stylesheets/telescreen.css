@@ -1,6 +1,7 @@
 /* The 1984 skin: near-black with quiet green reserved for links and
-   code; headings wear the logo border's parchment cream so the type
-   ties into the art. The light scheme stays stock Material. */
+   code; headings wear the logo's red and the chrome its parchment
+   cream, both sampled from the artwork. The light scheme stays stock
+   Material. */
 
 [data-md-color-scheme="slate"] {
   --md-default-bg-color: #0a0e0a;
@@ -29,7 +30,7 @@
 [data-md-color-scheme="slate"] .md-typeset h2,
 [data-md-color-scheme="slate"] .md-typeset h3 {
   font-family: var(--md-code-font-family, monospace);
-  color: #f5e5c9;
+  color: #c42524;
 }
 
 [data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
