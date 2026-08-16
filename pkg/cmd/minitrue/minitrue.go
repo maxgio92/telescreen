@@ -1,7 +1,8 @@
 // Package minitrue runs the producer: poll the watches,
 // enqueue hits. The systemd timer runs it every 10 minutes; the agent,
-// prompt, tool allowlist, and timeout come from ~/.config/minitrue.env
-// with the defaults below.
+// instructions, tool allowlist, and timeout come from the minitrue key
+// in telescreen.yaml, falling back to ~/.config/minitrue.env and the
+// defaults below.
 package minitrue
 
 import (
@@ -11,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/maxgio92/telescreen/internal/agentrun"
+	"github.com/maxgio92/telescreen/internal/config"
 	"github.com/maxgio92/telescreen/internal/recdep"
 )
 
@@ -41,11 +43,15 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
 	vars, err := agentrun.ParseEnvFile(filepath.Join(home, ".config", envFile))
 	if err != nil {
 		return err
 	}
-	inv, err := agentrun.Resolve(vars, "MINITRUE", defaultPrompt, defaultTools, filepath.Join(root, "produce.log"))
+	inv, err := agentrun.Resolve(cfg.Minitrue, vars, "MINITRUE", defaultPrompt, defaultTools, filepath.Join(root, "produce.log"))
 	if err != nil {
 		return err
 	}

@@ -66,14 +66,15 @@ Two axes, both resolved at the edges rather than in the core:
 
 ### Configuration
 
-Environment details live outside the code, split by shape. Env files
-(`~/.config/minitrue.env`, `~/.config/speakwrite.env`,
-`~/.config/thinkpol.env`) hold flat parameters and secrets, the agent
-binary, the prompt, and the MCP tool allowlists included.
-`~/.config/recdep/config.yaml` holds structured tables, such as the
-action map. Systemd enrollment chooses implementations: swapping a
-component means enabling a different unit. The subcommand defaults
-reproduce a plain claude setup, so an absent config is a working one.
+Environment details live outside the code, split by shape.
+`~/.config/telescreen.yaml` holds the per-component choices, the agent
+binary, instructions, MCP tool allowlists, and the action map
+included. Env files (`~/.config/minitrue.env`,
+`~/.config/speakwrite.env`, `~/.config/thinkpol.env`) hold identity
+and secrets, and act as the fallback layer for the agent keys.
+Systemd enrollment chooses implementations: swapping a component means
+enabling a different unit. The subcommand defaults reproduce a plain
+claude setup, so an absent config is a working one.
 
 ## Procedure
 

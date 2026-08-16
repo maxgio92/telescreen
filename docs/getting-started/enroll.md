@@ -21,6 +21,7 @@ telescreen install --force         # restore the shipped skills over your edits
 | Path | Contents |
 |---|---|
 | `~/.claude/skills/` | the agent skills; seeds you may edit, re-installs keep your edits, `--force` restores the shipped versions |
+| `~/.config/telescreen.yaml` | the pipeline config; install seeds a missing component key with `agent: claude` and never touches existing keys, `--force` included |
 | `~/.config/systemd/user/` | the units; ExecStart points at the installing binary |
 | `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/` | the state dirs, created 0700 |
 
@@ -40,10 +41,11 @@ LINEAR_ASSIGNEE=me
 REPO=owner/repo             # the GitHub repo to scope PR watches to
 ```
 
-Two more env files exist, both optional at first:
+Two more files matter, both optional at first:
 
-- `~/.config/speakwrite.env`: the speakwrite agent's binary, prompt,
-  allowlist, timeout. Absent means a plain claude setup.
+- `~/.config/telescreen.yaml`: the agent choices per component
+  (binary, args, instructions, allowlist, timeout, action map). The
+  seeded file is a plain claude setup.
 - `~/.config/thinkpol.env`: posting credentials (SLACK_TOKEN,
   LINEAR_API_KEY). Secrets; `chmod 600` it. GitHub posting uses your
   authenticated `gh` and needs no key here.

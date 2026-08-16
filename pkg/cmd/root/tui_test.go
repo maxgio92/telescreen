@@ -47,16 +47,14 @@ func inState(t *testing.T, root, name string) []string {
 }
 
 // TestNewModelMalformedConfigFallsBack pins the startup wiring: a broken
-// config.yaml surfaces in the status line and the built-in action table
-// stands. XDG_CONFIG_HOME isolation works on Linux only; os.UserConfigDir
-// ignores it on darwin, where these tests would read the real config.
+// telescreen.yaml surfaces in the status line and the built-in action
+// table stands. XDG_CONFIG_HOME isolation works on Linux only;
+// os.UserConfigDir ignores it on darwin, where these tests would read
+// the real config.
 func TestNewModelMalformedConfigFallsBack(t *testing.T) {
 	confdir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", confdir)
-	if err := os.MkdirAll(filepath.Join(confdir, "recdep"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(confdir, "recdep", "config.yaml"), []byte("actions: ["), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(confdir, "telescreen.yaml"), []byte("speakwrite:\n  actions: ["), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	builtin := actionRules

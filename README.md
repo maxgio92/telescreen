@@ -112,9 +112,10 @@ telescreen install --force         # restore the shipped skills over your edits
 The installer carries everything it enrolls: it writes the agent
 skills to `~/.claude/skills/`, the systemd user units to
 `~/.config/systemd/user/` (ExecStart points at the installing binary),
-creates the state dirs, and enables the units. Identity lives in
-`~/.config/minitrue.env` (SLACK_USER_ID, GH_LOGIN, LINEAR_ASSIGNEE,
-REPO). From source, for development or by choice, `make install`
+seeds missing component keys in `~/.config/telescreen.yaml` without
+touching your edits, creates the state dirs, and enables the units.
+Identity lives in `~/.config/minitrue.env` (SLACK_USER_ID, GH_LOGIN,
+LINEAR_ASSIGNEE, REPO). From source, for development or by choice, `make install`
 builds the binary into `~/.local/bin` and runs its installer.
 
 ## Documentation

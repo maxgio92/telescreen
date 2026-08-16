@@ -1,28 +1,60 @@
 # Configuration reference
 
-Lookup page for everything configurable through files: the dictation
-action map in `config.yaml` and the per-role env files. Everything else
-is a systemd setting or a pull request; the how-to lives in the
+Lookup page for everything configurable through files: the pipeline
+choices in `telescreen.yaml` and the per-role env files. Everything
+else is a systemd setting or a pull request; the how-to lives in the
 [Configuration guide](../guides/configuration.md).
 
-## config.yaml
+## telescreen.yaml
 
-Location: `<user config dir>/recdep/config.yaml`
-(`~/.config/recdep/config.yaml` on Linux).
+Location: `<user config dir>/telescreen.yaml`
+(`~/.config/telescreen.yaml` on Linux).
+
+One file for the whole pipeline, keyed by component: a `minitrue` key
+and a `speakwrite` key. thinkpol has no key; the actor is
+deterministic and its secrets stay in `thinkpol.env`.
 
 Parse rules:
 
-- The YAML is parsed strictly. An unknown key is an error, shown once
-  in the status line, and the built-ins stand.
-- A non-empty `actions` list replaces the built-in action map entirely.
-- An empty or absent `actions` list keeps the built-ins.
-- `action` is required on every rule; a rule without it is an error.
+- The YAML is parsed strictly. An unknown key, top level or nested, is
+  an error.
+- A field set here wins; a field left unset falls back to the role's
+  env file key, then the process environment, then the built-in
+  default.
+- When `telescreen.yaml` is absent and the retired
+  `<user config dir>/recdep/config.yaml` exists, the old file loads
+  and its `actions` list maps to `speakwrite.actions`. When both
+  exist, `telescreen.yaml` wins. Move the rules over and delete the
+  old file.
 
-The file holds one key, `actions`: a list of rules. A rule is a set of
-matchers plus outputs, evaluated top-down against each record; the
-first rule whose matchers all hold wins, and an omitted matcher matches
-anything. When no rule matches, the action is `respond` with no
-guidance.
+### minitrue
+
+| Field | Type | Description |
+|---|---|---|
+| `agent` | string | The agent binary. |
+| `args` | string | The argument template, split on whitespace; an element that is exactly `{prompt}` or `{tools}` becomes that value as one argument, every other element is verbatim; a template without `{tools}` leaves the allowlist unused. |
+| `instructions` | string | Path (`~` expands) whose file content becomes the prompt; wins over `MINITRUE_PROMPT`. A path that is missing or unreadable fails the run naming the path. |
+| `allowed_tools` | string | The agent's tool allowlist. |
+| `timeout` | int | Seconds before the subcommand kills the run; must be positive when set. |
+
+### speakwrite
+
+| Field | Type | Description |
+|---|---|---|
+| `agent` | string | The agent binary. |
+| `args` | string | The argument template; semantics as in the minitrue table. |
+| `instructions` | string | Path (`~` expands) whose file content becomes the prompt; wins over `SPEAKWRITE_PROMPT`. A path that is missing or unreadable fails the run naming the path. |
+| `allowed_tools` | string | The agent's tool allowlist. |
+| `timeout` | int | Seconds before the subcommand kills the run; must be positive when set. |
+| `actions` | list of rules | The dictation action map, per the [Rule fields](#rule-fields) table. A non-empty list replaces the built-in map entirely; empty or absent keeps the built-ins; `action` is required on every rule. |
+
+The `SPEAKWRITE_*` env keys are each field's fallback, as the
+`MINITRUE_*` keys are for minitrue.
+
+A rule is a set of matchers plus outputs, evaluated top-down against
+each record; the first rule whose matchers all hold wins, and an
+omitted matcher matches anything. When no rule matches, the action is
+`respond` with no guidance.
 
 ### Rule fields
 
@@ -38,7 +70,7 @@ guidance.
 
 ### Built-in action map
 
-Applied when the file is absent or the `actions` list is empty:
+Applied when the `actions` list is empty or absent:
 
 | source | name contains | who suffix | action |
 |---|---|---|---|
@@ -52,7 +84,9 @@ Applied when the file is absent or the `actions` list is empty:
 
 ## minitrue.env
 
-Location: `~/.config/minitrue.env`, plain `KEY=value` lines.
+Location: `~/.config/minitrue.env`, plain `KEY=value` lines. The env
+file is the home of identity and the fallback layer for the agent
+keys: a `telescreen.yaml` field wins over its `MINITRUE_*` twin.
 
 | Key | Meaning | Default |
 |---|---|---|
@@ -72,7 +106,9 @@ or systemd kills the run first.
 
 ## speakwrite.env
 
-Location: `~/.config/speakwrite.env`, plain `KEY=value` lines.
+Location: `~/.config/speakwrite.env`, plain `KEY=value` lines. The
+fallback layer for the agent keys: a `telescreen.yaml` field wins over
+its `SPEAKWRITE_*` twin.
 
 | Key | Meaning | Default |
 |---|---|---|

@@ -51,7 +51,7 @@ func TestActionFor(t *testing.T) {
 func TestActionForProviderScopes(t *testing.T) {
 	builtin := actionRules
 	t.Cleanup(func() { actionRules = builtin })
-	applyConfig(config.Config{Actions: []config.Action{
+	applyConfig(config.Config{Speakwrite: config.Speakwrite{Actions: []config.Action{
 		{URLPrefix: "https://github.com/acme/widgets/", Action: "review", Guidance: "cite the module owner"},
 		{URLPrefix: "https://github.com/acme/", Action: "pr-reply", Guidance: "professional register"},
 		{URLPrefix: "https://acme.enterprise.slack.com/", Action: "slack-reply", Guidance: "professional register"},
@@ -59,7 +59,7 @@ func TestActionForProviderScopes(t *testing.T) {
 		{URLPrefix: "https://linear.app/acme/", Action: "linear-comment"},
 		{Author: "alice", Action: "vet-findings", Guidance: "alice pre-vets"},
 		{Source: "github", Action: "github-generic"},
-	}})
+	}}})
 	tests := []struct {
 		name         string
 		e            recdep.Entry
@@ -107,10 +107,10 @@ func TestActionForProviderScopes(t *testing.T) {
 func TestActionForCustomTable(t *testing.T) {
 	builtin := actionRules
 	t.Cleanup(func() { actionRules = builtin })
-	applyConfig(config.Config{Actions: []config.Action{
+	applyConfig(config.Config{Speakwrite: config.Speakwrite{Actions: []config.Action{
 		{Source: "slack", Action: "respond"},
 		{Source: "github", WhoSuffix: "[bot]", Action: "review"},
-	}})
+	}}})
 	if got, _ := actionFor(recdep.Entry{Source: "slack", Who: "wes"}); got != "respond" {
 		t.Errorf("actionFor(slack) = %q, want %q", got, "respond")
 	}
@@ -190,9 +190,9 @@ func TestComposeGuidance(t *testing.T) {
 func TestRenderIntentPrependsRuleGuidance(t *testing.T) {
 	builtin := actionRules
 	t.Cleanup(func() { actionRules = builtin })
-	applyConfig(config.Config{Actions: []config.Action{
+	applyConfig(config.Config{Speakwrite: config.Speakwrite{Actions: []config.Action{
 		{Source: "slack", Action: "slack-reply", Guidance: "casual register"},
-	}})
+	}}})
 	e := recdep.ParseEntry("a.md", "[slack] wes: go for it\nhttps://friends.slack.com/archives/C1/p1\nseen now\n")
 	if got, want := renderIntent("/q/tube/a.md", e, "say yes"),
 		"entry /q/tube/a.md\naction slack-reply\n\nguidance:\ncasual register\nsay yes\n"; got != want {

@@ -1,8 +1,9 @@
 // Package agentrun runs a headless agent the way the minitrue and
-// speakwrite subcommands need: parameters from a plain KEY=value env
-// file with per-role defaults, stdin from /dev/null, stdout and stderr
-// appended to a log under the state root, and a hard timeout so the
-// oneshot unit always completes.
+// speakwrite subcommands need: parameters from the component's
+// telescreen.yaml entry with a plain KEY=value env file as the
+// fallback, stdin from /dev/null, stdout and stderr appended to a log
+// under the state root, and a hard timeout so the oneshot unit always
+// completes.
 package agentrun
 
 import (
@@ -10,11 +11,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/maxgio92/telescreen/internal/config"
 )
 
 // defaultAgent, defaultArgs, and defaultTimeoutSeconds match every
@@ -72,14 +76,19 @@ func ParseEnvFile(path string) (map[string]string, error) {
 	return vars, nil
 }
 
-// Resolve builds the invocation for one role from its env file vars and
-// defaults. prefix names the role's variables (MINITRUE_AGENT and so
-// on); a file value wins over a process environment value, and a key
-// set empty in the file means the default, not the process value,
-// matching the retired wrappers, which sourced the file over the
-// environment before applying ${VAR:-default}.
-func Resolve(vars map[string]string, prefix, defaultPrompt, defaultTools, logPath string) (Invocation, error) {
-	get := func(suffix, fallback string) string {
+// Resolve builds the invocation for one role from its telescreen.yaml
+// component, its env file vars, and defaults. A telescreen.yaml value
+// wins; unset there falls back to the env file key, then the process
+// environment, then the default. prefix names the role's variables
+// (MINITRUE_AGENT and so on); a file value wins over a process
+// environment value, and a key set empty in the file means the
+// default, not the process value, matching the retired wrappers, which
+// sourced the file over the environment before applying ${VAR:-default}.
+func Resolve(cfg config.Component, vars map[string]string, prefix, defaultPrompt, defaultTools, logPath string) (Invocation, error) {
+	get := func(suffix, configured, fallback string) string {
+		if configured != "" {
+			return configured
+		}
 		key := prefix + "_" + suffix
 		if v, ok := vars[key]; ok {
 			if v == "" {
@@ -92,22 +101,41 @@ func Resolve(vars map[string]string, prefix, defaultPrompt, defaultTools, logPat
 		}
 		return fallback
 	}
-	seconds, err := strconv.Atoi(get("TIMEOUT", strconv.Itoa(defaultTimeoutSeconds)))
+	configuredTimeout := ""
+	if cfg.Timeout > 0 {
+		configuredTimeout = strconv.Itoa(cfg.Timeout)
+	}
+	seconds, err := strconv.Atoi(get("TIMEOUT", configuredTimeout, strconv.Itoa(defaultTimeoutSeconds)))
 	if err != nil || seconds <= 0 {
-		return Invocation{}, fmt.Errorf("%s_TIMEOUT must be a positive number of seconds: %q", prefix, get("TIMEOUT", ""))
+		return Invocation{}, fmt.Errorf("%s_TIMEOUT must be a positive number of seconds: %q", prefix, get("TIMEOUT", configuredTimeout, ""))
+	}
+	// instructions resolves to the prompt text and wins over the env
+	// prompt key; a configured path that does not read fails the run so
+	// the agent never silently runs on the default prompt.
+	prompt := get("PROMPT", "", defaultPrompt)
+	if cfg.Instructions != "" {
+		path, err := expandHome(cfg.Instructions)
+		if err != nil {
+			return Invocation{}, err
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return Invocation{}, fmt.Errorf("instructions file %s: %w", path, err)
+		}
+		prompt = string(b)
 	}
 	env := make([]string, 0, len(vars))
 	for k, v := range vars {
 		env = append(env, k+"="+v)
 	}
 	sort.Strings(env)
-	argv := []string{get("AGENT", defaultAgent)}
-	for _, el := range strings.Fields(get("ARGS", defaultArgs)) {
+	argv := []string{get("AGENT", cfg.Agent, defaultAgent)}
+	for _, el := range strings.Fields(get("ARGS", cfg.Args, defaultArgs)) {
 		switch el {
 		case "{prompt}":
-			argv = append(argv, get("PROMPT", defaultPrompt))
+			argv = append(argv, prompt)
 		case "{tools}":
-			argv = append(argv, get("ALLOWED_TOOLS", defaultTools))
+			argv = append(argv, get("ALLOWED_TOOLS", cfg.AllowedTools, defaultTools))
 		default:
 			argv = append(argv, el)
 		}
@@ -118,6 +146,18 @@ func Resolve(vars map[string]string, prefix, defaultPrompt, defaultTools, logPat
 		Timeout: time.Duration(seconds) * time.Second,
 		Log:     logPath,
 	}, nil
+}
+
+// expandHome resolves a leading ~ in an instructions path.
+func expandHome(path string) (string, error) {
+	if path != "~" && !strings.HasPrefix(path, "~/") {
+		return path, nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, path[1:]), nil
 }
 
 // Exec runs one invocation. A nil Stdin gives the agent /dev/null, so

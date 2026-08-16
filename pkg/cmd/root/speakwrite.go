@@ -37,7 +37,7 @@ type actionRule struct {
 }
 
 // actionRules is the source-action map, in match order. It stays a data
-// table so config.yaml can replace it (applyConfig). Review requests
+// table so telescreen.yaml can replace it (applyConfig). Review requests
 // match on the filename slug: minitrue tags every GitHub entry [github]
 // in the header, so the slug is the only discriminator.
 var actionRules = []actionRule{
@@ -53,11 +53,11 @@ var actionRules = []actionRule{
 // An empty list keeps the built-ins: override is all or nothing, never
 // a merge.
 func applyConfig(c config.Config) {
-	if len(c.Actions) == 0 {
+	if len(c.Speakwrite.Actions) == 0 {
 		return
 	}
-	rules := make([]actionRule, len(c.Actions))
-	for i, a := range c.Actions {
+	rules := make([]actionRule, len(c.Speakwrite.Actions))
+	for i, a := range c.Speakwrite.Actions {
 		rules[i] = actionRule{
 			nameSubstring: a.NameContains,
 			source:        a.Source,

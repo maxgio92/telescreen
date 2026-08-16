@@ -1,7 +1,8 @@
 // Package speakwrite runs the speakwrite agent: consume dictation
 // intents and append drafts; publishing is thinkpol's job. The systemd
-// path unit runs it when an intent lands; the agent, prompt, tool
-// allowlist, and timeout come from ~/.config/speakwrite.env with the
+// path unit runs it when an intent lands; the agent, instructions,
+// tool allowlist, and timeout come from the speakwrite key in
+// telescreen.yaml, falling back to ~/.config/speakwrite.env and the
 // defaults below.
 package speakwrite
 
@@ -13,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/maxgio92/telescreen/internal/agentrun"
+	"github.com/maxgio92/telescreen/internal/config"
 	"github.com/maxgio92/telescreen/internal/recdep"
 )
 
@@ -65,11 +67,15 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
 	vars, err := agentrun.ParseEnvFile(filepath.Join(home, ".config", envFile))
 	if err != nil {
 		return err
 	}
-	inv, err := agentrun.Resolve(vars, "SPEAKWRITE", defaultPrompt, defaultTools, filepath.Join(root, "draft.log"))
+	inv, err := agentrun.Resolve(cfg.Speakwrite.Component, vars, "SPEAKWRITE", defaultPrompt, defaultTools, filepath.Join(root, "draft.log"))
 	if err != nil {
 		return err
 	}

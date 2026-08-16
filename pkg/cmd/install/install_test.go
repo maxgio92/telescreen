@@ -81,11 +81,17 @@ func TestInstallAll(t *testing.T) {
 	for _, dir := range []string{
 		filepath.Join(home, ".local", "state", "recdep", "tube"),
 		filepath.Join(home, ".local", "state", "recdep", "intents"),
-		filepath.Join(home, ".config", "recdep"),
 	} {
 		if _, err := os.Stat(dir); err != nil {
 			t.Errorf("%s: %v", dir, err)
 		}
+	}
+	cfg, err := os.ReadFile(filepath.Join(home, ".config", "telescreen.yaml"))
+	if err != nil {
+		t.Fatalf("telescreen.yaml: %v", err)
+	}
+	if want := "minitrue:\n  agent: claude\nspeakwrite:\n  agent: claude\n"; string(cfg) != want {
+		t.Errorf("telescreen.yaml = %q, want %q", cfg, want)
 	}
 	want := [][]string{
 		{"daemon-reload"},
@@ -135,11 +141,16 @@ func TestInstallDryRunWritesNothing(t *testing.T) {
 	if !strings.Contains(out, "would write ") {
 		t.Errorf("dry run printed no plan:\n%s", out)
 	}
+	for _, want := range []string{"would seed minitrue in ", "would seed speakwrite in "} {
+		if !strings.Contains(out, want) {
+			t.Errorf("dry run plan lacks %q:\n%s", want, out)
+		}
+	}
 	for _, dir := range []string{
 		filepath.Join(home, ".config", "systemd"),
 		filepath.Join(home, ".claude"),
 		filepath.Join(home, ".local", "state", "recdep"),
-		filepath.Join(home, ".config", "recdep"),
+		filepath.Join(home, ".config", "telescreen.yaml"),
 	} {
 		if _, err := os.Stat(dir); !os.IsNotExist(err) {
 			t.Errorf("dry run created %s: %v", dir, err)
@@ -158,6 +169,78 @@ func TestInstallRejectsUnknownComponent(t *testing.T) {
 	cmd.SetArgs([]string{"bigbrother"})
 	if err := cmd.Execute(); err == nil {
 		t.Error("install accepted an unknown component")
+	}
+}
+
+// TestInstallSeedsMissingConfigKey pins the key-level upsert: a
+// telescreen.yaml with only speakwrite gets minitrue appended and its
+// existing bytes stay untouched, comments included.
+func TestInstallSeedsMissingConfigKey(t *testing.T) {
+	home, _ := isolate(t)
+	existing := "# my choices\nspeakwrite:\n  agent: codex   # keep this\n  args: exec {prompt}\n"
+	cfgPath := filepath.Join(home, ".config", "telescreen.yaml")
+	if err := os.MkdirAll(filepath.Dir(cfgPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfgPath, []byte(existing), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out := execute(t)
+	if !strings.Contains(out, "seeded minitrue in "+cfgPath) {
+		t.Errorf("install did not report the seed:\n%s", out)
+	}
+	b, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := existing + "minitrue:\n  agent: claude\n"; string(b) != want {
+		t.Errorf("telescreen.yaml = %q, want %q", b, want)
+	}
+}
+
+// TestInstallSeedsWithoutTrailingNewline pins the append onto a file
+// lacking a final newline: the seeded key starts on its own line and
+// the result stays valid YAML.
+func TestInstallSeedsWithoutTrailingNewline(t *testing.T) {
+	home, _ := isolate(t)
+	existing := "speakwrite:\n  agent: codex"
+	cfgPath := filepath.Join(home, ".config", "telescreen.yaml")
+	if err := os.MkdirAll(filepath.Dir(cfgPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfgPath, []byte(existing), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	execute(t)
+	b, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := existing + "\nminitrue:\n  agent: claude\n"; string(b) != want {
+		t.Errorf("telescreen.yaml = %q, want %q", b, want)
+	}
+}
+
+// TestInstallKeepsFullConfig pins that a file with both keys survives a
+// re-install, --force included, byte for byte.
+func TestInstallKeepsFullConfig(t *testing.T) {
+	home, _ := isolate(t)
+	existing := "minitrue:\n  agent: codex\nspeakwrite:\n  agent: codex\n"
+	cfgPath := filepath.Join(home, ".config", "telescreen.yaml")
+	if err := os.MkdirAll(filepath.Dir(cfgPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfgPath, []byte(existing), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	execute(t)
+	execute(t, "--force")
+	b, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != existing {
+		t.Errorf("telescreen.yaml = %q, want it untouched", b)
 	}
 }
 

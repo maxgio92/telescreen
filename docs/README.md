@@ -24,7 +24,7 @@ audit with `ls` and `cat`.
 - [Configuration guide](guides/configuration.md) (3 min): which file to
   edit for which wish, task by task.
 - [Configuration reference](reference/configuration.md) (2 min per
-  lookup): every config.yaml field and env key, as tables.
+  lookup): every telescreen.yaml field and env key, as tables.
 - [Write a producer](guides/write-a-producer.md) (3 min): file records
   from anything.
 - [Swap the actor](guides/swap-the-actor.md) (3 min): enroll your own
@@ -54,14 +54,15 @@ audit with `ls` and `cat`.
   [Configuration reference](reference/configuration.md) and the
   [Vocabulary](reference/vocabulary.md) are hand-written.
 - [Configuration reference](reference/configuration.md): the
-  config.yaml schema, the built-in action map, every env key.
+  telescreen.yaml schema, the built-in action map, every env key.
 - Contracts: the [Queue contract](contracts/recdep.md) and the
   [Actor contract](contracts/thinkpol.md).
 - Files and paths: state under
   `${XDG_STATE_HOME:-$HOME/.local/state}/recdep/`; config in
+  `~/.config/telescreen.yaml`, identity and secrets in
   `~/.config/minitrue.env`, `~/.config/speakwrite.env`,
-  `~/.config/thinkpol.env`, and `~/.config/recdep/config.yaml`; units
-  in `~/.config/systemd/user/`; skills in `~/.claude/skills/`.
+  `~/.config/thinkpol.env`; units in `~/.config/systemd/user/`;
+  skills in `~/.claude/skills/`.
 
 ## Three things that surprise people
 

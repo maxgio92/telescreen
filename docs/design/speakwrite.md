@@ -59,7 +59,7 @@ exactly once.
 ## Action selection
 
 A record's source and shape pick the action through the rules in
-`config.yaml`; the built-in action map and the verb-to-draft mapping
+`telescreen.yaml`; the built-in action map and the verb-to-draft mapping
 live in the [Configuration reference](../reference/configuration.md).
 
 ## Guardrails

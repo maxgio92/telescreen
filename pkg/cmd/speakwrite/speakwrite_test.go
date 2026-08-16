@@ -46,6 +46,7 @@ func isolate(t *testing.T) (home, state string) {
 	home = t.TempDir()
 	state = t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("XDG_STATE_HOME", state)
 	return home, state
 }
