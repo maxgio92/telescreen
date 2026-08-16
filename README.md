@@ -178,13 +178,9 @@ The drawers, one directory per state:
 | `upsub/` | you acted, the other side owes the next move |
 | `files/` | closed |
 
-## The names
+## Components
 
-Every component is named in Newspeak, after Orwell's 1984: the world
-where the machinery watches the human. Here the direction flips and
-the machinery works for you.
-
-| Name | Role |
+| Component | Does |
 |---|---|
 | minitrue | the producer: polls the sources, files the records |
 | recdep | the queue: one drawer per state |
@@ -194,10 +190,11 @@ the machinery works for you.
 | memoryhole | permanent delete: nothing returns |
 | tube, desk, upsub, files | the drawers |
 
-The full lore, with why each name is a precise metaphor, lives in
-[Design: the names](docs/design/names.md). The domain terms (record,
-queue, intent, draft, approval, and the rest) are defined once in the
-[Vocabulary](docs/reference/vocabulary.md).
+The names come from Orwell's 1984, the world where the machinery
+watches the human; here the machinery works for you. Why each name is
+a precise metaphor: [Design: the names](docs/design/names.md). The
+domain terms (record, queue, intent, draft, approval, and the rest)
+are defined once in the [Vocabulary](docs/reference/vocabulary.md).
 
 ## Usage
 
