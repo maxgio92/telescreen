@@ -30,6 +30,29 @@ component key you deleted. The env files stay for identity and
 secrets, and their agent keys work as the fallback layer when a field
 is unset in the YAML.
 
+A complete file, every key in use:
+
+```yaml
+minitrue:
+  agent: codex                       # any agent CLI; claude is the default
+  args: exec {prompt}                # its argv shape; {prompt} lands as one argument
+  instructions: ~/notes/producer.md  # file content becomes the prompt
+  timeout: 900                       # seconds before the run is killed
+speakwrite:
+  agent: claude                      # claude reads the installed skill, so no
+  allowed_tools: mcp__github mcp__slack   # instructions field is needed here
+  actions:                           # replaces the built-in action map entirely
+    - url_prefix: https://github.com/acme/
+      action: review
+      guidance: professional register
+    - source: slack
+      action: slack-reply
+```
+
+Every field is optional except `action` inside a rule; an absent field
+falls back to the env-file key, then the default. Field semantics:
+[Configuration reference](../reference/configuration.md#telescreenyaml).
+
 ## Add a rule to the action map
 
 Edit `~/.config/telescreen.yaml` under `speakwrite.actions`. A
