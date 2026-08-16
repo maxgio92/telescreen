@@ -5,13 +5,13 @@
 
 [data-md-color-scheme="slate"] {
   --md-default-bg-color: #0a0e0a;
-  --md-default-fg-color: #c8e6c9;
-  --md-default-fg-color--light: #9ccc9e;
-  --md-default-fg-color--lighter: #6b8f6d;
+  --md-default-fg-color: #ddd6c6;
+  --md-default-fg-color--light: #b0a996;
+  --md-default-fg-color--lighter: #837c6b;
   --md-primary-fg-color: #0a0e0a;
-  --md-primary-bg-color: #c8e6c9;
+  --md-primary-bg-color: #f5e5c9;
   --md-accent-fg-color: #3ecf5a;
-  --md-typeset-color: #c8e6c9;
+  --md-typeset-color: #ddd6c6;
   --md-typeset-a-color: #3ecf5a;
   --md-code-bg-color: #101810;
   --md-code-fg-color: #a5d6a7;
