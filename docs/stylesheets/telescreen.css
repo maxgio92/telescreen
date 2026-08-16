@@ -44,3 +44,11 @@
 [data-md-color-scheme="slate"] .md-search__form {
   background-color: #282828;
 }
+
+/* The light scheme keeps stock Material neutrals; only the link and
+   hover colors join the red family, muted for light backgrounds. */
+
+[data-md-color-scheme="default"] {
+  --md-typeset-a-color: #9d0006;
+  --md-accent-fg-color: #c42524;
+}
