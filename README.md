@@ -16,7 +16,7 @@ Files are the only interface.<br>
 Agents draft, only you approve.
 
 [Install](#install) ·
-[Documentation](docs/README.md) ·
+[Documentation](docs/hub.md) ·
 [Getting started](docs/getting-started/install.md) ·
 [Design](docs/design/speakwrite.md)
 
@@ -120,7 +120,10 @@ builds the binary into `~/.local/bin` and runs its installer.
 
 ## Documentation
 
-- [Documentation index](docs/README.md)
+The same pages render as a website at
+[maxgio92.github.io/telescreen](https://maxgio92.github.io/telescreen/).
+
+- [Documentation index](docs/hub.md)
 - [Getting started](docs/getting-started/install.md)
 - [Enroll the agents](docs/getting-started/enroll.md)
 - [Your first record](docs/getting-started/first-record.md)

@@ -4,3 +4,5 @@ dist/
 unit.out
 e2e.out
 covdata/
+site/
+.venv/

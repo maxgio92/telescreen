@@ -19,7 +19,7 @@ go install github.com/maxgio92/telescreen@latest
 
 Debian, Fedora, and Alpine packages and plain tar.gz archives sit on
 the [latest release](https://github.com/maxgio92/telescreen/releases/latest);
-the README's [Install section](../../README.md#install) has the
+the README's [Install section](https://github.com/maxgio92/telescreen#install) has the
 per-distro commands. Later, `telescreen update` swaps the installed
 binary for the newest release in place.
 

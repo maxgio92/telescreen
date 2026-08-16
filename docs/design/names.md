@@ -7,7 +7,7 @@ precise metaphor for what the component does, chosen so the metaphor
 never drifts from the mechanism. This page is the lore. The mechanisms
 live in the [Queue contract](../contracts/recdep.md), the
 [Actor contract](../contracts/thinkpol.md), and the
-[README](../../README.md).
+[README](https://github.com/maxgio92/telescreen/blob/main/README.md).
 
 ## minitrue
 
