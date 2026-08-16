@@ -1,5 +1,6 @@
-/* The 1984 skin: phosphor green on near-black, dark scheme only.
-   The light scheme stays stock Material for daytime reading. */
+/* The 1984 skin: near-black with quiet green reserved for links and
+   code; headings and chrome stay neutral so the red art leads. The
+   light scheme stays stock Material. */
 
 [data-md-color-scheme="slate"] {
   --md-default-bg-color: #0a0e0a;
@@ -7,7 +8,7 @@
   --md-default-fg-color--light: #9ccc9e;
   --md-default-fg-color--lighter: #6b8f6d;
   --md-primary-fg-color: #0a0e0a;
-  --md-primary-bg-color: #3ecf5a;
+  --md-primary-bg-color: #c8e6c9;
   --md-accent-fg-color: #3ecf5a;
   --md-typeset-color: #c8e6c9;
   --md-typeset-a-color: #3ecf5a;
@@ -20,7 +21,7 @@
 [data-md-color-scheme="slate"] .md-header,
 [data-md-color-scheme="slate"] .md-tabs {
   background-color: #060a06;
-  color: #3ecf5a;
+  color: #c8e6c9;
   border-bottom: 1px solid #1d331d;
 }
 
@@ -28,12 +29,12 @@
 [data-md-color-scheme="slate"] .md-typeset h2,
 [data-md-color-scheme="slate"] .md-typeset h3 {
   font-family: var(--md-code-font-family, monospace);
-  color: #3ecf5a;
+  color: #dceddc;
 }
 
 [data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
   background-color: #101810;
-  color: #3ecf5a;
+  color: #dceddc;
 }
 
 [data-md-color-scheme="slate"] .md-typeset code {
