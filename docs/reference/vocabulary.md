@@ -29,8 +29,8 @@ upsub, files) are mapped to their roles in the
 | marker | An appended section in a record: dictated, draft, published, or discarded. |
 | stale | A record whose event resolved without you. |
 | rule, action map | The config rules picking a record's action and guidance. |
-| agent | An LLM process following a skill. |
-| skill | The instruction file an agent follows. |
+| agent | An LLM process following instructions. |
+| skill | The instruction file claude reads from `~/.claude/skills/`; other agents take the same text through the prompt. |
 
 ## Verbs
 

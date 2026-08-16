@@ -87,3 +87,30 @@ func TestRunDrainsQueuedIntent(t *testing.T) {
 		t.Errorf("log = %q, want %q", got.Log, want)
 	}
 }
+
+func TestRunHonorsArgsTemplate(t *testing.T) {
+	home, state := isolate(t)
+	got, _ := fakeExec(t)
+	intents := filepath.Join(state, "recdep", "intents")
+	if err := os.MkdirAll(intents, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(intents, "x.intent"), []byte("entry /e\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(home, ".config"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := "SPEAKWRITE_AGENT=codex\nSPEAKWRITE_ARGS=exec {prompt}\nSPEAKWRITE_PROMPT=\"Draft the queued reactions.\"\n"
+	if err := os.WriteFile(filepath.Join(home, ".config", envFile), []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := run(); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"codex", "exec", "Draft the queued reactions."}
+	if !slices.Equal(got.Argv, want) {
+		t.Errorf("argv = %v, want %v", got.Argv, want)
+	}
+}

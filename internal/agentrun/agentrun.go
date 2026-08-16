@@ -17,16 +17,21 @@ import (
 	"time"
 )
 
-// defaultAgent and defaultTimeoutSeconds match every role.
+// defaultAgent, defaultArgs, and defaultTimeoutSeconds match every
+// role. defaultArgs is the claude CLI shape; another agent overrides
+// it with <PREFIX>_ARGS, a whitespace-split template where an element
+// that is exactly {prompt} or {tools} becomes that value as one
+// argument. No shell interpolation, no re-splitting.
 const (
 	defaultAgent          = "claude"
+	defaultArgs           = "-p {prompt} --allowedTools {tools}"
 	defaultTimeoutSeconds = 600
 )
 
 // Invocation is one resolved agent run.
 type Invocation struct {
-	// Argv is the full command line: agent, -p, prompt, --allowedTools,
-	// and the space-separated tool list as one argument.
+	// Argv is the full command line: the agent binary, then the args
+	// template with {prompt} and {tools} substituted.
 	Argv []string
 	// Env holds the env file's KEY=value pairs, appended to the process
 	// environment so the agent sees them (identity handles, tokens).
@@ -96,12 +101,19 @@ func Resolve(vars map[string]string, prefix, defaultPrompt, defaultTools, logPat
 		env = append(env, k+"="+v)
 	}
 	sort.Strings(env)
+	argv := []string{get("AGENT", defaultAgent)}
+	for _, el := range strings.Fields(get("ARGS", defaultArgs)) {
+		switch el {
+		case "{prompt}":
+			argv = append(argv, get("PROMPT", defaultPrompt))
+		case "{tools}":
+			argv = append(argv, get("ALLOWED_TOOLS", defaultTools))
+		default:
+			argv = append(argv, el)
+		}
+	}
 	return Invocation{
-		Argv: []string{
-			get("AGENT", defaultAgent),
-			"-p", get("PROMPT", defaultPrompt),
-			"--allowedTools", get("ALLOWED_TOOLS", defaultTools),
-		},
+		Argv:    argv,
 		Env:     env,
 		Timeout: time.Duration(seconds) * time.Second,
 		Log:     logPath,

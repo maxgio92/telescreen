@@ -3,8 +3,9 @@
 The screen alone shows files. Records, draft reactions, and posts
 come from three enrolled components: minitrue files records,
 speakwrite writes drafts, thinkpol posts approved drafts. They run on
-systemd user units and require the claude CLI (thinkpol excepted; it
-is plain Go).
+systemd user units and default to the claude CLI (thinkpol excepted;
+it is plain Go). Another agent CLI works too:
+[Use another agent](../guides/use-another-agent.md).
 
 ## Enroll
 

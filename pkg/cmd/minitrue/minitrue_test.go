@@ -83,3 +83,23 @@ func TestRunHonorsEnvFile(t *testing.T) {
 		t.Errorf("env %v lacks the exported identity variable", got.Env)
 	}
 }
+
+func TestRunHonorsArgsTemplate(t *testing.T) {
+	home, _ := isolate(t)
+	got := fakeExec(t)
+	if err := os.MkdirAll(filepath.Join(home, ".config"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := "MINITRUE_AGENT=codex\nMINITRUE_ARGS=exec {prompt}\nMINITRUE_PROMPT=\"Poll the sources and file records.\"\n"
+	if err := os.WriteFile(filepath.Join(home, ".config", envFile), []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := run(); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"codex", "exec", "Poll the sources and file records."}
+	if !slices.Equal(got.Argv, want) {
+		t.Errorf("argv = %v, want %v", got.Argv, want)
+	}
+}

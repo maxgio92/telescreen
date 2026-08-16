@@ -59,6 +59,9 @@ for the producer, the `SPEAKWRITE_*` twins in
 path when the binary is not on the unit's PATH, and carry your
 environment's MCP tool identifiers in the allowlist key. All keys and
 defaults: [Configuration reference](../reference/configuration.md#minitrueenv).
+A CLI with different flags than claude also needs the args template
+key; the worked example lives in
+[Use another agent](use-another-agent.md).
 
 The prompts themselves are skills. `telescreen install` writes seeds
 under `~/.claude/skills/`; the agents read the installed files at run

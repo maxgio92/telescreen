@@ -29,6 +29,8 @@ audit with `ls` and `cat`.
   from anything.
 - [Swap the actor](guides/swap-the-actor.md) (3 min): enroll your own
   actor in place of the shipped one.
+- [Use another agent](guides/use-another-agent.md) (3 min): run the
+  shipped subcommands with an agent CLI other than claude.
 - [Troubleshooting](guides/troubleshooting.md) (2 min): symptom, cause,
   fix.
 

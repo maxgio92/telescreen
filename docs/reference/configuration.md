@@ -62,6 +62,7 @@ Location: `~/.config/minitrue.env`, plain `KEY=value` lines.
 | REPO | the GitHub repo to scope PR watches to | required |
 | BOT_LOGINS | bot logins to skip, besides `[bot]` suffixes | empty |
 | MINITRUE_AGENT | the agent binary the subcommand runs | `claude` |
+| MINITRUE_ARGS | the agent's argument template, split on whitespace; an element that is exactly `{prompt}` or `{tools}` becomes that value as one argument, every other element is verbatim; a template without `{tools}` leaves the allowlist unused | `-p {prompt} --allowedTools {tools}` |
 | MINITRUE_PROMPT | the headless prompt | `/minitrue produce` |
 | MINITRUE_ALLOWED_TOOLS | the agent's tool allowlist | the subcommand's default |
 | MINITRUE_TIMEOUT | seconds before the subcommand kills the run | `600` |
@@ -76,6 +77,7 @@ Location: `~/.config/speakwrite.env`, plain `KEY=value` lines.
 | Key | Meaning | Default |
 |---|---|---|
 | SPEAKWRITE_AGENT | the agent binary | `claude` |
+| SPEAKWRITE_ARGS | the agent's argument template, split on whitespace; an element that is exactly `{prompt}` or `{tools}` becomes that value as one argument, every other element is verbatim; a template without `{tools}` leaves the allowlist unused | `-p {prompt} --allowedTools {tools}` |
 | SPEAKWRITE_PROMPT | the headless prompt | `/speakwrite draft` |
 | SPEAKWRITE_ALLOWED_TOOLS | the agent's tool allowlist | the subcommand's default |
 | SPEAKWRITE_TIMEOUT | seconds before the subcommand kills the run | `600` |

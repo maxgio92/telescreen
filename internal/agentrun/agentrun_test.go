@@ -29,6 +29,20 @@ func TestParseEnvFile(t *testing.T) {
 	}
 }
 
+func TestParseEnvFileValueKeepsSpaces(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "minitrue.env")
+	if err := os.WriteFile(path, []byte("MINITRUE_ARGS=exec --full-auto {prompt}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	vars, err := ParseEnvFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := vars["MINITRUE_ARGS"]; got != "exec --full-auto {prompt}" {
+		t.Errorf("MINITRUE_ARGS = %q, want the spaces after the first = kept", got)
+	}
+}
+
 func TestParseEnvFileMissingIsEmpty(t *testing.T) {
 	vars, err := ParseEnvFile(filepath.Join(t.TempDir(), "absent.env"))
 	if err != nil {
@@ -54,6 +68,68 @@ func TestResolveDefaults(t *testing.T) {
 	}
 	if inv.Log != "/log" {
 		t.Errorf("log = %q, want /log", inv.Log)
+	}
+}
+
+func TestResolveArgsTemplate(t *testing.T) {
+	multiline := "Draft a reply.\n\nKeep it short."
+	cases := []struct {
+		name string
+		vars map[string]string
+		want []string
+	}{
+		{
+			name: "absent key keeps the claude shape",
+			vars: map[string]string{},
+			want: []string{"claude", "-p", "/produce", "--allowedTools", "Bash Read"},
+		},
+		{
+			name: "empty key keeps the claude shape",
+			vars: map[string]string{"MINITRUE_ARGS": ""},
+			want: []string{"claude", "-p", "/produce", "--allowedTools", "Bash Read"},
+		},
+		{
+			name: "codex shape keeps the prompt one argument",
+			vars: map[string]string{
+				"MINITRUE_AGENT":  "codex",
+				"MINITRUE_ARGS":   "exec {prompt}",
+				"MINITRUE_PROMPT": multiline,
+			},
+			want: []string{"codex", "exec", multiline},
+		},
+		{
+			name: "template without {tools} ignores the allowlist",
+			vars: map[string]string{"MINITRUE_ARGS": "-p {prompt}"},
+			want: []string{"claude", "-p", "/produce"},
+		},
+		{
+			name: "braces short of a placeholder stay verbatim",
+			vars: map[string]string{"MINITRUE_ARGS": "--flag={prompt} {prompts} {prompt}"},
+			want: []string{"claude", "--flag={prompt}", "{prompts}", "/produce"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			inv, err := Resolve(tc.vars, "MINITRUE", "/produce", "Bash Read", "/log")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(inv.Argv, tc.want) {
+				t.Errorf("argv = %q, want %q", inv.Argv, tc.want)
+			}
+		})
+	}
+}
+
+func TestResolveArgsFileWinsOverEnv(t *testing.T) {
+	t.Setenv("MINITRUE_ARGS", "run {prompt}")
+	inv, err := Resolve(map[string]string{"MINITRUE_ARGS": "exec {prompt}"}, "MINITRUE", "/produce", "Bash", "/log")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"claude", "exec", "/produce"}
+	if !slices.Equal(inv.Argv, want) {
+		t.Errorf("argv = %q, want the env file template %q", inv.Argv, want)
 	}
 }
 
