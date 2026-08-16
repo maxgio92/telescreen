@@ -58,6 +58,13 @@ type model struct {
 	// recdep/intents/; their rows show [dictated] before the runner
 	// writes the marker.
 	pending map[string]bool
+	// reader is the full-record view enter opens on the selected entry;
+	// readerScroll is its top line in the wrapped body. The reader
+	// follows the cursor: a reload can swap the body, and the
+	// name-armed publish gate keeps p p from approving a swapped
+	// record.
+	reader       bool
+	readerScroll int
 }
 
 var (
@@ -164,6 +171,15 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	m.armed = ""
 	m.pubArmed = ""
 	m.status = ""
+	if m.reader {
+		if _, ok := m.selected(); ok {
+			return m.handleReaderKey(msg, pubArmed)
+		}
+		// The read record vanished under the reader (moved or deleted by a
+		// reload); the view already fell back to the list, so keys do too.
+		m.reader = false
+		m.readerScroll = 0
+	}
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return m, tea.Quit
@@ -181,7 +197,12 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.view < len(recdep.States) && m.cursor[m.view] > 0 {
 			m.cursor[m.view]--
 		}
-	case "o", "enter":
+	case "enter":
+		if _, ok := m.selected(); ok {
+			m.reader = true
+			m.readerScroll = 0
+		}
+	case "o":
 		if e, ok := m.selected(); ok && e.URL != "" {
 			if err := exec.Command("xdg-open", e.URL).Start(); err != nil {
 				m.status = err.Error()
@@ -244,10 +265,82 @@ func (m *model) incinerate(armed string) {
 	m.status = "deleted " + e.Name
 }
 
+// handleReaderKey drives the full-record view: scroll keys, close on
+// q/esc, and the read-record actions (p p approve, D discard, s dictate)
+// without leaving the reader. Every other key is inert.
+func (m model) handleReaderKey(msg tea.KeyMsg, pubArmed string) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+	case "q", "esc":
+		m.reader = false
+		m.readerScroll = 0
+		return m, nil
+	case "j", "down":
+		m.readerScroll++
+	case "k", "up":
+		m.readerScroll--
+	case "pgdown", " ":
+		m.readerScroll += m.readerRows()
+	case "pgup":
+		m.readerScroll -= m.readerRows()
+	case "g":
+		m.readerScroll = 0
+	case "G":
+		m.readerScroll = len(m.readerBody())
+	case "s":
+		return m.dictate()
+	case "p":
+		m.publish(pubArmed)
+	case "D":
+		m.discard()
+	}
+	m.clampReaderScroll()
+	return m, nil
+}
+
+// readerRows is the body row budget of the reader: the height minus the
+// name, status, and help lines.
+func (m model) readerRows() int {
+	return max(1, m.height-3)
+}
+
+// readerBody returns the selected record's full detail wrapped at the
+// terminal width, one rendered line per element, so scroll offsets count
+// wrapped lines against the height budget.
+func (m model) readerBody() []string {
+	e, ok := m.selected()
+	if !ok {
+		return nil
+	}
+	path := filepath.Join(m.root, recdep.States[m.view], e.Name)
+	w := max(20, m.width)
+	return strings.Split(lipgloss.NewStyle().Width(w).Render(e.Detail(path)), "\n")
+}
+
+func (m *model) clampReaderScroll() {
+	m.readerScroll = min(m.readerScroll, len(m.readerBody())-m.readerRows())
+	m.readerScroll = max(0, m.readerScroll)
+}
+
 func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	m.status = ""
 	m.armed = ""
 	m.pubArmed = ""
+	if m.reader {
+		if _, ok := m.selected(); !ok {
+			m.reader = false
+			return m, nil
+		}
+		switch msg.Button {
+		case tea.MouseButtonWheelUp:
+			m.readerScroll--
+		case tea.MouseButtonWheelDown:
+			m.readerScroll++
+		}
+		m.clampReaderScroll()
+		return m, nil
+	}
 	switch {
 	case msg.Button == tea.MouseButtonWheelUp:
 		if m.view < len(recdep.States) && m.cursor[m.view] > 0 {
@@ -353,6 +446,11 @@ func copyToClipboard(text string) error {
 }
 
 func (m model) View() string {
+	if m.reader {
+		if v, ok := m.viewReader(); ok {
+			return v
+		}
+	}
 	var b strings.Builder
 
 	var tabs []string
@@ -503,7 +601,30 @@ func capDetail(content string, width, rows int) string {
 	return strings.Join(append(out, lines[tail:]...), "\n")
 }
 
-const helpLine = "j/k move  tab/1-5 view  o open  y yank  t take  u up  f file  b back  s dictate  p approve  D discard  x delete  q quit"
+// viewReader renders the full-record view: the record name on top, the
+// wrapped body window, then the status and help lines. ok is false with
+// no selection, and View falls back to the list.
+func (m model) viewReader() (string, bool) {
+	e, ok := m.selected()
+	if !ok {
+		return "", false
+	}
+	var b strings.Builder
+	b.WriteString(tabActive.Render(fitWidth(e.Name, m.width)) + "\n")
+	body := m.readerBody()
+	rows := m.readerRows()
+	start := min(m.readerScroll, max(0, len(body)-rows))
+	for i := start; i < len(body) && i < start+rows; i++ {
+		b.WriteString(body[i] + "\n")
+	}
+	b.WriteString(fitWidth(m.status, m.width) + "\n")
+	b.WriteString(helpStyle.Render(fitWidth(readerHelpLine, m.width)))
+	return clampHeight(b.String(), m.height), true
+}
+
+const helpLine = "j/k move  tab/1-5 view  enter read  o open  y yank  t take  u up  f file  b back  s dictate  p approve  D discard  x delete  q quit"
+
+const readerHelpLine = "j/k scroll  space/pgup/pgdn page  g/G top/bottom  s dictate  p approve  D discard  q close"
 
 // onceCounts renders one "<state> <count>" line per real state directory;
 // the virtual memory hole never appears here.

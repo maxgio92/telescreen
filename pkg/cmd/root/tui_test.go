@@ -540,9 +540,204 @@ func TestViewRowsNeverWiderThanTerminal(t *testing.T) {
 // TestHelpLineSpeaksDocumentedVerbs pins the help line to the verbs the
 // README keys table documents for each key.
 func TestHelpLineSpeaksDocumentedVerbs(t *testing.T) {
-	for _, want := range []string{"t take", "u up", "f file", "s dictate", "p approve", "D discard", "x delete"} {
+	for _, want := range []string{"enter read", "t take", "u up", "f file", "s dictate", "p approve", "D discard", "x delete"} {
 		if !strings.Contains(helpLine, want) {
 			t.Errorf("helpLine lacks %q: %q", want, helpLine)
 		}
+	}
+}
+
+// seedLongDraftModel builds a drafted desk entry whose draft is n numbered
+// lines, on a loaded model sized width x height with the reader closed.
+func seedLongDraftModel(t *testing.T, name string, n, width, height int) (model, string) {
+	t.Helper()
+	m, root := seedDraftModel(t, name, "https://github.com/o/r/pull/1")
+	var draft strings.Builder
+	for i := 1; i <= n; i++ {
+		fmt.Fprintf(&draft, "draft-line-%03d\n", i)
+	}
+	body := "[github] alice: please review\nhttps://github.com/o/r/pull/1\nseen now\n\n--- draft 2026-08-14T09:05:00Z\n" + draft.String()
+	if err := os.WriteFile(filepath.Join(root, "desk", name), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m.reload()
+	m.width, m.height = width, height
+	return m, root
+}
+
+// TestReaderShowsTopOfLongDraft opens the reader on a 40-line draft at
+// height 30: the top window shows, the budget holds, no row overflows.
+func TestReaderShowsTopOfLongDraft(t *testing.T) {
+	name := "20260814T090000Z-github-review-demo-1.md"
+	m, _ := seedLongDraftModel(t, name, 40, 80, 30)
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	if !m.reader {
+		t.Fatal("enter did not open the reader")
+	}
+	view := m.View()
+	lines := strings.Split(view, "\n")
+	if len(lines) > m.height {
+		t.Errorf("reader has %d lines, want <= %d", len(lines), m.height)
+	}
+	for _, l := range lines {
+		if w := lipgloss.Width(l); w > m.width {
+			t.Errorf("reader row is %d columns at width %d: %q", w, m.width, l)
+		}
+	}
+	if !strings.Contains(view, name) {
+		t.Errorf("reader lacks the record name on top:\n%s", view)
+	}
+	if !strings.Contains(view, "draft-line-001") {
+		t.Errorf("reader window lacks the draft top:\n%s", view)
+	}
+	if strings.Contains(view, "draft-line-040") {
+		t.Errorf("reader shows the draft bottom without scrolling:\n%s", view)
+	}
+}
+
+// TestReaderScrollsToBottom pins G and the line keys: the last draft line
+// comes on screen and the height budget still holds.
+func TestReaderScrollsToBottom(t *testing.T) {
+	name := "20260814T090000Z-github-review-demo-1.md"
+	m, _ := seedLongDraftModel(t, name, 40, 80, 30)
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	m = press(t, m, key("G"))
+	view := m.View()
+	if !strings.Contains(view, "draft-line-040") {
+		t.Errorf("G did not reach the draft bottom:\n%s", view)
+	}
+	if got := strings.Count(view, "\n") + 1; got > m.height {
+		t.Errorf("reader has %d lines, want <= %d", got, m.height)
+	}
+	m = press(t, m, key("g"))
+	if !strings.Contains(m.View(), "draft-line-001") {
+		t.Error("g did not return to the top")
+	}
+	for range 50 {
+		m = press(t, m, key("j"))
+	}
+	if !strings.Contains(m.View(), "draft-line-040") {
+		t.Error("j past the end did not pin the bottom")
+	}
+	m = press(t, m, key("g"))
+	m = press(t, m, key(" "))
+	if strings.Contains(m.View(), "draft-line-001") {
+		t.Error("space did not page down")
+	}
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEsc})
+	if strings.Contains(m.View(), "draft-line-002") {
+		t.Error("esc did not close the reader")
+	}
+}
+
+// TestReaderClosesBackToList pins q: the list view returns unchanged.
+func TestReaderClosesBackToList(t *testing.T) {
+	name := "20260814T090000Z-github-review-demo-1.md"
+	m, _ := seedLongDraftModel(t, name, 40, 80, 30)
+	before := m.View()
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	m = press(t, m, key("j"))
+	m = press(t, m, key("q"))
+	if m.reader {
+		t.Fatal("q did not close the reader")
+	}
+	if got := m.View(); got != before {
+		t.Errorf("list after the reader differs:\n%s\nwant:\n%s", got, before)
+	}
+}
+
+// TestReaderClosesWhenRecordVanishes pins the reader on a record that a
+// reload removed: keys fall back to the list, so q quits instead of
+// silently clearing a reader the screen no longer shows.
+func TestReaderClosesWhenRecordVanishes(t *testing.T) {
+	name := "20260811T142302Z-slack-wes-go-for-it.md"
+	m, root := seedModel(t, "desk", name)
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	if !m.reader {
+		t.Fatal("enter did not open the reader")
+	}
+	if err := os.Remove(filepath.Join(root, "desk", name)); err != nil {
+		t.Fatal(err)
+	}
+	m.reload()
+	nm, cmd := m.Update(key("q"))
+	m = nm.(model)
+	if m.reader {
+		t.Error("q on a vanished record left the reader flag set")
+	}
+	if cmd == nil {
+		t.Fatal("q on a vanished record did not quit")
+	}
+	if _, ok := cmd().(tea.QuitMsg); !ok {
+		t.Errorf("q returned %T, want tea.QuitMsg", cmd())
+	}
+}
+
+// TestReaderPublishArmsThenApproves pins p p inside the reader: the arm
+// status renders in the reader and the approval lands like the list path.
+func TestReaderPublishArmsThenApproves(t *testing.T) {
+	name := "20260814T090000Z-github-review-demo-1.md"
+	m, root := seedDraftModel(t, name, "https://github.com/o/r/pull/1")
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	approval := filepath.Join(root, "intents", name+".publish")
+
+	m = press(t, m, key("p"))
+	if want := "approve posting to https://github.com/o/r/pull/1: press p again"; m.status != want {
+		t.Errorf("status after first p = %q, want %q", m.status, want)
+	}
+	if !strings.Contains(m.View(), "press p again") {
+		t.Errorf("reader does not render the arm status:\n%s", m.View())
+	}
+	if _, err := os.Stat(approval); !os.IsNotExist(err) {
+		t.Fatalf("first p already wrote the approval: %v", err)
+	}
+
+	m = press(t, m, key("p"))
+	if !m.reader {
+		t.Error("approving closed the reader")
+	}
+	got, err := os.ReadFile(approval)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "entry " + filepath.Join(root, "desk", name) + "\n"; string(got) != want {
+		t.Errorf("approval = %q, want %q", got, want)
+	}
+}
+
+// TestReaderInertKeysStayInReader pins that list-only keys do nothing in
+// the reader: no move, no view switch, no quit command.
+func TestReaderInertKeysStayInReader(t *testing.T) {
+	name := "20260814T090000Z-github-review-demo-1.md"
+	m, root := seedDraftModel(t, name, "https://github.com/o/r/pull/1")
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	for _, k := range []string{"t", "u", "f", "b", "x", "1", "5", "o"} {
+		m = press(t, m, key(k))
+	}
+	if !m.reader || m.view != 1 {
+		t.Errorf("inert keys changed the reader state: reader=%v view=%d", m.reader, m.view)
+	}
+	if got := inState(t, root, name); !slices.Equal(got, []string{"desk"}) {
+		t.Errorf("inert keys moved the entry: in %v, want [desk]", got)
+	}
+}
+
+// TestReaderPlainRecordShowsBody pins the reader on a record with no
+// draft: the plain body and the path line render.
+func TestReaderPlainRecordShowsBody(t *testing.T) {
+	name := "20260811T142302Z-slack-wes-go-for-it.md"
+	m, root := seedModel(t, "tube", name)
+	m.width, m.height = 80, 24
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	view := m.View()
+	if !strings.Contains(view, "[slack] wes: go for it") {
+		t.Errorf("reader lacks the record body:\n%s", view)
+	}
+	// The path wraps at the terminal width; assert on its head.
+	if !strings.Contains(view, "path "+root) {
+		t.Errorf("reader lacks the path line:\n%s", view)
+	}
+	if got := strings.Count(view, "\n") + 1; got > m.height {
+		t.Errorf("reader has %d lines, want <= %d", got, m.height)
 	}
 }

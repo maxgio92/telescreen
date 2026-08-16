@@ -46,7 +46,10 @@ re-dictate; the new draft supersedes the old.
 
 ## Approve
 
-Press `p`: the status line names the target. Press `p` again: the
+Read the whole draft first: `enter` opens the reader, a full-screen
+scrollable view of the record, draft included; `q` closes it. `p p`
+works inside the reader too. Press `p`: the status line names the
+target. Press `p` again: the
 approval is written to disk, the recorded consent for one outward
 write. For a real record, thinkpol now posts the draft, stamps the
 record with the comment URL, and moves it to upsub. For the demo

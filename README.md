@@ -216,7 +216,8 @@ lints against the [Queue contract](docs/contracts/recdep.md).
 |---|---|
 | `tab`/`shift+tab`, `1`-`5` | switch view (tube, desk, upsub, files, memoryhole) |
 | `j`/`k`, arrows, wheel | navigate; click selects a row or a tab |
-| `o`, `enter` | open the record's URL |
+| `enter` | read the full record; inside: `j`/`k` line, `space`/`pgup`/`pgdn` page, `g`/`G` ends, `s`/`p p`/`D` act, `q` closes |
+| `o` | open the record's URL |
 | `y` | copy the URL (wl-copy, fallback xclip) |
 | `t` | take (tube to desk) |
 | `u` | up (tube or desk to upsub: you answered, their move) |
@@ -228,9 +229,10 @@ lints against the [Queue contract](docs/contracts/recdep.md).
 | `x` `x` | delete the record permanently (files only; the first press asks by name) |
 | `q` | quit |
 
-The detail pane shows the selected record in full: the content line,
-the preview, then the labeled path (one `cat` away, or one agent
-handle), url, and seen lines.
+The detail pane shows the selected record: the content line, the
+preview, then the labeled path (one `cat` away, or one agent handle),
+url, and seen lines. A long record outgrows the pane; `enter` opens
+the reader, a full-screen scrollable view of the same text.
 
 Under no circumstances does this screen watch you back. That would be
 doubleplusungood.
