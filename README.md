@@ -227,6 +227,7 @@ lints against the [Queue contract](docs/contracts/recdep.md).
 | `f` | file it (any open drawer to files) |
 | `b` | back, one drawer |
 | `s` | dictate into the speakwrite (tube, desk, upsub) |
+| `r` | quick reply, a small in-TUI popup writing the same intent; inside: `enter` newline, `ctrl+s` submit, `ctrl+e` escalate to the editor, `esc` cancel |
 | `p` `p` | approve a draft for posting (records with a matching publisher: GitHub PRs, Slack threads, Linear issues) |
 | `D` | discard a draft |
 | `x` `x` | delete the record permanently (files only; the first press asks by name) |

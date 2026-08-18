@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fsnotify/fsnotify"
@@ -65,6 +66,15 @@ type model struct {
 	// record.
 	reader       bool
 	readerScroll int
+	// quick is the quick-reply popup r opens on the selected entry;
+	// quickInput is its textarea. The popup layers over the list or the
+	// reader and swallows every key until it closes. quickName pins the
+	// record the popup opened on: a reload can shift the newest-first
+	// list under the cursor, so keys re-resolve the pin by name before
+	// the popup writes anything, like the editor path pins by e.Name.
+	quick      bool
+	quickName  string
+	quickInput textarea.Model
 }
 
 var (
@@ -151,6 +161,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+		if m.quick {
+			m.quickInput.SetWidth(max(10, m.width-4))
+			m.quickInput.SetHeight(quickInputHeight(m.height))
+		}
 	case fsEventMsg:
 		m.reload()
 		return m, watchCmd(m.watcher)
@@ -171,6 +185,15 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	m.armed = ""
 	m.pubArmed = ""
 	m.status = ""
+	if m.quick {
+		if i := slices.IndexFunc(m.lists[m.view], func(e recdep.Entry) bool { return e.Name == m.quickName }); i >= 0 {
+			m.cursor[m.view] = i
+			return m.handleQuickKey(msg)
+		}
+		// The pinned record vanished under the popup; discard it like the
+		// reader.
+		m.quick = false
+	}
 	if m.reader {
 		if _, ok := m.selected(); ok {
 			return m.handleReaderKey(msg, pubArmed)
@@ -230,7 +253,9 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.move("upsub", "desk")
 		m.move("desk", "tube")
 	case "s":
-		return m.dictate()
+		return m.dictate("")
+	case "r":
+		return m.openQuick()
 	case "p":
 		m.publish(pubArmed)
 	case "D":
@@ -289,7 +314,9 @@ func (m model) handleReaderKey(msg tea.KeyMsg, pubArmed string) (tea.Model, tea.
 	case "G":
 		m.readerScroll = len(m.readerBody())
 	case "s":
-		return m.dictate()
+		return m.dictate("")
+	case "r":
+		return m.openQuick()
 	case "p":
 		m.publish(pubArmed)
 	case "D":
@@ -300,9 +327,9 @@ func (m model) handleReaderKey(msg tea.KeyMsg, pubArmed string) (tea.Model, tea.
 }
 
 // readerRows is the body row budget of the reader: the height minus the
-// name, status, and help lines.
+// name, status, and help lines, and the popup block when it is open.
 func (m model) readerRows() int {
-	return max(1, m.height-3)
+	return max(1, m.height-3-m.quickLines())
 }
 
 // readerBody returns the selected record's full detail wrapped at the
@@ -324,6 +351,9 @@ func (m *model) clampReaderScroll() {
 }
 
 func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if m.quick {
+		return m, nil
+	}
 	m.status = ""
 	m.armed = ""
 	m.pubArmed = ""
@@ -385,7 +415,15 @@ func (m model) tabLabels() []string {
 // listViewport returns the scroll offset and row count of the list area,
 // matching what View renders.
 func (m model) listViewport() (start, rows int) {
-	rows = max(3, m.height-detailLines-5)
+	// With the popup open the detail pane hides and the popup takes the
+	// room; the list gives up every row before the popup loses its chord
+	// line. Mouse hit tests never see that branch: the popup swallows
+	// clicks.
+	if m.quick {
+		rows = max(0, m.height-5-m.quickLines())
+	} else {
+		rows = max(3, m.height-detailLines-5)
+	}
 	if m.cursor[m.view] >= rows {
 		start = m.cursor[m.view] - rows + 1
 	}
@@ -523,7 +561,10 @@ func (m model) View() string {
 	}
 
 	b.WriteString("\n")
-	if e, ok := m.selected(); ok {
+	// The popup replaces the detail pane: both describe the selected
+	// record, and on short terminals the pane's six rows would push the
+	// popup's chord line past the height budget.
+	if e, ok := m.selected(); ok && !m.quick {
 		path := filepath.Join(m.root, recdep.States[m.view], e.Name)
 		w := max(20, m.width)
 		detail := detailStyle.Width(w).Render(capDetail(e.Detail(path), w, detailLines-1))
@@ -531,6 +572,9 @@ func (m model) View() string {
 			detail = strings.Join(dl[:detailLines], "\n")
 		}
 		b.WriteString(detail + "\n")
+	}
+	if m.quick {
+		b.WriteString(m.viewQuick())
 	}
 	// The status row always renders, blank when empty, so the list never
 	// jumps when a message comes and goes and the height budget is constant.
@@ -617,14 +661,17 @@ func (m model) viewReader() (string, bool) {
 	for i := start; i < len(body) && i < start+rows; i++ {
 		b.WriteString(body[i] + "\n")
 	}
+	if m.quick {
+		b.WriteString(m.viewQuick())
+	}
 	b.WriteString(fitWidth(m.status, m.width) + "\n")
 	b.WriteString(helpStyle.Render(fitWidth(readerHelpLine, m.width)))
 	return clampHeight(b.String(), m.height), true
 }
 
-const helpLine = "j/k move  tab/1-5 view  enter read  o open  y yank  t take  u up  f file  b back  s dictate  p approve  D discard  x delete  q quit"
+const helpLine = "j/k move  tab/1-5 view  enter read  o open  y yank  t take  u up  f file  b back  s dictate  r reply  p approve  D discard  x delete  q quit"
 
-const readerHelpLine = "j/k scroll  space/pgup/pgdn page  g/G top/bottom  s dictate  p approve  D discard  q close"
+const readerHelpLine = "j/k scroll  space/pgup/pgdn page  g/G top/bottom  s dictate  r reply  p approve  D discard  q close"
 
 // onceCounts renders one "<state> <count>" line per real state directory;
 // the virtual memory hole never appears here.

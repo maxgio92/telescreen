@@ -161,10 +161,12 @@ type editorDoneMsg struct {
 	err  error
 }
 
-// dictate handles the s key: in tube, desk, and upsub it writes a
-// pre-filled draft intent and suspends into the editor. Files and the
+// dictate handles the s key and the popup's ctrl+e escalation: in tube,
+// desk, and upsub it writes a pre-filled draft intent and suspends into
+// the editor. typed is the popup's text and rides into the pre-fill after
+// any pending or last-dictated guidance: typed text last. Files and the
 // memory hole hold closed or destroyed records; dictation is a no-op.
-func (m model) dictate() (tea.Model, tea.Cmd) {
+func (m model) dictate(typed string) (tea.Model, tea.Cmd) {
 	if m.view >= len(recdep.States) || recdep.States[m.view] == "files" {
 		return m, nil
 	}
@@ -172,9 +174,10 @@ func (m model) dictate() (tea.Model, tea.Cmd) {
 	if !ok {
 		return m, nil
 	}
+	guidance := composeGuidance(guidanceFor(m.root, e), typed)
 	entryPath := filepath.Join(m.root, recdep.States[m.view], e.Name)
 	tmp := filepath.Join(m.root, recdep.IntentsDir, e.Name+".intent.tmp")
-	if err := os.WriteFile(tmp, []byte(renderIntent(entryPath, e, guidanceFor(m.root, e))), 0o600); err != nil {
+	if err := os.WriteFile(tmp, []byte(renderIntent(entryPath, e, guidance)), 0o600); err != nil {
 		m.status = err.Error()
 		return m, nil
 	}

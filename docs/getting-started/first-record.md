@@ -35,6 +35,8 @@ push back: the announcement contradicts the numbers.
 ```
 
 Save to submit; abort the editor to cancel. The row gains `[dictated]`.
+For a short stance, `r` opens a quick-reply popup inside the TUI that
+submits the same intent with `ctrl+s`, no editor round trip.
 
 ## Draft
 
