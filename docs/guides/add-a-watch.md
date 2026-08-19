@@ -44,7 +44,7 @@ on the `channel` metadata line the watch writes:
 ```yaml
 speakwrite:
   actions:
-    - meta: {channel: "#build-status"}
+    - metadata: {channel: "#build-status"}
       action: slack-reply
       guidance: build chatter; short, informal
 ```

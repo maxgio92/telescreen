@@ -220,11 +220,11 @@ func TestLoadMetaRule(t *testing.T) {
 	write(t, `speakwrite:
   actions:
     - source: slack
-      meta:
+      metadata:
         channel: "#incidents"
       action: slack-reply
       guidance: urgent register
-    - meta:
+    - metadata:
         org: acme
         repo: widgets
       action: review
@@ -244,24 +244,24 @@ func TestLoadMetaRule(t *testing.T) {
 
 func TestLoadMetaReservedKey(t *testing.T) {
 	for _, k := range []string{"stale", "seen", "path", "url"} {
-		write(t, "speakwrite:\n  actions:\n    - meta:\n        "+k+": x\n      action: respond\n")
+		write(t, "speakwrite:\n  actions:\n    - metadata:\n        "+k+": x\n      action: respond\n")
 		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "reserved") {
-			t.Errorf("Load() with meta key %q error = %v, want the reserved-key rejection", k, err)
+			t.Errorf("Load() with metadata key %q error = %v, want the reserved-key rejection", k, err)
 		}
 	}
 }
 
 func TestLoadMetaMalformedKey(t *testing.T) {
 	for _, k := range []string{"Channel", "chan-nel", "chan nel", "chan1", `""`} {
-		write(t, "speakwrite:\n  actions:\n    - meta:\n        "+k+": x\n      action: respond\n")
+		write(t, "speakwrite:\n  actions:\n    - metadata:\n        "+k+": x\n      action: respond\n")
 		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "lowercase") {
-			t.Errorf("Load() with meta key %q error = %v, want the key-shape rejection", k, err)
+			t.Errorf("Load() with metadata key %q error = %v, want the key-shape rejection", k, err)
 		}
 	}
 }
 
 func TestLoadMetaEmptyValue(t *testing.T) {
-	write(t, "speakwrite:\n  actions:\n    - meta:\n        channel: \"\"\n      action: respond\n")
+	write(t, "speakwrite:\n  actions:\n    - metadata:\n        channel: \"\"\n      action: respond\n")
 	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "value is required") {
 		t.Errorf("Load() error = %v, want the empty-value rejection", err)
 	}

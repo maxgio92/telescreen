@@ -38,7 +38,7 @@ type Action struct {
 	Author string `yaml:"author"`
 	// Meta matches when every pair equals the entry's metadata value
 	// for that key (last duplicate wins). An empty map matches anything.
-	Meta map[string]string `yaml:"meta"`
+	Meta map[string]string `yaml:"metadata"`
 	// Action is required.
 	Action string `yaml:"action"`
 	// Guidance travels with the action into the dictation intent.
@@ -183,13 +183,13 @@ func validateActions(actions []Action) error {
 		for _, k := range slices.Sorted(maps.Keys(a.Meta)) {
 			v := a.Meta[k]
 			if !recdep.ValidMetaKey(k) {
-				return fmt.Errorf("actions[%d]: meta key %q must be lowercase [a-z_]+", i, k)
+				return fmt.Errorf("actions[%d]: metadata key %q must be lowercase [a-z_]+", i, k)
 			}
 			if recdep.ReservedMetaKey(k) {
-				return fmt.Errorf("actions[%d]: meta key %q is reserved by the queue contract", i, k)
+				return fmt.Errorf("actions[%d]: metadata key %q is reserved by the queue contract", i, k)
 			}
 			if v == "" {
-				return fmt.Errorf("actions[%d]: meta %s: a value is required", i, k)
+				return fmt.Errorf("actions[%d]: metadata %s: a value is required", i, k)
 			}
 		}
 	}
