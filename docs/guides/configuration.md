@@ -142,7 +142,7 @@ keep the tools the skill's research and marker steps use (`Bash`,
 
 ```yaml
 speakwrite:
-  allowed_tools: Task Bash Read Write Glob Grep mcp__github mcp__slack mcp__linear-server__get_issue mcp__linear-server__list_comments
+  allowed_tools: Task Bash Read Write Glob Grep mcp__plugin_slack_slack__slack_read_thread mcp__linear-server__get_issue mcp__linear-server__list_comments
   timeout: 1200
 ```
 
