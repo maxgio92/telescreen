@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fsnotify/fsnotify"
@@ -76,6 +77,12 @@ type model struct {
 	quick      bool
 	quickName  string
 	quickInput textarea.Model
+	// search is the active filter query; every list view shows only
+	// matching records while it is set. searching is the / input open on
+	// the status row; it swallows every key until enter or esc.
+	search      string
+	searching   bool
+	searchInput textinput.Model
 }
 
 var (
@@ -110,10 +117,8 @@ func (m *model) reload() {
 			continue
 		}
 		m.lists[i] = list
-		if m.cursor[i] >= len(list) {
-			m.cursor[i] = max(0, len(list)-1)
-		}
 	}
+	m.clampCursors()
 	m.pending = map[string]bool{}
 	if names, err := os.ReadDir(filepath.Join(m.root, recdep.IntentsDir)); err == nil {
 		for _, d := range names {
@@ -128,7 +133,7 @@ func (m model) selected() (recdep.Entry, bool) {
 	if m.view >= len(recdep.States) {
 		return recdep.Entry{}, false
 	}
-	list := m.lists[m.view]
+	list := m.visible(m.view)
 	if len(list) == 0 {
 		return recdep.Entry{}, false
 	}
@@ -166,6 +171,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quickInput.SetWidth(max(10, m.width-4))
 			m.quickInput.SetHeight(quickInputHeight(m.height))
 		}
+		if m.searching {
+			m.searchInput.Width = searchWidth(m.width)
+		}
 	case fsEventMsg:
 		m.reload()
 		return m, watchCmd(m.watcher)
@@ -186,8 +194,11 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	m.armed = ""
 	m.pubArmed = ""
 	m.status = ""
+	if m.searching {
+		return m.handleSearchKey(msg)
+	}
 	if m.quick {
-		if i := slices.IndexFunc(m.lists[m.view], func(e recdep.Entry) bool { return e.Name == m.quickName }); i >= 0 {
+		if i := slices.IndexFunc(m.visible(m.view), func(e recdep.Entry) bool { return e.Name == m.quickName }); i >= 0 {
 			m.cursor[m.view] = i
 			return m.handleQuickKey(msg)
 		}
@@ -214,7 +225,7 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "1", "2", "3", "4", "5":
 		m.view = int(msg.String()[0] - '1')
 	case "j", "down":
-		if m.view < len(recdep.States) && m.cursor[m.view] < len(m.lists[m.view])-1 {
+		if m.view < len(recdep.States) && m.cursor[m.view] < len(m.visible(m.view))-1 {
 			m.cursor[m.view]++
 		}
 	case "k", "up":
@@ -222,12 +233,12 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor[m.view]--
 		}
 	case "g":
-		if m.view < len(recdep.States) && len(m.lists[m.view]) > 0 {
+		if m.view < len(recdep.States) && len(m.visible(m.view)) > 0 {
 			m.cursor[m.view] = 0
 		}
 	case "G":
-		if m.view < len(recdep.States) && len(m.lists[m.view]) > 0 {
-			m.cursor[m.view] = len(m.lists[m.view]) - 1
+		if m.view < len(recdep.States) && len(m.visible(m.view)) > 0 {
+			m.cursor[m.view] = len(m.visible(m.view)) - 1
 		}
 	case "enter":
 		if _, ok := m.selected(); ok {
@@ -261,6 +272,12 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.move("files", "upsub")
 		m.move("upsub", "desk")
 		m.move("desk", "tube")
+	case "/":
+		if m.view < len(recdep.States) {
+			return m.openSearch()
+		}
+	case "esc":
+		m.search = ""
 	case "s":
 		return m.dictate("")
 	case "r":
@@ -360,7 +377,7 @@ func (m *model) clampReaderScroll() {
 }
 
 func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
-	if m.quick {
+	if m.quick || m.searching {
 		return m, nil
 	}
 	m.status = ""
@@ -386,7 +403,7 @@ func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			m.cursor[m.view]--
 		}
 	case msg.Button == tea.MouseButtonWheelDown:
-		if m.view < len(recdep.States) && m.cursor[m.view] < len(m.lists[m.view])-1 {
+		if m.view < len(recdep.States) && m.cursor[m.view] < len(m.visible(m.view))-1 {
 			m.cursor[m.view]++
 		}
 	case msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft:
@@ -400,7 +417,7 @@ func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		start, rows := m.listViewport()
-		if i := rowAtY(msg.Y, headerLines, start, len(m.lists[m.view]), rows); i >= 0 {
+		if i := rowAtY(msg.Y, headerLines, start, len(m.visible(m.view)), rows); i >= 0 {
 			m.cursor[m.view] = i
 		}
 	}
@@ -412,10 +429,14 @@ func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 func (m model) tabLabels() []string {
 	labels := make([]string, len(views))
 	for i, s := range views {
-		if i < len(recdep.States) {
-			labels[i] = fmt.Sprintf("%d %s (%d)", i+1, s, len(m.lists[i]))
-		} else {
+		switch {
+		case i >= len(recdep.States):
 			labels[i] = fmt.Sprintf("%d %s", i+1, s)
+		case m.search != "":
+			// Matched over total, so cross-drawer hits show at a glance.
+			labels[i] = fmt.Sprintf("%d %s (%d/%d)", i+1, s, len(m.visible(i)), len(m.lists[i]))
+		default:
+			labels[i] = fmt.Sprintf("%d %s (%d)", i+1, s, len(m.lists[i]))
 		}
 	}
 	return labels
@@ -574,7 +595,7 @@ func (m model) View() string {
 		return clampHeight(b.String(), m.height)
 	}
 
-	list := m.lists[m.view]
+	list := m.visible(m.view)
 	now := time.Now().UTC()
 	// prefix is the row budget spent before the summary: age (4), gaps,
 	// source (7), and the context and status columns when the terminal
@@ -652,7 +673,8 @@ func (m model) View() string {
 	}
 	// The status row always renders, blank when empty, so the list never
 	// jumps when a message comes and goes and the height budget is constant.
-	b.WriteString(fitWidth(m.status, m.width) + "\n")
+	// The search input and the active filter hint share its line.
+	b.WriteString(m.statusRow() + "\n")
 	b.WriteString(helpStyle.Render(fitWidth(helpLine, m.width)))
 	return clampHeight(b.String(), m.height)
 }
@@ -737,7 +759,7 @@ func (m model) viewReader() (string, bool) {
 	return clampHeight(b.String(), m.height), true
 }
 
-const helpLine = "j/k g/G move tab/1-5 view enter read o open y yank t take u up f file b back s dictate r reply p approve D discard x delete q quit"
+const helpLine = "j/k g/G move tab/1-5 view enter read o open y yank t take u up f file b back s dictate r reply p approve D discard x delete / search q quit"
 
 const readerHelpLine = "j/k scroll  space/pgup/pgdn page  g/G top/bottom  s dictate  r reply  p approve  D discard  q close"
 

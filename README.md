@@ -231,6 +231,7 @@ lints against the [Queue contract](docs/contracts/recdep.md).
 | `p` `p` | approve a draft for posting (records with a matching publisher: GitHub PRs, Slack threads, Linear issues) |
 | `D` | discard a draft |
 | `x` `x` | delete the record permanently (files only; the first press asks by name) |
+| `/` | search across the drawers (case-insensitive substring); `enter` applies, `esc` clears |
 | `q` | quit |
 
 Each list row shows the record's age, source, a context column
