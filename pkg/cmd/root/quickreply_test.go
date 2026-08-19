@@ -64,8 +64,8 @@ func TestQuickReplySubmitCarriesRuleGuidanceThenTyped(t *testing.T) {
 	if !m.pending[name] {
 		t.Error("submitted entry is not tracked as pending")
 	}
-	if !strings.Contains(m.View(), "[dictated]") {
-		t.Errorf("row lacks [dictated] after the quick submit:\n%s", m.View())
+	if got := statusCol(stripANSI(strings.Split(m.View(), "\n")[headerLines])); got != "dictated" {
+		t.Errorf("status column = %q after the quick submit, want dictated:\n%s", got, m.View())
 	}
 }
 

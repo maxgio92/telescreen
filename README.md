@@ -165,8 +165,8 @@ The life of one record:
 2. You take it to `desk/`: seen, the next move is yours.
 3. You dictate a stance with `s`: your editor opens on an intent,
    you write what you think in plain words.
-4. The speakwrite agent writes the draft into the record; the row
-   turns `[draft]`.
+4. The speakwrite agent writes the draft into the record; the row's
+   status column turns `draft`.
 5. You approve with `p` `p`: the double keypress is the recorded
    consent.
 6. The actor posts the draft upstream, stamps the record with the
@@ -235,8 +235,10 @@ lints against the [Queue contract](docs/contracts/recdep.md).
 
 Each list row shows the record's age, source, a context column
 carrying the most identifying metadata value (the repo for github,
-the channel or dm for slack, the ticket or project for linear), the
-summary, and any tags; a header above the list names the columns.
+the channel or dm for slack, the ticket or project for linear), a
+status column (`draft`, `dictated`, or `stale`; the stale reason lives
+in the detail pane), and the summary; a header above the list names
+the columns.
 
 The detail pane shows the selected record: the content line, the
 preview, then the labeled path (one `cat` away, or one agent handle),

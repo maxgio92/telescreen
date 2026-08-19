@@ -621,16 +621,17 @@ func TestPublishDisarmsOnOtherKey(t *testing.T) {
 func TestDiscardAppendsMarkerOnce(t *testing.T) {
 	name := "20260814T090000Z-github-review-demo-1.md"
 	m, _ := seedDraftModel(t, name, "https://github.com/o/r/pull/1")
-	if !strings.Contains(m.View(), "[draft]") {
-		t.Fatal("seeded row lacks [draft]")
+	m.width, m.height = 80, 24
+	if got := statusCol(stripANSI(strings.Split(m.View(), "\n")[headerLines])); got != "draft   " {
+		t.Fatalf("seeded row status column = %q, want draft", got)
 	}
 
 	m = press(t, m, key("D"))
 	if m.status != "draft discarded" {
 		t.Errorf("status = %q, want %q", m.status, "draft discarded")
 	}
-	if strings.Contains(m.View(), "[draft]") {
-		t.Errorf("discarded row still carries [draft]:\n%s", m.View())
+	if got := statusCol(stripANSI(strings.Split(m.View(), "\n")[headerLines])); got != strings.Repeat(" ", statusWidth) {
+		t.Errorf("discarded row still carries a status word: %q", got)
 	}
 
 	// A second D is a no-op: the last marker is discarded, not draft.
@@ -690,18 +691,18 @@ func TestDiscardFreshEntryDoesNothing(t *testing.T) {
 	}
 }
 
-func TestPendingIntentShowsDictatedTag(t *testing.T) {
+func TestPendingIntentShowsDictatedStatus(t *testing.T) {
 	name := "20260811T142302Z-slack-wes-go-for-it.md"
 	m, root := seedModel(t, "tube", name)
 	m.width, m.height = 80, 24
-	if strings.Contains(m.View(), "[dictated]") {
-		t.Fatal("row shows [dictated] before any intent exists")
+	if got := statusCol(stripANSI(strings.Split(m.View(), "\n")[headerLines])); got != strings.Repeat(" ", statusWidth) {
+		t.Fatalf("row shows status %q before any intent exists", got)
 	}
 	if err := os.WriteFile(filepath.Join(root, "intents", name+".intent"), []byte("entry x\naction respond\n\nguidance:\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	m.reload()
-	if !strings.Contains(m.View(), "[dictated]") {
-		t.Errorf("row lacks [dictated] with a pending intent:\n%s", m.View())
+	if got := statusCol(stripANSI(strings.Split(m.View(), "\n")[headerLines])); got != "dictated" {
+		t.Errorf("status column = %q with a pending intent, want dictated:\n%s", got, m.View())
 	}
 }

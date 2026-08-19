@@ -57,8 +57,8 @@ type model struct {
 	// publication; any other key or mouse press clears it.
 	pubArmed string
 	// pending holds the entry names with an intent file waiting in
-	// recdep/intents/; their rows show [dictated] before the runner
-	// writes the marker.
+	// recdep/intents/; their rows show dictated in the status column
+	// before the runner writes the marker.
 	pending map[string]bool
 	// reader is the full-record view enter opens on the selected entry;
 	// readerScroll is its top line in the wrapped body. The reader
@@ -492,16 +492,19 @@ func copyToClipboard(text string) error {
 	return cmd.Run()
 }
 
-// contextWidth is the fixed width of the metadata context column. The
-// column and its gap cost 17 columns on top of the 14-column age and
-// source prefix; below width 60 the summary would keep fewer than 29
-// columns, so narrower terminals drop the column whole.
+// contextWidth is the fixed width of the metadata context column.
 const contextWidth = 16
 
-// contextMinWidth is the narrowest terminal that affords the context
-// column: the 14-column prefix, the column and its gap, and enough
-// summary to stay legible. Derived from contextWidth; move them
-// together.
+// statusWidth is the fixed width of the status column, sized to
+// "dictated", the longest word.
+const statusWidth = 8
+
+// contextMinWidth is the narrowest terminal that affords the metadata
+// and status columns. They share one threshold: two steps would buy
+// nine columns of summary in a narrow band, not worth the second rule.
+// The columns and their gaps cost 26 on top of the 14-column age and
+// source prefix; below width 60 the summary would keep fewer than 20
+// columns, so narrower terminals drop both columns whole.
 const contextMinWidth = 60
 
 // contextFor picks the most identifying metadata value for the list
@@ -521,6 +524,27 @@ func contextFor(e recdep.Entry) string {
 			return v
 		}
 		return e.MetaValue("project")
+	}
+	return ""
+}
+
+// statusFor picks the row's status word. Staleness and the mark are
+// parsed independently; a stale row with a draft or dictated mark still
+// wants approval or discard, so the actionable state shows. A pending
+// intent counts as dictated before the runner writes the marker.
+// Published and discarded rows carry no word; the stale reason stays
+// in the detail pane.
+func (m model) statusFor(e recdep.Entry) string {
+	mark := e.Mark
+	if m.pending[e.Name] {
+		mark = "dictated"
+	}
+	switch mark {
+	case "draft", "dictated":
+		return mark
+	}
+	if e.Stale != "" {
+		return "stale"
 	}
 	return ""
 }
@@ -553,18 +577,19 @@ func (m model) View() string {
 	list := m.lists[m.view]
 	now := time.Now().UTC()
 	// prefix is the row budget spent before the summary: age (4), gaps,
-	// source (7), and the context column when the terminal affords it.
+	// source (7), and the context and status columns when the terminal
+	// affords them.
 	prefix := 14
 	showContext := m.width >= contextMinWidth
 	if showContext {
-		prefix += contextWidth + 1
+		prefix += contextWidth + 1 + statusWidth + 1
 	}
 	// The column header names the row columns at their offsets; the popup
 	// hides it with the detail pane.
 	if !m.quick {
 		header := fmt.Sprintf("%4s  %-7s ", "age", "source")
 		if showContext {
-			header += fmt.Sprintf("%-*s ", contextWidth, "metadata")
+			header += fmt.Sprintf("%-*s %-*s ", contextWidth, "metadata", statusWidth, "status")
 		}
 		header += "summary"
 		b.WriteString(tabInactive.Render(fitWidth(header, m.width)) + "\n")
@@ -575,7 +600,7 @@ func (m model) View() string {
 	start, listRows := m.listViewport()
 	for i := start; i < len(list) && i < start+listRows; i++ {
 		e := list[i]
-		ctx := ""
+		ctx, status := "", ""
 		if showContext {
 			c := []rune(contextFor(e))
 			if len(c) > contextWidth {
@@ -584,51 +609,27 @@ func (m model) View() string {
 			// Pad by rune count: %-*s pads by bytes and a multibyte
 			// value would shift the summary left on its row.
 			ctx = string(c) + strings.Repeat(" ", contextWidth-len(c)) + " "
-		}
-		staleTag, markTag := "", ""
-		if e.Stale != "" {
-			staleTag = "  [stale: " + e.Stale + "]"
-		}
-		// The speakwrite tag follows the stale tag; published and
-		// discarded carry no tag. A pending intent shows [dictated]
-		// before the runner writes the marker.
-		mark := e.Mark
-		if m.pending[e.Name] {
-			mark = "dictated"
-		}
-		switch mark {
-		case "dictated":
-			markTag = "  [dictated]"
-		case "draft":
-			markTag = "  [draft]"
-		}
-		// Tags drop whole, never wrap: the speakwrite tag goes first, the
-		// stale tag survives alone when it still fits.
-		tag := staleTag + markTag
-		if m.width > prefix && len([]rune(tag)) > m.width-prefix {
-			tag = staleTag
-			if len([]rune(tag)) > m.width-prefix {
-				tag = ""
-			}
+			s := m.statusFor(e)
+			status = s + strings.Repeat(" ", statusWidth-len([]rune(s))) + " "
 		}
 		summary := e.Summary
-		if budget := m.width - prefix - len([]rune(tag)); m.width > prefix {
-			if r := []rune(summary); len(r) > budget {
-				summary = string(r[:max(0, budget)])
+		if m.width > prefix {
+			if r := []rune(summary); len(r) > m.width-prefix {
+				summary = string(r[:m.width-prefix])
 			}
 		}
 		switch {
 		case i == m.cursor[m.view]:
-			b.WriteString(rowSelected.Render(fmt.Sprintf("%4s  %-7s %s%s%s", age(e.TS, now), e.Source, ctx, summary, tag)))
+			b.WriteString(rowSelected.Render(fmt.Sprintf("%4s  %-7s %s%s%s", age(e.TS, now), e.Source, ctx, status, summary)))
 		case e.Stale != "":
-			b.WriteString(tabInactive.Render(fmt.Sprintf("%4s  %-7s %s%s%s", age(e.TS, now), e.Source, ctx, summary, tag)))
+			b.WriteString(tabInactive.Render(fmt.Sprintf("%4s  %-7s %s%s%s", age(e.TS, now), e.Source, ctx, status, summary)))
 		default:
 			row := ageStyle.Render(fmt.Sprintf("%4s", age(e.TS, now))) + "  " +
 				sourceStyle.Render(fmt.Sprintf("%-7s", e.Source)) + " "
 			if ctx != "" {
 				row += sourceStyle.Render(ctx)
 			}
-			b.WriteString(row + summary + tag)
+			b.WriteString(row + status + summary)
 		}
 		b.WriteString("\n")
 	}

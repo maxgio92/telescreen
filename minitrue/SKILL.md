@@ -144,8 +144,8 @@ view, memoryhole (key 5), is always empty, and `x` in files, pressed twice
 on the same entry, permanently deletes its file. `o` opens the
 entry's URL, `y` copies it, `q` quits. `s` on a tube, desk, or upsub
 entry dictates a speakwrite intent: it opens a pre-filled intent file in the
-editor and submits it into `intents/` on save, and the row shows `[dictated]`
-while the intent is pending. It watches the state dirs with
+editor and submits it into `intents/` on save, and the row's status column
+shows `dictated` while the intent is pending. It watches the state dirs with
 fsnotify, so new producer entries appear live. `pw -once` prints per-state
 counts and exits.
 

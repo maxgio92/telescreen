@@ -159,80 +159,97 @@ func TestViewRowsFitWidth(t *testing.T) {
 	}
 }
 
-func TestViewRendersStaleTagDimmed(t *testing.T) {
+// statusCol slices the status column out of a stripped row: it starts
+// after the age, source, and metadata prefix and runs statusWidth
+// columns; the offset derives from the same constants the view uses.
+func statusCol(row string) string {
+	off := 14 + contextWidth + 1
+	return row[off : off+statusWidth]
+}
+
+// TestViewRendersStatusColumn pins the column between metadata and
+// summary: draft and dictated show their word, published and discarded
+// leave it blank, and the summary sits at column 40 on every row.
+func TestViewRendersStatusColumn(t *testing.T) {
+	m := model{width: 80, height: 24}
+	m.lists[0] = []recdep.Entry{
+		{Name: "a.md", Source: "github", Summary: "review one", Mark: "draft"},
+		{Name: "b.md", Source: "github", Summary: "review two", Mark: "dictated"},
+		{Name: "c.md", Source: "github", Summary: "review three", Mark: "published"},
+		{Name: "d.md", Source: "github", Summary: "review four", Mark: "discarded"},
+	}
+	lines := strings.Split(m.View(), "\n")
+	wants := []string{"draft   ", "dictated", "        ", "        "}
+	for i, want := range wants {
+		row := stripANSI(lines[headerLines+i])
+		if got := statusCol(row); got != want {
+			t.Errorf("row %d status column = %q, want %q", i, got, want)
+		}
+		if !strings.HasPrefix(row[40:], m.lists[0][i].Summary) {
+			t.Errorf("row %d summary not at column 40: %q", i, row)
+		}
+	}
+}
+
+// TestViewRendersStaleStatusDimmed pins the stale row: the column shows
+// the bare word (the reason stays in the detail pane) and the row keeps
+// the muted style.
+func TestViewRendersStaleStatusDimmed(t *testing.T) {
 	m := model{width: 80, height: 24}
 	m.lists[0] = []recdep.Entry{
 		{Name: "a.md", Source: "github", Summary: "please review", Stale: ""},
 		{Name: "b.md", Source: "github", Summary: "old ask", Stale: "merged"},
 	}
-	view := m.View()
-	if !strings.Contains(view, "[stale: merged]") {
-		t.Errorf("view lacks the stale tag:\n%s", view)
+	lines := strings.Split(m.View(), "\n")
+	if got := statusCol(stripANSI(lines[headerLines])); got != strings.Repeat(" ", statusWidth) {
+		t.Errorf("fresh row status column = %q, want blank", got)
 	}
-	staleRow := strings.Split(view, "\n")[headerLines+1]
+	staleRow := lines[headerLines+1]
+	if got := statusCol(stripANSI(staleRow)); got != "stale   " {
+		t.Errorf("stale row status column = %q, want %q", got, "stale   ")
+	}
+	if strings.Contains(stripANSI(staleRow), "merged") {
+		t.Errorf("stale row carries the reason: %q", staleRow)
+	}
 	if staleRow != tabInactive.Render(stripANSI(staleRow)) {
 		t.Errorf("stale row is not rendered with the muted style: %q", staleRow)
 	}
 }
 
-// TestViewDropsTagOnNarrowWidth pins that a tag wider than the row budget
-// disappears instead of wrapping the row.
-func TestViewDropsTagOnNarrowWidth(t *testing.T) {
-	m := model{width: 30, height: 24}
-	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "x", Stale: "already-reviewed"}}
-	lines := strings.Split(m.View(), "\n")
-	row := lines[headerLines]
-	if strings.Contains(row, "[stale:") {
-		t.Errorf("narrow row still carries the tag: %q", row)
+// TestViewStatusMarkBeatsStale pins the priority on a stale draft: the
+// mark is the actionable state, so it wins the column.
+func TestViewStatusMarkBeatsStale(t *testing.T) {
+	m := model{width: 80, height: 24}
+	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "old ask", Stale: "merged", Mark: "draft"}}
+	row := stripANSI(strings.Split(m.View(), "\n")[headerLines])
+	if got := statusCol(row); got != "draft   " {
+		t.Errorf("status column = %q, want draft to win over stale", got)
+	}
+	// The pending-map branch carries the same priority: a fresh intent
+	// on a stale row shows dictated.
+	m.lists[0][0].Mark = ""
+	m.pending = map[string]bool{"a.md": true}
+	row = stripANSI(strings.Split(m.View(), "\n")[headerLines])
+	if got := statusCol(row); got != "dictated" {
+		t.Errorf("status column = %q, want dictated to win over stale", got)
+	}
+}
+
+// TestViewDropsStatusOnNarrowWidth pins that below contextMinWidth the
+// status column disappears with the metadata column and the summary
+// recovers their budget.
+func TestViewDropsStatusOnNarrowWidth(t *testing.T) {
+	m := model{width: 59, height: 24}
+	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "review", Stale: "merged", Mark: "draft"}}
+	row := stripANSI(strings.Split(m.View(), "\n")[headerLines])
+	if strings.Contains(row, "draft") || strings.Contains(row, "stale") {
+		t.Errorf("narrow row still carries a status word: %q", row)
+	}
+	if !strings.HasPrefix(row[14:], "review") {
+		t.Errorf("summary did not recover the columns' budget: %q", row)
 	}
 	if w := lipgloss.Width(row); w > m.width {
 		t.Errorf("row width = %d, want <= %d", w, m.width)
-	}
-}
-
-func TestViewRendersSpeakwriteTags(t *testing.T) {
-	m := model{width: 80, height: 24}
-	m.lists[0] = []recdep.Entry{
-		{Name: "a.md", Source: "github", Summary: "drafted", Mark: "draft"},
-		{Name: "b.md", Source: "github", Summary: "dictated", Mark: "dictated"},
-		{Name: "c.md", Source: "github", Summary: "posted", Mark: "published"},
-		{Name: "d.md", Source: "github", Summary: "dropped", Mark: "discarded"},
-	}
-	lines := strings.Split(m.View(), "\n")
-	if !strings.Contains(lines[headerLines], "[draft]") {
-		t.Errorf("draft row lacks the tag: %q", lines[headerLines])
-	}
-	if !strings.Contains(lines[headerLines+1], "[dictated]") {
-		t.Errorf("dictated row lacks the tag: %q", lines[headerLines+1])
-	}
-	for i := headerLines + 2; i < headerLines+4; i++ {
-		if row := stripANSI(lines[i]); strings.Contains(row, "[") {
-			t.Errorf("published/discarded row carries a tag: %q", row)
-		}
-	}
-}
-
-// TestViewDropsDraftTagOnNarrowWidth pins that the speakwrite tag follows
-// the same drop-whole discipline as the stale tag.
-func TestViewDropsDraftTagOnNarrowWidth(t *testing.T) {
-	m := model{width: 20, height: 24}
-	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "x", Mark: "draft"}}
-	lines := strings.Split(m.View(), "\n")
-	row := lines[headerLines]
-	if strings.Contains(row, "[draft]") {
-		t.Errorf("narrow row still carries the tag: %q", row)
-	}
-	if w := lipgloss.Width(row); w > m.width {
-		t.Errorf("row width = %d, want <= %d", w, m.width)
-	}
-}
-
-func TestViewRendersStaleAndDraftTags(t *testing.T) {
-	m := model{width: 80, height: 24}
-	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "old draft", Stale: "merged", Mark: "draft"}}
-	row := strings.Split(m.View(), "\n")[headerLines]
-	if !strings.Contains(row, "[stale: merged]  [draft]") {
-		t.Errorf("row lacks stale-then-draft tags: %q", row)
 	}
 }
 
@@ -280,10 +297,10 @@ func TestViewRendersContextColumn(t *testing.T) {
 		if want != "" && !strings.Contains(row, want+" ") {
 			t.Errorf("row %d lacks context %q: %q", i, want, row)
 		}
-		// The summary starts after the fixed 31-column prefix on every
+		// The summary starts after the fixed 40-column prefix on every
 		// row, populated or empty.
-		if got := m.lists[0][i].Summary; !strings.HasPrefix(row[31:], got[:4]) {
-			t.Errorf("row %d summary not at column 31: %q", i, row)
+		if got := m.lists[0][i].Summary; !strings.HasPrefix(row[40:], got[:4]) {
+			t.Errorf("row %d summary not at column 40: %q", i, row)
 		}
 		if w := lipgloss.Width(lines[headerLines+i]); w > m.width {
 			t.Errorf("row %d width = %d, want <= %d", i, w, m.width)
@@ -320,20 +337,23 @@ func TestViewRendersColumnHeader(t *testing.T) {
 	if got := strings.Index(row, "metadata"); got != 14 {
 		t.Errorf("metadata label at column %d, want 14: %q", got, row)
 	}
-	if got := strings.Index(row, "summary"); got != 14+contextWidth+1 {
-		t.Errorf("summary label at column %d, want %d: %q", got, 14+contextWidth+1, row)
+	if got := strings.Index(row, "status"); got != 14+contextWidth+1 {
+		t.Errorf("status label at column %d, want %d: %q", got, 14+contextWidth+1, row)
+	}
+	if got := strings.Index(row, "summary"); got != 14+contextWidth+1+statusWidth+1 {
+		t.Errorf("summary label at column %d, want %d: %q", got, 14+contextWidth+1+statusWidth+1, row)
 	}
 }
 
 // TestViewColumnHeaderDropsMetadataOnNarrowWidth keeps the header in step
-// with the rows: below contextMinWidth the metadata label disappears with
-// its column and summary moves up.
+// with the rows: below contextMinWidth the metadata and status labels
+// disappear with their columns and summary moves up.
 func TestViewColumnHeaderDropsMetadataOnNarrowWidth(t *testing.T) {
 	m := model{width: 59, height: 24}
 	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "review"}}
 	row := stripANSI(strings.Split(m.View(), "\n")[headerLines-1])
-	if strings.Contains(row, "metadata") {
-		t.Errorf("narrow header still names the metadata column: %q", row)
+	if strings.Contains(row, "metadata") || strings.Contains(row, "status") {
+		t.Errorf("narrow header still names a dropped column: %q", row)
 	}
 	if got := strings.Index(row, "summary"); got != 14 {
 		t.Errorf("summary label at column %d, want 14: %q", got, row)

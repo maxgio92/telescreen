@@ -76,8 +76,9 @@ he speaks the correction, the machine writes it into the record.
 A headless agent behind a systemd path unit on `recdep/intents/`.
 Press `s` on a record to dictate your stance in `$EDITOR`; the agent
 researches the matter read-only, writes the draft into the record,
-and the row turns `[draft]`. Press `p` twice to approve: the actor
-posts the draft upstream, stamps the record with the comment URL, and
+and the row's status column turns `draft`. Press `p` twice to
+approve: the actor posts the draft upstream, stamps the record with
+the comment URL, and
 moves it to upsub. Press `D` to discard a draft into the record's
 history instead. Nothing posts without a recorded double-key approval.
 Design in [Design: speakwrite](speakwrite.md).

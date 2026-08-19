@@ -22,8 +22,9 @@ posts anything on its own; the actor is thinkpol
    the guidance lives on inside the record, so the draft can always be
    audited against what was asked.
 3. Review. The detail pane shows the draft because it is part of the
-   body. The row carries a `[draft]` tag. `s` again re-dictates with the
-   previous guidance pre-filled; the new draft supersedes the old.
+   body. The row's status column shows `draft`. `s` again re-dictates
+   with the previous guidance pre-filled; the new draft supersedes the
+   old.
 4. Approve. `p` shows the target in the status line; a second `p`
    writes an approval into the intent directory. thinkpol executes it
    per the [Actor contract](../contracts/thinkpol.md): it posts the
@@ -36,10 +37,10 @@ posts anything on its own; the actor is thinkpol
 
 | Key | Name | Works in | Effect |
 |---|---|---|---|
-| `s` | dictate | tube, desk, upsub | Open the intent in `$EDITOR`; save submits, empty guidance means defaults, abort cancels. Row gains `[dictated]` |
+| `s` | dictate | tube, desk, upsub | Open the intent in `$EDITOR`; save submits, empty guidance means defaults, abort cancels. Row status column turns `dictated` |
 | `s` | re-dictate | record with a draft or pending intent | Reopen with the previous guidance; the new draft supersedes |
-| `p` `p` | approve | record with `[draft]` | First press names the target in the status line, second press records the approval; thinkpol posts and moves the record ([Actor contract](../contracts/thinkpol.md)) |
-| `D` | discard | record with `[draft]` | Append a discarded marker; the draft stays in the record but stops rendering as actionable |
+| `p` `p` | approve | record with a `draft` status | First press names the target in the status line, second press records the approval; thinkpol posts and moves the record ([Actor contract](../contracts/thinkpol.md)) |
+| `D` | discard | record with a `draft` status | Append a discarded marker; the draft stays in the record but stops rendering as actionable |
 
 `p` is double-keyed like `x` because posting is outward-facing the way
 deletion is destructive. `D` is shifted because it discards work; the
@@ -49,9 +50,9 @@ lowercase keys are safe moves.
 
 The intent format and the four marker kinds are normative in the
 [Queue contract](../contracts/recdep.md). The design-relevant part is
-how the TUI derives tags from the last marker: `[dictated]` after
-dictated, `[draft]` after draft, nothing after published (the record
-moves drawer instead) or discarded. Everything is append-only, the TUI
+how the TUI derives the status column from the last marker: `dictated`
+after dictated, `draft` after draft, nothing after published (the
+record moves drawer instead) or discarded. Everything is append-only, the TUI
 included: the discarded marker is the one line the consumer may append,
 so the record keeps the full history and the rename-only rule bends
 exactly once.

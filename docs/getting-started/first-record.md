@@ -38,7 +38,8 @@ guidance:
 push back: the announcement contradicts the numbers.
 ```
 
-Save to submit; abort the editor to cancel. The row gains `[dictated]`.
+Save to submit; abort the editor to cancel. The row's status column
+turns `dictated`.
 For a short stance, `r` opens a quick-reply popup inside the TUI that
 submits the same intent with `ctrl+s`, no editor round trip.
 
@@ -46,8 +47,8 @@ submits the same intent with `ctrl+s`, no editor round trip.
 
 The speakwrite agent (if enrolled) picks up the intent, researches the
 record read-only, and appends a dictated marker and a draft marker to
-the record file. The row turns `[draft]` and the detail pane shows the
-draft, because the draft is part of the file. Press `s` again to
+the record file. The row's status column turns `draft` and the detail
+pane shows the draft, because the draft is part of the file. Press `s` again to
 re-dictate; the new draft supersedes the old.
 
 ## Approve
