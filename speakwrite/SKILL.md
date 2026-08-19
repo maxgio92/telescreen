@@ -74,6 +74,17 @@ For each `intents/*.intent`, oldest first:
    polite pushback with the reason. Write GitHub drafts in the
    pr-review-message register and Slack drafts in the slack-message
    register when those skills are available.
+
+   When the stance names an agent (an @name the runtime resolves; for
+   claude, a subagent under `~/.claude/agents`), run it via the Task
+   tool against the entry's subject (the PR, the thread, the ticket)
+   and write the draft from its output: condensed to a postable
+   reaction per the action's verb, with the first line naming the
+   delegate (for example "dastardly's review, condensed:"), so the
+   human knows at approval time whose work they are signing. When the
+   delegate fails, the step 2 rule holds: draft from what you have, say
+   so inside the draft, and still remove the intent. A stance that
+   names no agent changes nothing here.
 4. Append to the entry file, prepending a newline when the file lacks a
    trailing one (the marker line must start its own line):
 
@@ -96,6 +107,9 @@ For each `intents/*.intent`, oldest first:
 
 Research is read-only against Slack, GitHub, and Linear. The only
 writes are the marker appends to entry files and the intent removals.
+A delegated agent inherits the read-only rule: it must not post,
+merge, or write anywhere; its findings land in the draft, and the
+actor posts them only after approval.
 This runner cannot post: publishing is thinkpol's job, executed per
 docs/contracts/thinkpol.md only on an explicit double-key approval. Every move between
 states belongs to the human at the TUI.

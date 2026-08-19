@@ -123,6 +123,36 @@ New action verbs live in the same file: speakwrite drafts whatever the
 skill says a verb means, so a custom `summarize` action works as soon
 as your speakwrite skill defines it.
 
+## Delegate a stance to an agent
+
+A stance can name an agent, and speakwrite runs it against the
+record's subject and condenses its output into the draft. Dictate on
+the record:
+
+```
+Let @dastardly review it and show me the draft
+```
+
+For claude, `@dastardly` resolves to a subagent under
+`~/.claude/agents`, and spawning it needs the `Task` tool in the
+allowlist; a delegated review reads the whole PR, so raise the
+timeout too. A set `allowed_tools` replaces the built-in list, so
+keep the tools the skill's research and marker steps use (`Bash`,
+`Read`, `Write`) alongside `Task`:
+
+```yaml
+speakwrite:
+  allowed_tools: Task Bash Read Write Glob Grep mcp__github mcp__slack mcp__linear-server__get_issue mcp__linear-server__list_comments
+  timeout: 1200
+```
+
+The draft's first line names the delegate, so you know at approval
+time whose work you are signing. The delegation rules, including the
+delegate's read-only guardrail, live in the
+[speakwrite skill](https://github.com/maxgio92/telescreen/blob/main/speakwrite/SKILL.md);
+the field semantics in the
+[Configuration reference](../reference/configuration.md#speakwrite).
+
 ## Route or add a publisher
 
 Edit `~/.config/telescreen.yaml` under `thinkpol.publishers`. Rules

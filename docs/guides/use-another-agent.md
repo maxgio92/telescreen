@@ -63,6 +63,8 @@ The record format the instructions must honor is the
 your local copy of it rather than restating the grammar.
 
 The same recipe covers speakwrite under the `speakwrite` key.
+Delegating a stance to a named agent is a feature of the claude
+skill; another agent implements it in its instructions file.
 
 Timeouts (`timeout`) and the logs (`produce.log`, `draft.log` under
 the state root) behave identically whatever the agent.

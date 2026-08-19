@@ -45,8 +45,8 @@ Parse rules:
 | `agent` | string | The agent binary. |
 | `args` | string | The argument template; semantics as in the minitrue table. |
 | `instructions` | string | Path (`~` expands) whose file content becomes the prompt; wins over `SPEAKWRITE_PROMPT`. A path that is missing or unreadable fails the run naming the path. |
-| `allowed_tools` | string | The agent's tool allowlist. |
-| `timeout` | int | Seconds before the subcommand kills the run; must be positive when set. |
+| `allowed_tools` | string | The agent's tool allowlist. Delegating a stance to a named agent needs the agent-spawning tool in the allowlist (for claude, `Task`). |
+| `timeout` | int | Seconds before the subcommand kills the run; must be positive when set. A delegated review may need a higher value. |
 | `actions` | list of rules | The dictation action map, per the [Rule fields](#rule-fields) table. A non-empty list replaces the built-in map entirely; empty or absent keeps the built-ins; `action` is required on every rule. |
 
 The `SPEAKWRITE_*` env keys are each field's fallback, as the
