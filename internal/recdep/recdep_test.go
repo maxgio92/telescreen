@@ -79,9 +79,9 @@ func TestCutMeta(t *testing.T) {
 		line string
 		ok   bool
 	}{
-		{"org chainguard-dev", true},
+		{"org acme-corp", true},
 		{"severity_hint high", true},
-		{"Org chainguard-dev", false},
+		{"Org acme-corp", false},
 		{"org", false},
 		{"org ", false},
 		{"org  double-space", false},
