@@ -104,6 +104,70 @@ func TestActionForProviderScopes(t *testing.T) {
 	}
 }
 
+func TestActionForMeta(t *testing.T) {
+	builtin := actionRules
+	t.Cleanup(func() { actionRules = builtin })
+	applyConfig(config.Config{Speakwrite: config.Speakwrite{Actions: []config.Action{
+		{Author: "alice", Action: "vet-findings"},
+		{Meta: map[string]string{"channel": "#incidents"}, Action: "slack-reply", Guidance: "urgent register"},
+		{Meta: map[string]string{"org": "acme", "repo": "widgets"}, Action: "review", Guidance: "cite the module owner"},
+		{URLPrefix: "https://github.com/acme/", Meta: map[string]string{"repo": "gadgets"}, Action: "pr-reply"},
+		{Source: "slack", Action: "slack-reply"},
+	}}})
+	meta := func(pairs ...string) []recdep.MetaPair {
+		var m []recdep.MetaPair
+		for i := 0; i < len(pairs); i += 2 {
+			m = append(m, recdep.MetaPair{Key: pairs[i], Value: pairs[i+1]})
+		}
+		return m
+	}
+	tests := []struct {
+		name         string
+		e            recdep.Entry
+		wantAction   string
+		wantGuidance string
+	}{
+		{"single key match",
+			recdep.Entry{Source: "slack", Who: "wes", Meta: meta("channel", "#incidents")},
+			"slack-reply", "urgent register"},
+		{"multi-key AND match",
+			recdep.Entry{Source: "github", Who: "bob", Meta: meta("org", "acme", "repo", "widgets")},
+			"review", "cite the module owner"},
+		{"multi-key AND, one mismatch fails the rule",
+			recdep.Entry{Source: "github", Who: "bob", Meta: meta("org", "acme", "repo", "gadgets")},
+			"respond", ""},
+		{"record without the key never matches",
+			recdep.Entry{Source: "slack", Who: "wes"},
+			"slack-reply", ""},
+		{"earlier rule wins over a later meta match",
+			recdep.Entry{Source: "slack", Who: "alice", Meta: meta("channel", "#incidents")},
+			"vet-findings", ""},
+		{"meta composes with url_prefix",
+			recdep.Entry{Source: "github", Who: "bob", URL: "https://github.com/acme/gadgets/pull/9", Meta: meta("org", "acme", "repo", "gadgets")},
+			"pr-reply", ""},
+		{"url_prefix holds but meta does not",
+			recdep.Entry{Source: "github", Who: "bob", URL: "https://github.com/acme/tools/pull/2", Meta: meta("org", "acme", "repo", "tools")},
+			"respond", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			action, guidance := actionFor(tt.e)
+			if action != tt.wantAction || guidance != tt.wantGuidance {
+				t.Errorf("actionFor(%+v) = %q, %q, want %q, %q", tt.e, action, guidance, tt.wantAction, tt.wantGuidance)
+			}
+		})
+	}
+	// A duplicate metadata key is last-wins through MetaValue: a parsed
+	// record with two channel lines matches on the second.
+	dup := recdep.ParseEntry(
+		"20260819T090000Z-slack-ops-incident.md",
+		"[slack] wes: the deploy is down\nhttps://acme.slack.com/archives/C1/p1\nseen now\nchannel #ops\nchannel #incidents\n\nbody\n",
+	)
+	if action, guidance := actionFor(dup); action != "slack-reply" || guidance != "urgent register" {
+		t.Errorf("actionFor(duplicate channel) = %q, %q, want the last-wins match", action, guidance)
+	}
+}
+
 func TestActionForCustomTable(t *testing.T) {
 	builtin := actionRules
 	t.Cleanup(func() { actionRules = builtin })

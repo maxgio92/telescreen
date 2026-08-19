@@ -11,11 +11,15 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/maxgio92/telescreen/internal/recdep"
 )
 
 // Action is one row of the dictation action map. The match fields are
@@ -32,6 +36,9 @@ type Action struct {
 	URLPrefix string `yaml:"url_prefix"`
 	// Author matches when it equals the entry author.
 	Author string `yaml:"author"`
+	// Meta matches when every pair equals the entry's metadata value
+	// for that key (last duplicate wins). An empty map matches anything.
+	Meta map[string]string `yaml:"meta"`
 	// Action is required.
 	Action string `yaml:"action"`
 	// Guidance travels with the action into the dictation intent.
@@ -172,6 +179,18 @@ func validateActions(actions []Action) error {
 	for i, a := range actions {
 		if a.Action == "" {
 			return fmt.Errorf("actions[%d]: action is required", i)
+		}
+		for _, k := range slices.Sorted(maps.Keys(a.Meta)) {
+			v := a.Meta[k]
+			if !recdep.ValidMetaKey(k) {
+				return fmt.Errorf("actions[%d]: meta key %q must be lowercase [a-z_]+", i, k)
+			}
+			if recdep.ReservedMetaKey(k) {
+				return fmt.Errorf("actions[%d]: meta key %q is reserved by the queue contract", i, k)
+			}
+			if v == "" {
+				return fmt.Errorf("actions[%d]: meta %s: a value is required", i, k)
+			}
 		}
 	}
 	return nil

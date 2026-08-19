@@ -39,15 +39,19 @@ The next timer run reads the edited skill; no re-enroll, no restart.
 
 Records from the new channel arrive with the built-in `slack-reply`
 action. To give them their own guidance, add an action-map rule keyed
-on the channel's archives URL:
+on the `channel` metadata line the watch writes:
 
 ```yaml
 speakwrite:
   actions:
-    - url_prefix: https://acme.enterprise.slack.com/archives/C0BUILD0000/
+    - meta: {channel: "#build-status"}
       action: slack-reply
       guidance: build chatter; short, informal
 ```
+
+A `url_prefix` rule on the channel's archives URL
+(`https://acme.enterprise.slack.com/archives/C0BUILD0000/`) also works
+when the producer wrote no metadata.
 
 A non-empty `actions` list replaces the built-in map entirely, so
 carry over the built-ins you still want; every field is in the

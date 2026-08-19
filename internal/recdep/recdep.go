@@ -74,18 +74,38 @@ func (e Entry) MetaValue(key string) string {
 	return v
 }
 
+// ValidMetaKey reports whether key matches the contract's metadata key
+// shape, lowercase [a-z_]+.
+func ValidMetaKey(key string) bool {
+	if key == "" {
+		return false
+	}
+	for _, r := range key {
+		if (r < 'a' || r > 'z') && r != '_' {
+			return false
+		}
+	}
+	return true
+}
+
+// ReservedMetaKey reports whether the contract reserves key: stale for
+// the stale marker, seen, path, and url because the detail view renders
+// labeled lines with those names.
+func ReservedMetaKey(key string) bool {
+	switch key {
+	case "stale", "seen", "path", "url":
+		return true
+	}
+	return false
+}
+
 // CutMeta splits a metadata line into its key and value. ok is false
 // when the line does not match the grammar: a lowercase [a-z_]+ key,
 // one space, a non-empty value.
 func CutMeta(line string) (MetaPair, bool) {
 	key, value, found := strings.Cut(line, " ")
-	if !found || key == "" || value == "" || value[0] == ' ' {
+	if !found || value == "" || value[0] == ' ' || !ValidMetaKey(key) {
 		return MetaPair{}, false
-	}
-	for _, r := range key {
-		if (r < 'a' || r > 'z') && r != '_' {
-			return MetaPair{}, false
-		}
 	}
 	return MetaPair{Key: key, Value: value}, true
 }

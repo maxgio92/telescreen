@@ -194,8 +194,7 @@ func lintDrawer(root, drawer string) (findings, warnings []string, records int, 
 					report(name, "malformed metadata line %q", line)
 					continue
 				}
-				switch pair.Key {
-				case "seen", "path", "url":
+				if recdep.ReservedMetaKey(pair.Key) && pair.Key != "stale" {
 					report(name, "reserved metadata key %q", pair.Key)
 				}
 			}

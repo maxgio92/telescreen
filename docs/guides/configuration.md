@@ -67,12 +67,19 @@ non-empty `actions` list replaces the built-ins entirely, so bring
 every rule you still want. The rule fields, the match order, and the
 built-in map are defined in the
 [Configuration reference](../reference/configuration.md#telescreenyaml).
+A rule can also match the record's
+[metadata lines](../contracts/recdep.md#metadata) directly with the
+[`meta` field](../reference/configuration.md#rule-fields), such as a
+Slack channel by name.
 
-Example: two Slack workspaces, two registers.
+Example: two Slack workspaces, two registers, one urgent channel.
 
 ```yaml
 speakwrite:
   actions:
+    - meta: {channel: "#incidents"}                    # match the metadata line
+      action: slack-reply
+      guidance: urgent register, lead with the state
     - url_prefix: https://acme.enterprise.slack.com/   # the work workspace
       action: slack-reply
       guidance: professional register

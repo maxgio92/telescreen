@@ -27,11 +27,12 @@ import (
 // actionRule maps an entry shape to a speakwrite action. Empty fields
 // match anything; the first matching rule in actionRules wins.
 type actionRule struct {
-	nameSubstring string // matches when the filename contains this
-	source        string // matches when the source equals this
-	whoSuffix     string // matches when who ends with this
-	urlPrefix     string // matches when the URL starts with this
-	author        string // matches when who equals this
+	nameSubstring string            // matches when the filename contains this
+	source        string            // matches when the source equals this
+	whoSuffix     string            // matches when who ends with this
+	urlPrefix     string            // matches when the URL starts with this
+	author        string            // matches when who equals this
+	meta          map[string]string // matches when every pair equals the entry's metadata value
 	action        string
 	guidance      string // travels with the action into the intent
 }
@@ -67,6 +68,7 @@ func applyConfig(c config.Config) {
 			whoSuffix:     a.WhoSuffix,
 			urlPrefix:     a.URLPrefix,
 			author:        a.Author,
+			meta:          a.Meta,
 			action:        a.Action,
 			guidance:      a.Guidance,
 		}
@@ -93,9 +95,24 @@ func actionFor(e recdep.Entry) (action, guidance string) {
 		if r.author != "" && e.Who != r.author {
 			continue
 		}
+		if !metaMatches(e, r.meta) {
+			continue
+		}
 		return r.action, r.guidance
 	}
 	return "respond", ""
+}
+
+// metaMatches reports whether every pair equals the entry's metadata
+// value for its key (MetaValue, last duplicate wins). An empty map
+// matches anything, like every omitted matcher.
+func metaMatches(e recdep.Entry, meta map[string]string) bool {
+	for k, v := range meta {
+		if e.MetaValue(k) != v {
+			return false
+		}
+	}
+	return true
 }
 
 // composeGuidance prepends the rule guidance to the dictated stance so

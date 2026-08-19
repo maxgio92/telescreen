@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -77,7 +78,7 @@ speakwrite:
 		t.Fatalf("actions = %+v, want %+v", c.Speakwrite.Actions, wantActions)
 	}
 	for i := range wantActions {
-		if c.Speakwrite.Actions[i] != wantActions[i] {
+		if !reflect.DeepEqual(c.Speakwrite.Actions[i], wantActions[i]) {
 			t.Errorf("actions[%d] = %+v, want %+v", i, c.Speakwrite.Actions[i], wantActions[i])
 		}
 	}
@@ -215,6 +216,57 @@ func TestLoadMissingAction(t *testing.T) {
 	}
 }
 
+func TestLoadMetaRule(t *testing.T) {
+	write(t, `speakwrite:
+  actions:
+    - source: slack
+      meta:
+        channel: "#incidents"
+      action: slack-reply
+      guidance: urgent register
+    - meta:
+        org: acme
+        repo: widgets
+      action: review
+`)
+	c, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+	wantActions := []Action{
+		{Source: "slack", Meta: map[string]string{"channel": "#incidents"}, Action: "slack-reply", Guidance: "urgent register"},
+		{Meta: map[string]string{"org": "acme", "repo": "widgets"}, Action: "review"},
+	}
+	if !reflect.DeepEqual(c.Speakwrite.Actions, wantActions) {
+		t.Errorf("actions = %+v, want %+v", c.Speakwrite.Actions, wantActions)
+	}
+}
+
+func TestLoadMetaReservedKey(t *testing.T) {
+	for _, k := range []string{"stale", "seen", "path", "url"} {
+		write(t, "speakwrite:\n  actions:\n    - meta:\n        "+k+": x\n      action: respond\n")
+		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "reserved") {
+			t.Errorf("Load() with meta key %q error = %v, want the reserved-key rejection", k, err)
+		}
+	}
+}
+
+func TestLoadMetaMalformedKey(t *testing.T) {
+	for _, k := range []string{"Channel", "chan-nel", "chan nel", "chan1", `""`} {
+		write(t, "speakwrite:\n  actions:\n    - meta:\n        "+k+": x\n      action: respond\n")
+		if _, err := Load(); err == nil || !strings.Contains(err.Error(), "lowercase") {
+			t.Errorf("Load() with meta key %q error = %v, want the key-shape rejection", k, err)
+		}
+	}
+}
+
+func TestLoadMetaEmptyValue(t *testing.T) {
+	write(t, "speakwrite:\n  actions:\n    - meta:\n        channel: \"\"\n      action: respond\n")
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "value is required") {
+		t.Errorf("Load() error = %v, want the empty-value rejection", err)
+	}
+}
+
 // TestLoadOldPathFallback pins the migration path: with telescreen.yaml
 // absent, the retired recdep/config.yaml still loads and its actions
 // map to speakwrite.actions.
@@ -226,7 +278,7 @@ func TestLoadOldPathFallback(t *testing.T) {
 		t.Fatalf("Load() error: %v", err)
 	}
 	want := Action{Source: "slack", Action: "respond"}
-	if len(c.Speakwrite.Actions) != 1 || c.Speakwrite.Actions[0] != want {
+	if len(c.Speakwrite.Actions) != 1 || !reflect.DeepEqual(c.Speakwrite.Actions[0], want) {
 		t.Errorf("actions = %+v, want [%+v]", c.Speakwrite.Actions, want)
 	}
 }
