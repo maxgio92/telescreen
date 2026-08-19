@@ -491,6 +491,39 @@ func copyToClipboard(text string) error {
 	return cmd.Run()
 }
 
+// contextWidth is the fixed width of the metadata context column. The
+// column and its gap cost 17 columns on top of the 14-column age and
+// source prefix; below width 60 the summary would keep fewer than 29
+// columns, so narrower terminals drop the column whole.
+const contextWidth = 16
+
+// contextMinWidth is the narrowest terminal that affords the context
+// column: the 14-column prefix, the column and its gap, and enough
+// summary to stay legible. Derived from contextWidth; move them
+// together.
+const contextMinWidth = 60
+
+// contextFor picks the most identifying metadata value for the list
+// row: repo for github, channel (or dm) for slack, ticket (or project)
+// for linear. Any other source carries nothing.
+func contextFor(e recdep.Entry) string {
+	switch e.Source {
+	case "github":
+		return e.MetaValue("repo")
+	case "slack":
+		if v := e.MetaValue("channel"); v != "" {
+			return v
+		}
+		return e.MetaValue("dm")
+	case "linear":
+		if v := e.MetaValue("ticket"); v != "" {
+			return v
+		}
+		return e.MetaValue("project")
+	}
+	return ""
+}
+
 func (m model) View() string {
 	if m.reader {
 		if v, ok := m.viewReader(); ok {
@@ -522,8 +555,25 @@ func (m model) View() string {
 		b.WriteString(tabInactive.Render("  (empty)") + "\n")
 	}
 	start, listRows := m.listViewport()
+	// prefix is the row budget spent before the summary: age (4), gaps,
+	// source (7), and the context column when the terminal affords it.
+	prefix := 14
+	showContext := m.width >= contextMinWidth
+	if showContext {
+		prefix += contextWidth + 1
+	}
 	for i := start; i < len(list) && i < start+listRows; i++ {
 		e := list[i]
+		ctx := ""
+		if showContext {
+			c := []rune(contextFor(e))
+			if len(c) > contextWidth {
+				c = c[:contextWidth]
+			}
+			// Pad by rune count: %-*s pads by bytes and a multibyte
+			// value would shift the summary left on its row.
+			ctx = string(c) + strings.Repeat(" ", contextWidth-len(c)) + " "
+		}
 		staleTag, markTag := "", ""
 		if e.Stale != "" {
 			staleTag = "  [stale: " + e.Stale + "]"
@@ -544,26 +594,30 @@ func (m model) View() string {
 		// Tags drop whole, never wrap: the speakwrite tag goes first, the
 		// stale tag survives alone when it still fits.
 		tag := staleTag + markTag
-		if m.width > 14 && len([]rune(tag)) > m.width-14 {
+		if m.width > prefix && len([]rune(tag)) > m.width-prefix {
 			tag = staleTag
-			if len([]rune(tag)) > m.width-14 {
+			if len([]rune(tag)) > m.width-prefix {
 				tag = ""
 			}
 		}
 		summary := e.Summary
-		if budget := m.width - 14 - len([]rune(tag)); m.width > 14 {
+		if budget := m.width - prefix - len([]rune(tag)); m.width > prefix {
 			if r := []rune(summary); len(r) > budget {
 				summary = string(r[:max(0, budget)])
 			}
 		}
 		switch {
 		case i == m.cursor[m.view]:
-			b.WriteString(rowSelected.Render(fmt.Sprintf("%4s  %-7s %s%s", age(e.TS, now), e.Source, summary, tag)))
+			b.WriteString(rowSelected.Render(fmt.Sprintf("%4s  %-7s %s%s%s", age(e.TS, now), e.Source, ctx, summary, tag)))
 		case e.Stale != "":
-			b.WriteString(tabInactive.Render(fmt.Sprintf("%4s  %-7s %s%s", age(e.TS, now), e.Source, summary, tag)))
+			b.WriteString(tabInactive.Render(fmt.Sprintf("%4s  %-7s %s%s%s", age(e.TS, now), e.Source, ctx, summary, tag)))
 		default:
-			b.WriteString(ageStyle.Render(fmt.Sprintf("%4s", age(e.TS, now))) + "  " +
-				sourceStyle.Render(fmt.Sprintf("%-7s", e.Source)) + " " + summary + tag)
+			row := ageStyle.Render(fmt.Sprintf("%4s", age(e.TS, now))) + "  " +
+				sourceStyle.Render(fmt.Sprintf("%-7s", e.Source)) + " "
+			if ctx != "" {
+				row += sourceStyle.Render(ctx)
+			}
+			b.WriteString(row + summary + tag)
 		}
 		b.WriteString("\n")
 	}

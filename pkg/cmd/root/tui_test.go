@@ -132,6 +132,7 @@ func TestViewAtXStyledLabels(t *testing.T) {
 
 func TestViewRowsFitWidth(t *testing.T) {
 	long := strings.Repeat("x", 100)
+	meta := []recdep.MetaPair{{Key: "channel", Value: "#" + long}, {Key: "repo", Value: long}}
 	tests := []struct {
 		name  string
 		stale string
@@ -143,8 +144,8 @@ func TestViewRowsFitWidth(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := model{width: 80, height: 24}
 			m.lists[0] = []recdep.Entry{
-				{Name: "a.md", Source: "slack", Summary: long, Stale: tt.stale},
-				{Name: "b.md", Source: "github", Summary: long, Stale: tt.stale},
+				{Name: "a.md", Source: "slack", Summary: long, Stale: tt.stale, Meta: meta},
+				{Name: "b.md", Source: "github", Summary: long, Stale: tt.stale, Meta: meta},
 			}
 			// The cursor stays on index 0, so both the selected and the
 			// plain row style are covered. List rows start after the header.
@@ -232,6 +233,78 @@ func TestViewRendersStaleAndDraftTags(t *testing.T) {
 	row := strings.Split(m.View(), "\n")[headerLines]
 	if !strings.Contains(row, "[stale: merged]  [draft]") {
 		t.Errorf("row lacks stale-then-draft tags: %q", row)
+	}
+}
+
+func TestContextFor(t *testing.T) {
+	tests := []struct {
+		name string
+		e    recdep.Entry
+		want string
+	}{
+		{"github repo", recdep.Entry{Source: "github", Meta: []recdep.MetaPair{{Key: "org", Value: "example"}, {Key: "repo", Value: "demo"}}}, "demo"},
+		{"github without repo", recdep.Entry{Source: "github", Meta: []recdep.MetaPair{{Key: "org", Value: "example"}}}, ""},
+		{"slack channel", recdep.Entry{Source: "slack", Meta: []recdep.MetaPair{{Key: "channel", Value: "#general"}}}, "#general"},
+		{"slack dm fallback", recdep.Entry{Source: "slack", Meta: []recdep.MetaPair{{Key: "dm", Value: "wes,julia"}}}, "wes,julia"},
+		{"linear ticket", recdep.Entry{Source: "linear", Meta: []recdep.MetaPair{{Key: "ticket", Value: "DEMO-1"}}}, "DEMO-1"},
+		{"linear project fallback", recdep.Entry{Source: "linear", Meta: []recdep.MetaPair{{Key: "project", Value: "queue"}}}, "queue"},
+		{"other source", recdep.Entry{Source: "mail", Meta: []recdep.MetaPair{{Key: "repo", Value: "demo"}}}, ""},
+		{"no metadata", recdep.Entry{Source: "github"}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := contextFor(tt.e); got != tt.want {
+				t.Errorf("contextFor = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestViewRendersContextColumn pins the column between source and
+// summary: values show, a record without the keys keeps the summary
+// aligned, and a long value truncates at contextWidth.
+func TestViewRendersContextColumn(t *testing.T) {
+	m := model{width: 80, height: 24}
+	m.lists[0] = []recdep.Entry{
+		{Name: "a.md", Source: "github", Summary: "review", Meta: []recdep.MetaPair{{Key: "repo", Value: "demo"}}},
+		{Name: "b.md", Source: "slack", Summary: "thread", Meta: []recdep.MetaPair{{Key: "channel", Value: "#general"}}},
+		{Name: "c.md", Source: "slack", Summary: "direct", Meta: []recdep.MetaPair{{Key: "dm", Value: "wes"}}},
+		{Name: "d.md", Source: "linear", Summary: "assigned", Meta: []recdep.MetaPair{{Key: "ticket", Value: "DEMO-1"}}},
+		{Name: "e.md", Source: "github", Summary: "bare"},
+		{Name: "f.md", Source: "github", Summary: "long", Meta: []recdep.MetaPair{{Key: "repo", Value: strings.Repeat("r", 30)}}},
+	}
+	lines := strings.Split(m.View(), "\n")
+	wants := []string{"demo", "#general", "wes", "DEMO-1", "", strings.Repeat("r", 16)}
+	for i, want := range wants {
+		row := stripANSI(lines[headerLines+i])
+		if want != "" && !strings.Contains(row, want+" ") {
+			t.Errorf("row %d lacks context %q: %q", i, want, row)
+		}
+		// The summary starts after the fixed 31-column prefix on every
+		// row, populated or empty.
+		if got := m.lists[0][i].Summary; !strings.HasPrefix(row[31:], got[:4]) {
+			t.Errorf("row %d summary not at column 31: %q", i, row)
+		}
+		if w := lipgloss.Width(lines[headerLines+i]); w > m.width {
+			t.Errorf("row %d width = %d, want <= %d", i, w, m.width)
+		}
+	}
+	if strings.Contains(stripANSI(lines[headerLines+5]), strings.Repeat("r", 17)) {
+		t.Errorf("long context not truncated at %d: %q", contextWidth, lines[headerLines+5])
+	}
+}
+
+// TestViewDropsContextOnNarrowWidth pins that below width 60 the column
+// disappears whole instead of starving the summary.
+func TestViewDropsContextOnNarrowWidth(t *testing.T) {
+	m := model{width: 59, height: 24}
+	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "review", Meta: []recdep.MetaPair{{Key: "repo", Value: "demo"}}}}
+	row := stripANSI(strings.Split(m.View(), "\n")[headerLines])
+	if strings.Contains(row, "demo") {
+		t.Errorf("narrow row still carries the context column: %q", row)
+	}
+	if len(row) < 20 || !strings.HasPrefix(row[14:], "review") {
+		t.Errorf("summary did not recover the column's budget: %q", row)
 	}
 }
 
