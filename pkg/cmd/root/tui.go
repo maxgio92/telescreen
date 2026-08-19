@@ -220,6 +220,14 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.view < len(recdep.States) && m.cursor[m.view] > 0 {
 			m.cursor[m.view]--
 		}
+	case "g":
+		if m.view < len(recdep.States) && len(m.lists[m.view]) > 0 {
+			m.cursor[m.view] = 0
+		}
+	case "G":
+		if m.view < len(recdep.States) && len(m.lists[m.view]) > 0 {
+			m.cursor[m.view] = len(m.lists[m.view]) - 1
+		}
 	case "enter":
 		if _, ok := m.selected(); ok {
 			m.reader = true
@@ -663,7 +671,7 @@ func (m model) viewReader() (string, bool) {
 	return clampHeight(b.String(), m.height), true
 }
 
-const helpLine = "j/k move  tab/1-5 view  enter read  o open  y yank  t take  u up  f file  b back  s dictate  r reply  p approve  D discard  x delete  q quit"
+const helpLine = "j/k g/G move tab/1-5 view enter read o open y yank t take u up f file b back s dictate r reply p approve D discard x delete q quit"
 
 const readerHelpLine = "j/k scroll  space/pgup/pgdn page  g/G top/bottom  s dictate  r reply  p approve  D discard  q close"
 

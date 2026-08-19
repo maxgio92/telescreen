@@ -465,6 +465,49 @@ func TestViewShowsFirstRowAfterScrollBack(t *testing.T) {
 	}
 }
 
+// TestListJumpKeys drives g/G on a deep list: G lands the cursor on the
+// last record with its row on screen, g returns to the first.
+func TestListJumpKeys(t *testing.T) {
+	m := heightModel(200, 80, 20)
+	m = press(t, m, key("G"))
+	if m.cursor[0] != 199 {
+		t.Fatalf("cursor after G = %d, want 199", m.cursor[0])
+	}
+	if view := m.View(); !strings.Contains(view, "summary-199") {
+		t.Errorf("view after G lacks the last record:\n%s", view)
+	}
+	m = press(t, m, key("g"))
+	if m.cursor[0] != 0 {
+		t.Fatalf("cursor after g = %d, want 0", m.cursor[0])
+	}
+	if view := m.View(); !strings.Contains(view, "summary-000") {
+		t.Errorf("view after g lacks the first record:\n%s", view)
+	}
+}
+
+// TestListJumpKeysPerView keeps the jump scoped to the open view: G in
+// tube leaves desk's cursor alone.
+func TestListJumpKeysPerView(t *testing.T) {
+	m := heightModel(200, 80, 20)
+	m.lists[1] = m.lists[0]
+	m.cursor[1] = 3
+	m = press(t, m, key("G"))
+	if m.cursor[0] != 199 || m.cursor[1] != 3 {
+		t.Errorf("cursors = %d/%d, want 199/3", m.cursor[0], m.cursor[1])
+	}
+}
+
+// TestListJumpKeysEmptyList keeps g/G inert on an empty drawer.
+func TestListJumpKeysEmptyList(t *testing.T) {
+	m := heightModel(0, 80, 20)
+	for _, k := range []string{"g", "G"} {
+		m = press(t, m, key(k))
+		if m.cursor[0] != 0 {
+			t.Errorf("cursor after %q on empty list = %d, want 0", k, m.cursor[0])
+		}
+	}
+}
+
 // TestViewStatusRowIsConstant keeps the line count identical with and
 // without a status message so the list never jumps.
 func TestViewStatusRowIsConstant(t *testing.T) {
@@ -565,7 +608,7 @@ func TestViewRowsNeverWiderThanTerminal(t *testing.T) {
 // TestHelpLineSpeaksDocumentedVerbs pins the help line to the verbs the
 // README keys table documents for each key.
 func TestHelpLineSpeaksDocumentedVerbs(t *testing.T) {
-	for _, want := range []string{"enter read", "t take", "u up", "f file", "s dictate", "p approve", "D discard", "x delete"} {
+	for _, want := range []string{"j/k g/G move", "enter read", "t take", "u up", "f file", "s dictate", "p approve", "D discard", "x delete"} {
 		if !strings.Contains(helpLine, want) {
 			t.Errorf("helpLine lacks %q: %q", want, helpLine)
 		}

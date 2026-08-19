@@ -218,7 +218,7 @@ lints against the [Queue contract](docs/contracts/recdep.md).
 | Key | Effect |
 |---|---|
 | `tab`/`shift+tab`, `1`-`5` | switch view (tube, desk, upsub, files, memoryhole) |
-| `j`/`k`, arrows, wheel | navigate; click selects a row or a tab |
+| `j`/`k`, arrows, wheel | navigate; `g`/`G` jump to first/last; click selects a row or a tab |
 | `enter` | read the full record; inside: `j`/`k` line, `space`/`pgup`/`pgdn` page, `g`/`G` ends, `s`/`p p`/`D` act, `q` closes |
 | `o` | open the record's URL |
 | `y` | copy the URL (wl-copy, fallback xclip) |

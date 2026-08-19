@@ -181,6 +181,21 @@ func TestQuickReplyGlobalKeysInert(t *testing.T) {
 	}
 }
 
+// TestQuickReplyJumpKeyTypes keeps g inside the popup as text: it feeds
+// the textarea instead of jumping the list.
+func TestQuickReplyJumpKeyTypes(t *testing.T) {
+	name := "20260811T142302Z-slack-wes-go-for-it.md"
+	m, _ := seedModel(t, "tube", name)
+	m = press(t, m, key("r"))
+	m = press(t, m, key("g"))
+	if got := m.quickInput.Value(); got != "g" {
+		t.Errorf("popup input = %q, want %q", got, "g")
+	}
+	if !m.quick {
+		t.Error("g closed the popup")
+	}
+}
+
 // TestQuickReplyHeightInvariant keeps the popup usable inside the
 // terminal: the detail pane yields and the list shrinks before the popup
 // loses its chord line, down to tiny heights.
