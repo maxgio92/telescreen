@@ -15,8 +15,9 @@ about the chocolate ration.
 
 ## Triage
 
-- The tube view shows the record, its context column carrying the repo
-  (`demo`); the detail pane shows its full body:
+- The tube view shows the record, its metadata column carrying the
+  repo (`demo`), under a header naming the columns; the detail pane
+  shows its full body:
   the content line, the preview, then the labeled tail: the path, the
   URL, the metadata lines (`org example`, `repo demo`), and the seen
   stamp.

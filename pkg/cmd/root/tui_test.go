@@ -308,6 +308,74 @@ func TestViewDropsContextOnNarrowWidth(t *testing.T) {
 	}
 }
 
+// TestViewRendersColumnHeader pins the header row above the list: each
+// label sits at the offset its column uses.
+func TestViewRendersColumnHeader(t *testing.T) {
+	m := model{width: 80, height: 24}
+	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "review"}}
+	row := stripANSI(strings.Split(m.View(), "\n")[headerLines-1])
+	if !strings.HasPrefix(row, " age  source ") {
+		t.Errorf("header = %q, want the ' age  source ' prefix", row)
+	}
+	if got := strings.Index(row, "metadata"); got != 14 {
+		t.Errorf("metadata label at column %d, want 14: %q", got, row)
+	}
+	if got := strings.Index(row, "summary"); got != 14+contextWidth+1 {
+		t.Errorf("summary label at column %d, want %d: %q", got, 14+contextWidth+1, row)
+	}
+}
+
+// TestViewColumnHeaderDropsMetadataOnNarrowWidth keeps the header in step
+// with the rows: below contextMinWidth the metadata label disappears with
+// its column and summary moves up.
+func TestViewColumnHeaderDropsMetadataOnNarrowWidth(t *testing.T) {
+	m := model{width: 59, height: 24}
+	m.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "review"}}
+	row := stripANSI(strings.Split(m.View(), "\n")[headerLines-1])
+	if strings.Contains(row, "metadata") {
+		t.Errorf("narrow header still names the metadata column: %q", row)
+	}
+	if got := strings.Index(row, "summary"); got != 14 {
+		t.Errorf("summary label at column %d, want 14: %q", got, row)
+	}
+}
+
+// TestViewColumnHeaderAbsentOutsideLists keeps the header off the views
+// that render no list: the memory hole and the reader.
+func TestViewColumnHeaderAbsentOutsideLists(t *testing.T) {
+	mh := model{width: 80, height: 24, view: memoryHoleView}
+	if v := stripANSI(mh.View()); strings.Contains(v, " age  source ") {
+		t.Errorf("memory hole view renders the column header:\n%s", v)
+	}
+	m, _ := seedModel(t, "tube", "20260811T142302Z-slack-wes-go-for-it.md")
+	m.width, m.height = 80, 24
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	if !m.reader {
+		t.Fatal("enter did not open the reader")
+	}
+	if v := stripANSI(m.View()); strings.Contains(v, " age  source ") {
+		t.Errorf("reader renders the column header:\n%s", v)
+	}
+	// The quick-reply popup hides the header directly, not only via the
+	// height clip.
+	qm := model{width: 80, height: 24}
+	qm.lists[0] = []recdep.Entry{{Name: "a.md", Source: "github", Summary: "s"}}
+	qm = press(t, qm, key("r"))
+	if strings.Contains(stripANSI(qm.View()), "age  source") {
+		t.Error("the popup view still renders the column header")
+	}
+}
+
+// TestViewEmptyListRendersUnderHeader keeps the placeholder on the first
+// row slot, under the column header.
+func TestViewEmptyListRendersUnderHeader(t *testing.T) {
+	m := model{width: 80, height: 20}
+	lines := strings.Split(m.View(), "\n")
+	if got := stripANSI(lines[headerLines]); !strings.Contains(got, "(empty)") {
+		t.Errorf("line %d = %q, want the (empty) placeholder", headerLines, got)
+	}
+}
+
 func stripANSI(s string) string {
 	var b strings.Builder
 	inEsc := false

@@ -21,9 +21,10 @@ import (
 type fsEventMsg struct{}
 
 // Layout constants shared by View and the mouse hit tests: the header is
-// the tab line plus a blank line, and the detail pane is fixed height.
+// the tab line, a blank line, and the column header row; the detail pane
+// is fixed height.
 const (
-	headerLines = 2
+	headerLines = 3
 	detailLines = 6
 )
 
@@ -423,14 +424,14 @@ func (m model) tabLabels() []string {
 // listViewport returns the scroll offset and row count of the list area,
 // matching what View renders.
 func (m model) listViewport() (start, rows int) {
-	// With the popup open the detail pane hides and the popup takes the
-	// room; the list gives up every row before the popup loses its chord
-	// line. Mouse hit tests never see that branch: the popup swallows
-	// clicks.
+	// With the popup open the detail pane and the column header hide and
+	// the popup takes the room; the list gives up every row before the
+	// popup loses its chord line. Mouse hit tests never see that branch:
+	// the popup swallows clicks.
 	if m.quick {
 		rows = max(0, m.height-5-m.quickLines())
 	} else {
-		rows = max(3, m.height-detailLines-5)
+		rows = max(3, m.height-detailLines-6)
 	}
 	if m.cursor[m.view] >= rows {
 		start = m.cursor[m.view] - rows + 1
@@ -551,10 +552,6 @@ func (m model) View() string {
 
 	list := m.lists[m.view]
 	now := time.Now().UTC()
-	if len(list) == 0 {
-		b.WriteString(tabInactive.Render("  (empty)") + "\n")
-	}
-	start, listRows := m.listViewport()
 	// prefix is the row budget spent before the summary: age (4), gaps,
 	// source (7), and the context column when the terminal affords it.
 	prefix := 14
@@ -562,6 +559,20 @@ func (m model) View() string {
 	if showContext {
 		prefix += contextWidth + 1
 	}
+	// The column header names the row columns at their offsets; the popup
+	// hides it with the detail pane.
+	if !m.quick {
+		header := fmt.Sprintf("%4s  %-7s ", "age", "source")
+		if showContext {
+			header += fmt.Sprintf("%-*s ", contextWidth, "metadata")
+		}
+		header += "summary"
+		b.WriteString(tabInactive.Render(fitWidth(header, m.width)) + "\n")
+	}
+	if len(list) == 0 {
+		b.WriteString(tabInactive.Render("  (empty)") + "\n")
+	}
+	start, listRows := m.listViewport()
 	for i := start; i < len(list) && i < start+listRows; i++ {
 		e := list[i]
 		ctx := ""

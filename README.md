@@ -236,7 +236,7 @@ lints against the [Queue contract](docs/contracts/recdep.md).
 Each list row shows the record's age, source, a context column
 carrying the most identifying metadata value (the repo for github,
 the channel or dm for slack, the ticket or project for linear), the
-summary, and any tags.
+summary, and any tags; a header above the list names the columns.
 
 The detail pane shows the selected record: the content line, the
 preview, then the labeled path (one `cat` away, or one agent handle),
