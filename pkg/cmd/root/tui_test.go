@@ -509,7 +509,7 @@ func TestViewFitsStateMatrix(t *testing.T) {
 // seen tail while the preview absorbs the cut.
 func TestCapDetailCutsPreviewFirst(t *testing.T) {
 	content := "summary line\npreview 1\npreview 2\npreview 3\npreview 4\npath /tmp/x\nurl https://example.com\nseen 2026-08-15"
-	got := capDetail(content, 80, 5)
+	got := capDetail(content, 80, 5, 3)
 	if h := strings.Count(got, "\n") + 1; h > 5 {
 		t.Errorf("capDetail height = %d, want <= 5", h)
 	}
@@ -519,6 +519,31 @@ func TestCapDetailCutsPreviewFirst(t *testing.T) {
 		}
 	}
 	if strings.Contains(got, "preview 2") {
+		t.Errorf("capDetail kept a preview line past the budget:\n%s", got)
+	}
+}
+
+// TestCapDetailProtectsMetadataTail keeps the metadata lines with the
+// path, url, and seen tail while the preview absorbs the cut.
+func TestCapDetailProtectsMetadataTail(t *testing.T) {
+	e := recdep.ParseEntry("20260815T100000Z-github-x.md",
+		"[github] alice: please review\n"+
+			"https://github.com/o/r/pull/7\n"+
+			"seen 2026-08-15T10:00:00Z\n"+
+			"org o\n"+
+			"repo r\n"+
+			"\n"+
+			"preview 1\npreview 2\npreview 3\npreview 4\n")
+	got := capDetail(e.Detail("/tmp/x"), 80, 7, e.DetailTail())
+	if h := strings.Count(got, "\n") + 1; h > 7 {
+		t.Errorf("capDetail height = %d, want <= 7", h)
+	}
+	for _, want := range []string{"org o", "repo r", "path /tmp/x", "seen 2026-08-15T10:00:00Z"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("capDetail dropped %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "preview 1") {
 		t.Errorf("capDetail kept a preview line past the budget:\n%s", got)
 	}
 }

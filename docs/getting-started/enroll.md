@@ -30,7 +30,9 @@ minutes) and path units for speakwrite (`intents/*.intent`) and
 thinkpol (`intents/*.publish`).
 
 Editing the seeded skills is how you extend what the producer
-watches: [Add a watch](../guides/add-a-watch.md).
+watches: [Add a watch](../guides/add-a-watch.md). An already-installed
+skill keeps the shipped text it was seeded with until you merge newer
+shipped changes into your copy or restore it with `--force`.
 
 ## Identity
 

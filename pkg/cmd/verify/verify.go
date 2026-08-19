@@ -180,6 +180,25 @@ func lintDrawer(root, drawer string) (findings, warnings []string, records int, 
 			report(name, "missing seen line")
 		case seenAt != 2:
 			report(name, "seen line not third (line %d)", seenAt+1)
+		default:
+			// Metadata lines sit between seen and the blank line; a stale
+			// or marker line ends the region on a previewless record. Any
+			// key is allowed, but the shape (lowercase key, one space,
+			// non-empty value) is grammar.
+			for _, line := range preview[3:] {
+				if line == "" || strings.HasPrefix(line, "stale ") || recdep.MarkerKind(line) != "" {
+					break
+				}
+				pair, ok := recdep.CutMeta(line)
+				if !ok {
+					report(name, "malformed metadata line %q", line)
+					continue
+				}
+				switch pair.Key {
+				case "seen", "path", "url":
+					report(name, "reserved metadata key %q", pair.Key)
+				}
+			}
 		}
 		if staleLines > 1 {
 			warn("more than one stale line (%d)", staleLines)

@@ -16,6 +16,7 @@ upsub, files) are mapped to their roles in the
 | queue | The whole recdep directory tree of records. |
 | drawer | One state directory of the queue: tube, desk, upsub, or files. |
 | source | The provider a record came from: github, slack, or linear. |
+| metadata line | An optional labeled fact a producer attaches to a record: a key, one space, a value, after the seen line. |
 | producer | The program that polls sources and files records. minitrue is the shipped producer. |
 | stance | The text you type when you dictate. |
 | intent | The file recording a request for a reaction: an entry line, an action line, a guidance section. |

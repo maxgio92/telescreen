@@ -36,6 +36,10 @@ type Entry struct {
 	// Seen is the value of the third line's "seen <time>" marker, verbatim;
 	// empty when the line is missing or misplaced.
 	Seen string
+	// Meta holds the metadata lines that follow the seen line, in file
+	// order: structured provider facts such as org/repo (github),
+	// channel or dm (slack), project/ticket (linear).
+	Meta []MetaPair
 	// Stale is the reason from a trailing "stale <reason> <time>" marker
 	// appended by the producer's revalidation pass; empty when fresh.
 	// StaleLine keeps the raw marker line for the detail pane.
@@ -48,6 +52,42 @@ type Entry struct {
 	// time verbatim.
 	Mark     string
 	MarkTime string
+}
+
+// MetaPair is one metadata line, split at the first space.
+type MetaPair struct {
+	Key   string
+	Value string
+}
+
+// MetaValue returns the value of the entry's last metadata line with
+// the given key (duplicates are last-wins, matching export), or "".
+// MetaValue is the lookup seam for metadata-scoped rule matching;
+// export iterates Meta directly.
+func (e Entry) MetaValue(key string) string {
+	v := ""
+	for _, p := range e.Meta {
+		if p.Key == key {
+			v = p.Value
+		}
+	}
+	return v
+}
+
+// CutMeta splits a metadata line into its key and value. ok is false
+// when the line does not match the grammar: a lowercase [a-z_]+ key,
+// one space, a non-empty value.
+func CutMeta(line string) (MetaPair, bool) {
+	key, value, found := strings.Cut(line, " ")
+	if !found || key == "" || value == "" || value[0] == ' ' {
+		return MetaPair{}, false
+	}
+	for _, r := range key {
+		if (r < 'a' || r > 'z') && r != '_' {
+			return MetaPair{}, false
+		}
+	}
+	return MetaPair{Key: key, Value: value}, true
 }
 
 // markerKinds are the only speakwrite marker kinds docs/contracts/recdep.md recognizes.
@@ -108,6 +148,22 @@ func ParseEntry(name, body string) Entry {
 			e.Seen = v
 		}
 	}
+	// Metadata lines sit between the seen line and the blank line. A
+	// stale or marker line stops the scan (stale lands there on a
+	// previewless record), and so does the first malformed line: the
+	// parser tolerates it, verify flags it.
+	if e.Seen != "" {
+		for _, line := range lines[3:] {
+			if line == "" || strings.HasPrefix(line, "stale ") || MarkerKind(line) != "" {
+				break
+			}
+			p, ok := CutMeta(line)
+			if !ok {
+				break
+			}
+			e.Meta = append(e.Meta, p)
+		}
+	}
 	// Everything from the first "--- " line onward is marker sections,
 	// not preview. The last marker wins for presentation.
 	for _, line := range lines {
@@ -146,7 +202,8 @@ func ParseEntry(name, body string) Entry {
 
 // Detail renders the pane body for an entry stored at path: the content
 // line, the preview, then the entry's file path (so the full file is one
-// cat or one agent handle away), the URL, and the seen line last.
+// cat or one agent handle away), the URL, the metadata lines, and the
+// seen line last.
 func (e Entry) Detail(path string) string {
 	lines := strings.Split(e.Body, "\n")
 	if len(lines) < 3 || !strings.HasPrefix(lines[2], "seen ") {
@@ -155,9 +212,25 @@ func (e Entry) Detail(path string) string {
 	// path and url carry labels in the seen line's style, so the two
 	// look-alike lines cannot be confused.
 	out := []string{lines[0]}
-	out = append(out, lines[3:]...)
-	out = append(out, "path "+path, "url "+lines[1], lines[2])
+	out = append(out, lines[3+len(e.Meta):]...)
+	out = append(out, "path "+path, "url "+lines[1])
+	for _, p := range e.Meta {
+		out = append(out, p.Key+" "+p.Value)
+	}
+	out = append(out, lines[2])
 	return strings.Join(out, "\n")
+}
+
+// DetailTail is the number of labeled lines Detail appends after the
+// preview (path, url, metadata, seen), so the TUI protects them when
+// capping the pane. A body without a well-placed seen line gets only
+// the path line.
+func (e Entry) DetailTail() int {
+	lines := strings.Split(e.Body, "\n")
+	if len(lines) < 3 || !strings.HasPrefix(lines[2], "seen ") {
+		return 1
+	}
+	return 3 + len(e.Meta)
 }
 
 // LastSection returns the text of the body's last marker section of the

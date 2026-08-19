@@ -34,6 +34,66 @@ func TestParseEntry(t *testing.T) {
 	}
 }
 
+func TestParseEntryMeta(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want []MetaPair
+	}{
+		{"github", "[github] alice: please review\nhttps://github.com/o/r/pull/7\nseen 2026-08-12T10:00:00Z\norg o\nrepo r\n\npreview\n",
+			[]MetaPair{{"org", "o"}, {"repo", "r"}}},
+		{"slack channel", "[slack] wes: go for it\nhttps://example.com/thread/123\nseen 2026-08-12T10:00:00Z\nchannel #eng-ful-auto\n\npreview\n",
+			[]MetaPair{{"channel", "#eng-ful-auto"}}},
+		{"slack dm", "[slack] wes: ping\nhttps://example.com/dm/1\nseen 2026-08-12T10:00:00Z\ndm wes,julia\n",
+			[]MetaPair{{"dm", "wes,julia"}}},
+		{"linear", "[linear] bob: assigned FUL-1\nhttps://linear.app/t/issue/FUL-1\nseen 2026-08-12T10:00:00Z\nproject fulfillment\nticket FUL-1\n",
+			[]MetaPair{{"project", "fulfillment"}, {"ticket", "FUL-1"}}},
+		{"unknown key", "[github] alice: hi\nhttps://github.com/o/r/pull/7\nseen 2026-08-12T10:00:00Z\nseverity_hint high\n",
+			[]MetaPair{{"severity_hint", "high"}}},
+		{"zero metadata", "[slack] wes: go for it\nhttps://example.com/thread/123\nseen 2026-08-12T10:00:00Z\n\npreview\n", nil},
+		{"malformed line stops the scan", "[github] alice: hi\nhttps://github.com/o/r/pull/7\nseen 2026-08-12T10:00:00Z\nOrg o\nrepo r\n", nil},
+		{"stale on a previewless record is not metadata", "[github] alice: hi\nhttps://github.com/o/r/pull/7\nseen 2026-08-12T10:00:00Z\nstale merged 2026-08-14T09:00:00Z\n", nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := ParseEntry("20260812T100000Z-x-y.md", tt.body)
+			if !slices.Equal(e.Meta, tt.want) {
+				t.Errorf("meta = %v, want %v", e.Meta, tt.want)
+			}
+		})
+	}
+}
+
+func TestMetaValueLastWins(t *testing.T) {
+	e := Entry{Meta: []MetaPair{{"org", "a"}, {"org", "b"}}}
+	if got := e.MetaValue("org"); got != "b" {
+		t.Errorf("MetaValue(org) = %q, want b", got)
+	}
+	if got := e.MetaValue("repo"); got != "" {
+		t.Errorf("MetaValue(repo) = %q, want empty", got)
+	}
+}
+
+func TestCutMeta(t *testing.T) {
+	tests := []struct {
+		line string
+		ok   bool
+	}{
+		{"org chainguard-dev", true},
+		{"severity_hint high", true},
+		{"Org chainguard-dev", false},
+		{"org", false},
+		{"org ", false},
+		{"org  double-space", false},
+		{"key9 x", false},
+	}
+	for _, tt := range tests {
+		if _, ok := CutMeta(tt.line); ok != tt.ok {
+			t.Errorf("CutMeta(%q) ok = %v, want %v", tt.line, ok, tt.ok)
+		}
+	}
+}
+
 func TestParseEntryStale(t *testing.T) {
 	body := "[github] alice: please review\nhttps://github.com/o/r/pull/7\nseen 2026-08-12T10:00:00Z\n\nreview requested\nstale merged 2026-08-14T09:00:00Z\n"
 	e := ParseEntry("20260812T100000Z-github-alice-please-review.md", body)
@@ -273,6 +333,26 @@ func TestDetailWithMarkers(t *testing.T) {
 		"seen 2026-08-12T10:00:00Z"
 	if got != want {
 		t.Errorf("detail =\n%q\nwant\n%q", got, want)
+	}
+}
+
+// TestDetailWithMeta pins the tail order: path, url, the metadata
+// lines in file order, seen last; the metadata lines leave the preview.
+func TestDetailWithMeta(t *testing.T) {
+	body := "[github] alice: please review\nhttps://github.com/o/r/pull/7\nseen 2026-08-12T10:00:00Z\norg o\nrepo r\n\nreview requested\n"
+	e := ParseEntry("20260812T100000Z-github-alice-please-review.md", body)
+	got := e.Detail("/state/recdep/tube/20260812T100000Z-github-alice-please-review.md")
+	want := "[github] alice: please review\n" +
+		"\nreview requested\n" +
+		"path /state/recdep/tube/20260812T100000Z-github-alice-please-review.md\n" +
+		"url https://github.com/o/r/pull/7\n" +
+		"org o\nrepo r\n" +
+		"seen 2026-08-12T10:00:00Z"
+	if got != want {
+		t.Errorf("detail =\n%q\nwant\n%q", got, want)
+	}
+	if got := e.DetailTail(); got != 5 {
+		t.Errorf("detailTail = %d, want 5", got)
 	}
 }
 

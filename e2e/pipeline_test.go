@@ -14,13 +14,15 @@ import (
 )
 
 // recordName and recordBody are one conforming github record per the
-// docs/contracts/recdep.md grammar: header, URL, seen line, blank,
-// preview.
+// docs/contracts/recdep.md grammar: header, URL, seen line, metadata,
+// blank, preview.
 const (
 	recordName = "20260815T100000Z-github-alice-please-review.md"
 	recordBody = "[github] alice: please review\n" +
 		"https://github.com/o/r/pull/7\n" +
 		"seen 2026-08-15T10:00:00Z\n" +
+		"org o\n" +
+		"repo r\n" +
 		"\n" +
 		"review requested on o/r#7\n"
 )
@@ -114,8 +116,9 @@ printf 'https://github.com/o/r/pull/7#issuecomment-1\n'
 		t.Fatalf("export exited %d:\n%s", code, out)
 	}
 	var records []struct {
-		Drawer string `json:"drawer"`
-		File   string `json:"file"`
+		Drawer string            `json:"drawer"`
+		File   string            `json:"file"`
+		Meta   map[string]string `json:"meta"`
 	}
 	if err := json.Unmarshal([]byte(out), &records); err != nil {
 		t.Fatalf("export output is not JSON: %v\n%s", err, out)
@@ -126,6 +129,9 @@ printf 'https://github.com/o/r/pull/7#issuecomment-1\n'
 			found = true
 			if r.Drawer != "upsub" {
 				t.Errorf("exported drawer = %q, want upsub", r.Drawer)
+			}
+			if r.Meta["repo"] != "r" {
+				t.Errorf("exported meta = %v, want repo r", r.Meta)
 			}
 		}
 	}

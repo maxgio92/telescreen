@@ -17,11 +17,16 @@ order is time order), mode 0600, with this body:
 [<source>] <who>: <one-line summary>
 <link>
 seen <ISO-8601 instant>
+<key> <value>
 
 <preview>
 ```
 
-A minimal producer can emit only line 1 and still render.
+A minimal producer can emit only line 1 and still render. The
+`<key> <value>` metadata lines are optional structured provider facts
+(github: `org`, `repo`; slack: `channel` or `dm`; linear: `project`,
+`ticket`); the [Queue contract](../contracts/recdep.md#metadata) has
+the grammar and the recommended keys.
 
 ## The obligations
 

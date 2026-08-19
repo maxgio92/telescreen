@@ -24,8 +24,9 @@ event, skip what the watched person authored.
 - G. Slack channel #build-status: `slack_search_public_and_private`
   `in:#build-status`. Enqueue messages by others with ts after
   `since`, one record per message; Slack `after:` is date-granular,
-  so filter ts precisely. Keep the `[slack]` source tag and let the
-  slug carry the channel name.
+  so filter ts precisely. Keep the `[slack]` source tag, write a
+  `channel #build-status` metadata line, and let the slug carry the
+  channel name.
 ```
 
 Stay on the tools the shipped watches already use; a new tool also

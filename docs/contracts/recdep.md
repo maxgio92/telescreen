@@ -69,6 +69,7 @@ Body:
 [<source>] <who>: <one-line summary>
 <link>
 seen <produce-run-time>
+<key> <value>
 
 <preview>
 ```
@@ -76,6 +77,8 @@ seen <produce-run-time>
 - Line 1: `[<source>]` tag, the author, a colon, and a one-line summary.
 - Line 2: the canonical URL of the triggering event.
 - Line 3: `seen <ISO-8601 instant>`, when the producer observed it.
+- Metadata (optional): zero or more `<key> <value>` lines between the
+  seen line and the blank line, written with the record.
 - Preview (optional): after one blank line, the triggering content
   quoted verbatim (a Slack reply, a review comment body, a Linear
   comment). Cap it at roughly 15 lines or 1000 characters and append
@@ -84,6 +87,31 @@ seen <produce-run-time>
 The consumer parses lines 1 and 2 for the list view and shows the full
 body in the detail pane. Unknown or missing pieces degrade to empty
 fields, so a minimal producer can emit only line 1 and still render.
+
+### Metadata
+
+A metadata line is one structured provider fact: a lowercase `[a-z_]+`
+key, a single space, and a non-empty value running to the end of the
+line. The recommended keys per source:
+
+| Source | Keys |
+|---|---|
+| `github` | `org` (the owner), `repo` (the name) |
+| `slack` | `channel` (the `#` name), or `dm` (comma-separated participants) |
+| `linear` | `project`, `ticket` (the KEY, e.g. `FUL-1`) |
+
+Unknown keys are allowed; consumers ignore what they do not know.
+`stale`, `seen`, `path`, and `url` are reserved: `stale` for the stale
+marker below, the other three because the detail view renders labeled
+lines with those names and a metadata twin would be indistinguishable
+from the real one. Records without metadata stay valid.
+
+Metadata sits after the seen line and before the blank line, never at
+the end of the file: the stale marker and the speakwrite markers are
+appended to the end (see below), so the append-only stamping can never
+land inside or corrupt the metadata region. On a record with no
+preview, an appended stale line follows the metadata directly; it ends
+the region rather than joining it.
 
 ## Producer obligations
 

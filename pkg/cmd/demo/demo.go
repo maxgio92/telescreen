@@ -56,6 +56,8 @@ func seed(root string, now time.Time) error {
 	body := fmt.Sprintf(`[github] julia: review requested on demo#42: feat(ministry): ration the chocolate
 https://github.com/example/demo/pull/42
 seen %s
+org example
+repo demo
 
 the ration goes from 30 grammes to 20. the announcement says it went up.
 `, now.Format(time.RFC3339))

@@ -105,6 +105,24 @@ func TestExportFieldsAndOrder(t *testing.T) {
 	}
 }
 
+func TestExportMeta(t *testing.T) {
+	root := seed(t)
+	write(t, root, "tube", "20260814T090000Z-github-alice-review.md",
+		"[github] alice: please review\nhttps://github.com/o/r/pull/7\nseen 2026-08-14T09:00:01Z\norg o\nrepo r\nrepo r2\n\npreview line\n")
+	write(t, root, "tube", "20260814T100000Z-slack-bob-ping.md",
+		"[slack] bob: ping\nhttps://example.com/t/1\nseen 2026-08-14T10:00:01Z\n\npreview line\n")
+
+	records := export(t, root)
+	withMeta := records[1]
+	// A duplicate key is last-wins in the meta object.
+	if withMeta.Meta["org"] != "o" || withMeta.Meta["repo"] != "r2" || len(withMeta.Meta) != 2 {
+		t.Errorf("meta = %+v, want org=o repo=r2", withMeta.Meta)
+	}
+	if records[0].Meta != nil {
+		t.Errorf("record without metadata exported meta = %+v", records[0].Meta)
+	}
+}
+
 func TestExportMalformedDegrades(t *testing.T) {
 	root := seed(t)
 	write(t, root, "files", "not-a-stamp.md", "no header shape here\n")

@@ -54,10 +54,17 @@ BOT_LOGINS=                 # space-separated bot logins to skip, besides [bot] 
    [<source>] <who>: <one-line summary>
    <link>
    seen <produce-run-time>
+   <key> <value>
 
    <preview>
    ```
-   `<UTC>` is `YYYYMMDDTHHMMSSZ` so files sort by time. `<preview>` is the
+   `<UTC>` is `YYYYMMDDTHHMMSSZ` so files sort by time. The `<key> <value>`
+   metadata lines carry the source's structured facts, one per line, between
+   the seen line and the blank line: for github hits `org` and `repo` (the
+   owner and name from `$REPO`); for slack hits `channel` (the `#` name) for
+   channel threads or `dm` (comma-separated participants) for DMs; for linear
+   hits `project` and `ticket` (the KEY, e.g. `FUL-1`). Write the keys you
+   know; skip a line when the fact is unavailable. `<preview>` is the
    triggering content quoted verbatim after a blank line: the Slack reply
    text, the GitHub review or comment body, or the Linear comment. Cap it at
    roughly 15 lines or 1000 characters and append `[...]` when truncated.

@@ -16,7 +16,9 @@ about the chocolate ration.
 ## Triage
 
 - The tube view shows the record; the detail pane shows its full body:
-  the content line, the URL, the seen stamp, the preview.
+  the content line, the preview, then the labeled tail: the path, the
+  URL, the metadata lines (`org example`, `repo demo`), and the seen
+  stamp.
 - Press `t`: take it to the desk. The move is a file rename; check with
   `ls ~/.local/state/recdep/desk/` if you like.
 - `b` moves it back a drawer, `f` files it, `u` sends it to upsub. Try

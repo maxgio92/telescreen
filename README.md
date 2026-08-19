@@ -235,7 +235,8 @@ lints against the [Queue contract](docs/contracts/recdep.md).
 
 The detail pane shows the selected record: the content line, the
 preview, then the labeled path (one `cat` away, or one agent handle),
-url, and seen lines. A long record outgrows the pane; `enter` opens
+url, metadata, and seen lines. A long record outgrows the pane;
+`enter` opens
 the reader, a full-screen scrollable view of the same text.
 
 Under no circumstances does this screen watch you back. That would be

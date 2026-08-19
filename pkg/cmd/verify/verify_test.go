@@ -163,6 +163,29 @@ func TestVerifyMarkerAndStaleWarnings(t *testing.T) {
 	wantFinding(t, root, "desk", "20260814T090300Z-github-a-shortstale.md", "fewer than 3 fields")
 }
 
+func TestVerifyMetadataFindings(t *testing.T) {
+	root := seed(t)
+	// Well-formed metadata, recommended keys or not, stays clean.
+	write(t, root, "tube", "20260814T090000Z-github-a-meta.md",
+		"[github] alice: please review\nhttps://github.com/o/r/pull/7\nseen 2026-08-14T09:00:01Z\norg o\nrepo r\nseverity_hint high\n\npreview line\n")
+	out, failed := verifyOut(t, root)
+	if failed {
+		t.Fatalf("metadata record failed:\n%s", out)
+	}
+	if strings.Contains(out, "warning:") {
+		t.Errorf("metadata record warned:\n%s", out)
+	}
+
+	// A metadata line off the grammar is a finding.
+	write(t, root, "tube", "20260814T090100Z-github-a-badmeta.md",
+		"[github] alice: please review\nhttps://github.com/o/r/pull/7\nseen 2026-08-14T09:01:01Z\nOrg o\n\npreview line\n")
+	wantFinding(t, root, "tube", "20260814T090100Z-github-a-badmeta.md", "malformed metadata line")
+
+	write(t, root, "tube", "20260814T090200Z-github-a-emptymeta.md",
+		"[github] alice: please review\nhttps://github.com/o/r/pull/7\nseen 2026-08-14T09:02:01Z\norg\n\npreview line\n")
+	wantFinding(t, root, "tube", "20260814T090200Z-github-a-emptymeta.md", "malformed metadata line")
+}
+
 func TestVerifyPreviewQuotesStayClean(t *testing.T) {
 	root := seed(t)
 	// A GitHub review comment quoting a diff hunk, plus a real trailing
@@ -252,4 +275,14 @@ func TestVerifyPermissionWarnings(t *testing.T) {
 	if !strings.Contains(out, "1 records, clean") {
 		t.Errorf("no summary line; output:\n%s", out)
 	}
+}
+
+// TestVerifyFlagsReservedMetaKey pins that seen, path, and url cannot
+// pose as metadata: a twin would render indistinguishable from the
+// real labeled lines.
+func TestVerifyFlagsReservedMetaKey(t *testing.T) {
+	root := seed(t)
+	write(t, root, "tube", "20260814T090300Z-github-a-reserved.md",
+		"[github] a: s\nhttps://github.com/acme/demo/pull/1\nseen 2026-08-14T09:00:00Z\nurl https://evil.example\n\np\n")
+	wantFinding(t, root, "tube", "20260814T090300Z-github-a-reserved.md", "reserved metadata key")
 }

@@ -33,6 +33,7 @@ type record struct {
 	Summary  string            `json:"summary"`
 	URL      string            `json:"url"`
 	Seen     string            `json:"seen"`
+	Meta     map[string]string `json:"meta,omitempty"`
 	Stale    *stale            `json:"stale"`
 	Marker   *marker           `json:"marker"`
 	Sections map[string]string `json:"sections,omitempty"`
@@ -119,6 +120,14 @@ func toRecord(drawer string, e recdep.Entry) record {
 	}
 	if !e.TS.IsZero() {
 		r.TS = e.TS.Format(time.RFC3339)
+	}
+	// Meta is a JSON object keyed by the metadata key, so a duplicate
+	// key is last-wins and encoding/json sorts keys, not file order.
+	for _, p := range e.Meta {
+		if r.Meta == nil {
+			r.Meta = map[string]string{}
+		}
+		r.Meta[p.Key] = p.Value
 	}
 	if e.Stale != "" {
 		r.Stale = &stale{Reason: e.Stale}

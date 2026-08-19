@@ -567,7 +567,7 @@ func (m model) View() string {
 	if e, ok := m.selected(); ok && !m.quick {
 		path := filepath.Join(m.root, recdep.States[m.view], e.Name)
 		w := max(20, m.width)
-		detail := detailStyle.Width(w).Render(capDetail(e.Detail(path), w, detailLines-1))
+		detail := detailStyle.Width(w).Render(capDetail(e.Detail(path), w, detailLines-1, e.DetailTail()))
 		if dl := strings.Split(detail, "\n"); len(dl) > detailLines {
 			detail = strings.Join(dl[:detailLines], "\n")
 		}
@@ -611,24 +611,18 @@ func clampHeight(view string, height int) string {
 }
 
 // capDetail bounds the detail content to rows rendered lines at width,
-// counting lipgloss wrapping. Preview lines get cut first: the summary line
-// and the path, url, and seen tail carry the most and survive as long as
+// counting lipgloss wrapping. Preview lines get cut first: the summary
+// line and the labeled tail (path, url, metadata, seen: the last tail
+// lines, per Entry.DetailTail) carry the most and survive as long as
 // they fit.
-func capDetail(content string, width, rows int) string {
+func capDetail(content string, width, rows, tail int) string {
 	wrap := lipgloss.NewStyle().Width(width)
 	h := func(s string) int { return lipgloss.Height(wrap.Render(s)) }
 	if h(content) <= rows {
 		return content
 	}
 	lines := strings.Split(content, "\n")
-	tail := len(lines)
-	for tail > 1 {
-		l := lines[tail-1]
-		if !strings.HasPrefix(l, "path ") && !strings.HasPrefix(l, "url ") && !strings.HasPrefix(l, "seen ") {
-			break
-		}
-		tail--
-	}
+	tail = max(1, len(lines)-tail)
 	out := []string{lines[0]}
 	used := h(lines[0])
 	for _, l := range lines[tail:] {
