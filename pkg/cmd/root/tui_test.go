@@ -1072,8 +1072,14 @@ func TestReaderPlainRecordShowsBody(t *testing.T) {
 	if !strings.Contains(view, "[slack] wes: go for it") {
 		t.Errorf("reader lacks the record body:\n%s", view)
 	}
-	// The path wraps at the terminal width; assert on its head.
-	if !strings.Contains(view, "path "+root) {
+	// The path wraps at the terminal width wherever the temp dir's
+	// length puts the break, and wrapped lines are padded to the width,
+	// so trim each line and join before searching.
+	var b strings.Builder
+	for _, line := range strings.Split(stripANSI(view), "\n") {
+		b.WriteString(strings.TrimRight(line, " "))
+	}
+	if !strings.Contains(b.String(), "path "+root) {
 		t.Errorf("reader lacks the path line:\n%s", view)
 	}
 	if got := strings.Count(view, "\n") + 1; got > m.height {
