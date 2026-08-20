@@ -64,7 +64,9 @@ func TestUpdate(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("update exited %d:\n%s", code, out)
 	}
-	if !strings.Contains(out, "updated telescreen dev -> 9.9.9") {
+	// The current version is dev on a dirty tree and a VCS
+	// pseudo-version on a clean one; only the target matters.
+	if !strings.Contains(out, "updated telescreen ") || !strings.Contains(out, " -> 9.9.9") {
 		t.Errorf("update did not report the swap:\n%s", out)
 	}
 	got, err := os.ReadFile(target)
