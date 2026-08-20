@@ -951,6 +951,116 @@ func TestReaderInertKeysStayInReader(t *testing.T) {
 	}
 }
 
+// appendDraft rewrites the record in state with a draft marker appended.
+func appendDraft(t *testing.T, root, state, name string) {
+	t.Helper()
+	path := filepath.Join(root, state, name)
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := append(body, []byte("\n--- draft 2026-08-14T09:05:00Z\nthe draft text\n")...)
+	if err := os.WriteFile(path, out, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// fsEvent drives one fsEventMsg through Update and returns the model and
+// the command.
+func fsEvent(t *testing.T, m model) (model, tea.Cmd) {
+	t.Helper()
+	nm, cmd := m.Update(fsEventMsg{})
+	return nm.(model), cmd
+}
+
+// TestFsEventFreshDraftAlerts pins the notification: a reload where a
+// record gains a draft marker sets the status line and batches the bell
+// command alongside the watch resubscription.
+func TestFsEventFreshDraftAlerts(t *testing.T) {
+	name := "20260811T142302Z-slack-wes-go-for-it.md"
+	m, root := seedModel(t, "desk", name)
+	appendDraft(t, root, "desk", name)
+	m, cmd := fsEvent(t, m)
+	if want := "draft ready: " + name; m.status != want {
+		t.Errorf("status = %q, want %q", m.status, want)
+	}
+	if cmd == nil {
+		t.Fatal("fresh draft returned no command")
+	}
+	batch, ok := cmd().(tea.BatchMsg)
+	if !ok || len(batch) != 2 {
+		t.Errorf("fresh draft cmd = %T of %d, want a two-command tea.BatchMsg", cmd(), len(batch))
+	}
+}
+
+// TestFsEventInitialLoadSilent pins the baseline: opening the screen over
+// an existing draft never alerts.
+func TestFsEventInitialLoadSilent(t *testing.T) {
+	name := "20260814T090000Z-github-review-demo-1.md"
+	m, _ := seedDraftModel(t, name, "https://github.com/o/r/pull/1")
+	if m.status != "" {
+		t.Errorf("initial load over a draft set status %q, want silence", m.status)
+	}
+}
+
+// TestFsEventNoTransitionSilent pins a reload that changes nothing: a
+// draft already on screen stays quiet.
+func TestFsEventNoTransitionSilent(t *testing.T) {
+	name := "20260814T090000Z-github-review-demo-1.md"
+	m, _ := seedDraftModel(t, name, "https://github.com/o/r/pull/1")
+	m, _ = fsEvent(t, m)
+	if m.status != "" {
+		t.Errorf("no-transition reload set status %q, want silence", m.status)
+	}
+}
+
+// TestKeypressReloadKeepsDraftAlert pins the window between a draft
+// landing on disk and the fs event that announces it: a keypress-driven
+// reload in that window (dictation, discard, delete, move, quick reply
+// all call reload and overwrite the status) must not consume the
+// transition, so the next fsEventMsg still alerts and rings the bell.
+func TestKeypressReloadKeepsDraftAlert(t *testing.T) {
+	name := "20260811T142302Z-slack-wes-go-for-it.md"
+	m, root := seedModel(t, "desk", name)
+	appendDraft(t, root, "desk", name)
+	m.reload()
+	m.status = "deleted something-else.md"
+	m, cmd := fsEvent(t, m)
+	if want := "draft ready: " + name; m.status != want {
+		t.Errorf("status = %q, want %q", m.status, want)
+	}
+	if cmd == nil {
+		t.Fatal("draft after a keypress reload returned no command")
+	}
+	if batch, ok := cmd().(tea.BatchMsg); !ok || len(batch) != 2 {
+		t.Errorf("cmd = %T, want a two-command tea.BatchMsg carrying the bell", cmd())
+	}
+}
+
+// TestFsEventTwoFreshDraftsCount pins the plural form: two drafts landing
+// in one reload alert with the count, not a name.
+func TestFsEventTwoFreshDraftsCount(t *testing.T) {
+	a := "20260811T142302Z-slack-wes-go-for-it.md"
+	b := "20260811T150000Z-slack-julia-follow-up.md"
+	m, root := seedModel(t, "desk", a)
+	body := "[slack] julia: follow up\nhttps://example.com/2\nseen now\n"
+	if err := os.WriteFile(filepath.Join(root, "desk", b), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	appendDraft(t, root, "desk", a)
+	appendDraft(t, root, "desk", b)
+	m, cmd := fsEvent(t, m)
+	if want := "drafts ready: 2"; m.status != want {
+		t.Errorf("status = %q, want %q", m.status, want)
+	}
+	if cmd == nil {
+		t.Fatal("two fresh drafts returned no command")
+	}
+	if _, ok := cmd().(tea.BatchMsg); !ok {
+		t.Errorf("two fresh drafts cmd = %T, want a tea.BatchMsg carrying the bell", cmd())
+	}
+}
+
 // TestReaderPlainRecordShowsBody pins the reader on a record with no
 // draft: the plain body and the path line render.
 func TestReaderPlainRecordShowsBody(t *testing.T) {

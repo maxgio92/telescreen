@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/maxgio92/telescreen/internal/publish"
 	"github.com/maxgio92/telescreen/internal/recdep"
@@ -205,6 +206,74 @@ func TestDrainGHFailureLeavesEntryUntouched(t *testing.T) {
 	}
 	if !strings.Contains(readLog(t, root), "HTTP 502") {
 		t.Errorf("log lacks the gh error:\n%s", readLog(t, root))
+	}
+}
+
+// TestDrainGHFailureFilesFailureRecord pins the record a failed post
+// files into tube/: the stamped name carries the original slug, the
+// header names the original, the URL and metadata copy over, a "record"
+// line names the original, and the error's first line is the preview.
+func TestDrainGHFailureFilesFailureRecord(t *testing.T) {
+	body := strings.Join([]string{
+		"[github] alice: please review",
+		"https://github.com/o/r/pull/1",
+		"seen now",
+		"org o",
+		"repo r",
+		"",
+		"--- draft 2026-08-14T09:05:00Z",
+		"the draft text",
+		"",
+	}, "\n")
+	root := seed(t, "tube", body)
+	fakeGH(t, "", errors.New("gh: HTTP 502\ngh: request to api.github.com failed"))
+
+	if err := drain(root); err != nil {
+		t.Fatal(err)
+	}
+	const suffix = "-thinkpol-publish-failed-github-review-demo-1.md"
+	matches, err := filepath.Glob(filepath.Join(root, "tube", "*"+suffix))
+	if err != nil || len(matches) != 1 {
+		t.Fatalf("failure records matching %q in tube = %v (err %v), want one", suffix, matches, err)
+	}
+	stamp := strings.TrimSuffix(filepath.Base(matches[0]), suffix)
+	if _, err := time.Parse(recdep.StampLayout, stamp); err != nil {
+		t.Errorf("failure record name %q lacks a stamp prefix: %v", filepath.Base(matches[0]), err)
+	}
+	b, err := os.ReadFile(matches[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(string(b), "\n")
+	wants := []string{
+		"[thinkpol] actor: publish failed: " + entryName,
+		"https://github.com/o/r/pull/1",
+		"", // seen line, prefix-checked below
+		"record " + entryName,
+		"org o",
+		"repo r",
+		"",
+		"gh: HTTP 502",
+	}
+	if len(lines) < len(wants) {
+		t.Fatalf("failure record has %d lines, want >= %d:\n%s", len(lines), len(wants), b)
+	}
+	for i, want := range wants {
+		if i == 2 {
+			if !strings.HasPrefix(lines[2], "seen ") {
+				t.Errorf("line 2 = %q, want a seen line", lines[2])
+			}
+			continue
+		}
+		if lines[i] != want {
+			t.Errorf("line %d = %q, want %q", i, lines[i], want)
+		}
+	}
+	if strings.Contains(string(b), "api.github.com") {
+		t.Errorf("preview carries more than the error's first line:\n%s", b)
+	}
+	if strings.Contains(string(b), "--- ") {
+		t.Errorf("failure record carries a marker section:\n%s", b)
 	}
 }
 

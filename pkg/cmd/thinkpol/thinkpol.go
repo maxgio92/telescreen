@@ -131,6 +131,9 @@ func execute(root, approval string) error {
 		return nil
 	}
 	if _, ok := publish.Match(e.URL); !ok {
+		// Refusal, not failure: nothing was attempted, so no failure record
+		// is filed. The log line and the surviving entry already tell the
+		// operator the URL matched no publisher.
 		_ = os.Remove(approval)
 		logLine(root, "refused %s: no publisher for %q", aname, e.URL)
 		return nil
@@ -139,6 +142,7 @@ func execute(root, approval string) error {
 	if err != nil {
 		_ = os.Remove(approval)
 		logLine(root, "failed %s: %v", aname, err)
+		writeFailureRecord(root, e, err)
 		return nil
 	}
 	// The post happened; a failure past this point is logged, and the
@@ -155,6 +159,50 @@ func execute(root, approval string) error {
 	_ = os.Remove(approval)
 	logLine(root, "published %s via %s: %s", aname, pubName, commentURL)
 	return nil
+}
+
+// writeFailureRecord files one record into tube/ so the screen shows the
+// failed post: the original's URL (so o opens the subject), a "record"
+// metadata line naming it, the original's own metadata, and the error's
+// first line as the preview. It is an ordinary record with no draft and
+// no approval, so it never triggers further thinkpol action by itself.
+// One record per consumed approval: re-approving and failing again is a
+// new event and files another.
+func writeFailureRecord(root string, e recdep.Entry, postErr error) {
+	now := time.Now().UTC()
+	// The original slug is the filename minus its stamp when the prefix
+	// really is one (ParseEntry's rule); a stampless hand-made name
+	// stays whole. The source tag stays in the slug so two originals
+	// differing only by source cannot collide on the stamped name.
+	slug := strings.TrimSuffix(e.Name, ".md")
+	if len(slug) > len(recdep.StampLayout) {
+		if _, err := time.Parse(recdep.StampLayout, slug[:len(recdep.StampLayout)]); err == nil && slug[len(recdep.StampLayout)] == '-' {
+			slug = slug[len(recdep.StampLayout)+1:]
+		}
+	}
+	name := now.Format(recdep.StampLayout) + "-thinkpol-publish-failed-" + slug + ".md"
+	reason, _, _ := strings.Cut(postErr.Error(), "\n")
+	lines := []string{
+		"[thinkpol] actor: publish failed: " + e.Name,
+		e.URL,
+		"seen " + now.Format(time.RFC3339),
+		"record " + e.Name,
+	}
+	for _, p := range e.Meta {
+		lines = append(lines, p.Key+" "+p.Value)
+	}
+	lines = append(lines, "", reason, "")
+	// O_EXCL: a second failure in the same second must not truncate the
+	// first record.
+	f, err := os.OpenFile(filepath.Join(root, "tube", name), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		logLine(root, "failed to file the failure record for %s: %v", e.Name, err)
+		return
+	}
+	if _, err := f.WriteString(strings.Join(lines, "\n")); err != nil {
+		logLine(root, "failed to file the failure record for %s: %v", e.Name, err)
+	}
+	_ = f.Close()
 }
 
 // drain executes every pending approval. Approval names start with the

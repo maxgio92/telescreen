@@ -83,6 +83,12 @@ type model struct {
 	search      string
 	searching   bool
 	searchInput textinput.Model
+	// drafted is the fsEventMsg-turn snapshot of record names whose last
+	// mark is draft. Only the fsEventMsg case reads and advances it, so
+	// keypress-driven reloads (dictation, discard, delete, move, quick
+	// reply) cannot consume a fresh-draft transition before the fs event
+	// that alerts on it arrives.
+	drafted map[string]bool
 }
 
 var (
@@ -106,6 +112,9 @@ func newModel(root string, w *fsnotify.Watcher) model {
 		applyConfig(cfg)
 	}
 	m.reload()
+	// Record the drafts already on disk so opening the screen over
+	// existing drafts never alerts.
+	m.drafted = m.draftedSet()
 	return m
 }
 
@@ -127,6 +136,53 @@ func (m *model) reload() {
 			}
 		}
 	}
+}
+
+// draftedSet returns the record names whose last mark is draft in the
+// loaded lists.
+func (m *model) draftedSet() map[string]bool {
+	drafted := map[string]bool{}
+	for _, list := range m.lists {
+		for _, e := range list {
+			if e.Mark == "draft" {
+				drafted[e.Name] = true
+			}
+		}
+	}
+	return drafted
+}
+
+// draftAlert advances the drafted snapshot and, when new drafts appeared
+// since the previous fsEventMsg turn, sets the status line and reports
+// that the bell should ring. Called only from the fsEventMsg case so no
+// other reload path can consume the transition or clobber the message.
+func (m *model) draftAlert() bool {
+	prev := m.drafted
+	m.drafted = m.draftedSet()
+	var fresh []string
+	for name := range m.drafted {
+		if !prev[name] {
+			fresh = append(fresh, name)
+		}
+	}
+	// The alert outranks whatever status the turn left behind: the
+	// arrival is the newest fact and any keypress clears it anyway.
+	switch {
+	case len(fresh) == 1:
+		m.status = "draft ready: " + fresh[0]
+	case len(fresh) > 1:
+		m.status = fmt.Sprintf("drafts ready: %d", len(fresh))
+	}
+	return len(fresh) > 0
+}
+
+// bellCmd rings the terminal once. Bubbletea has no bell API, so this is
+// a one-shot command writing BEL straight to stdout: BEL moves no
+// cursor, and a one-byte interleaved write is harmless with the
+// standard renderer. A \a in View would re-ring on every render.
+func bellCmd() tea.Msg {
+	fmt.Print("\a")
+	return nil
 }
 
 func (m model) selected() (recdep.Entry, bool) {
@@ -176,6 +232,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case fsEventMsg:
 		m.reload()
+		if m.draftAlert() {
+			return m, tea.Batch(watchCmd(m.watcher), bellCmd)
+		}
 		return m, watchCmd(m.watcher)
 	case editorDoneMsg:
 		m.finishDictation(msg)

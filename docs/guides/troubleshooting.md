@@ -9,7 +9,7 @@ actor. Start there; the records themselves are the audit trail.
 |---|---|---|
 | No records appear | The minitrue timer is not enrolled, or the identity in `~/.config/minitrue.env` is missing | `systemctl --user status minitrue.timer`; check `produce.log` for the run's own account; set SLACK_USER_ID, GH_LOGIN, REPO per [Enroll the agents](../getting-started/enroll.md) |
 | A draft never lands | The speakwrite path unit is not enrolled, or an intent is stuck | `systemctl --user status speakwrite.path`; look in `recdep/intents/` for the leftover `.intent`; check `draft.log` |
-| Publish fails | A token is missing from `~/.config/thinkpol.env` | `publish.log` names the reason per approval; add SLACK_TOKEN or LINEAR_API_KEY, or authenticate `gh` for GitHub |
+| Publish fails | A token is missing from `~/.config/thinkpol.env` | `publish.log` names the reason per approval, and a failure record appears in the tube naming the record and the error; add SLACK_TOKEN or LINEAR_API_KEY, or authenticate `gh` for GitHub |
 | `telescreen verify` reports findings | A producer wrote nonconforming records, or file modes drifted | Each finding names the file and the broken rule from the [Queue contract](../contracts/recdep.md); grammar findings mean fix the producer, mode warnings mean `chmod 600` the file (verify warns, it never chmods) |
 
 A disappeared approval is always explained somewhere: the actor logs

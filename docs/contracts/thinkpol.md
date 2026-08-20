@@ -94,7 +94,13 @@ Triggered by a systemd path unit on `recdep/intents/*.publish`
    approval, log one line.
 5. On failure: leave the record untouched (the draft tag survives, the
    human can re-approve), remove the approval so nothing retries
-   silently, log the error.
+   silently, log the error. An actor MAY additionally file a failure
+   record into `tube/` so the screen shows the failed post; the enrolled
+   reference actor does: an ordinary record carrying the original's URL
+   and metadata, a `record <name>` line naming the original, and the
+   error's first line as the preview. It has no draft and no approval,
+   so it never triggers further actor action by itself; one record per
+   consumed approval.
 
 Logs append to `recdep/publish.log`, one line per approval, so a
 disappeared approval is always explained somewhere.

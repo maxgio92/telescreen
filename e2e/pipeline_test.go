@@ -294,6 +294,70 @@ printf 'https://forum.example.com/t/42/reply/7\n'
 	}
 }
 
+// TestExecPublishFailureFilesRecord drives a failing exec publisher:
+// the record stays drafted in its drawer, the approval is consumed,
+// publish.log names the failure, and a failure record lands in tube/
+// carrying the original's URL, a record line, and the error's first
+// line as the preview.
+func TestExecPublishFailureFilesRecord(t *testing.T) {
+	s := newScratch(t)
+	name := "20260816T110000Z-forum-carol-broken.md"
+	rawURL := "https://forum.example.com/t/43"
+	body := "[forum] carol: a broken post\n" +
+		rawURL + "\n" +
+		"seen 2026-08-16T11:00:00Z\n" +
+		"topic t-43\n" +
+		"\n" +
+		"a forum question\n" +
+		"--- draft 2026-08-16T11:30:00Z\n" +
+		"the forum draft\n"
+	entryPath := s.writeRecord(t, "desk", name, body)
+	s.writeIntent(t, name+".publish", "entry "+entryPath+"\n")
+
+	script := s.writeScript(t, "forum-post", `echo 'the forum said no' >&2
+exit 1
+`)
+	if err := writeFile(filepath.Join(s.configDir, "telescreen.yaml"),
+		"thinkpol:\n  publishers:\n    - publisher: exec\n      url_prefix: https://forum.example.com/\n      command: "+script+" --to {url}\n"); err != nil {
+		t.Fatal(err)
+	}
+
+	out, code := s.run(t, "thinkpol")
+	if code != 0 {
+		t.Fatalf("thinkpol exited %d:\n%s", code, out)
+	}
+	if got := readFile(t, entryPath); got != body {
+		t.Errorf("record changed on a failed publish:\n%s", got)
+	}
+	if exists(filepath.Join(s.root, "intents", name+".publish")) {
+		t.Error("approval survived the failed publish")
+	}
+	log := readFile(t, filepath.Join(s.root, "publish.log"))
+	if !strings.Contains(log, "failed "+name+".publish:") {
+		t.Errorf("publish.log does not record the failure:\n%s", log)
+	}
+	const suffix = "-thinkpol-publish-failed-forum-carol-broken.md"
+	matches, err := filepath.Glob(filepath.Join(s.root, "tube", "*"+suffix))
+	if err != nil || len(matches) != 1 {
+		t.Fatalf("failure records matching %q in tube = %v (err %v), want one", suffix, matches, err)
+	}
+	failure := readFile(t, matches[0])
+	for _, want := range []string{
+		"[thinkpol] actor: publish failed: " + name + "\n",
+		rawURL + "\n",
+		"record " + name + "\n",
+		"topic t-43\n",
+		"the forum said no",
+	} {
+		if !strings.Contains(failure, want) {
+			t.Errorf("failure record lacks %q:\n%s", want, failure)
+		}
+	}
+	if strings.Contains(failure, "--- ") {
+		t.Errorf("failure record carries a marker section:\n%s", failure)
+	}
+}
+
 // splitLines splits the stub's one-argument-per-line record without
 // mangling arguments that contain spaces.
 func splitLines(s string) []string {
