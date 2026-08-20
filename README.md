@@ -43,6 +43,12 @@ That is the screen with one record in the tube: move it with `t`, `u`,
 reactions need the agents enrolled (the Install section below); they
 run on systemd user units and require the claude CLI.
 
+Thirty seconds of triage on fictional records
+([the cast](assets/demo.cast), playable on the
+[site](https://telescreen.maxgio.me/#demo)):
+
+![the telescreen demo](assets/demo.gif)
+
 ## Install
 
 <p>

@@ -82,3 +82,7 @@ nav:
 
 extra_css:
   - stylesheets/skin.css
+  - stylesheets/asciinema-player.css
+extra_javascript:
+  - js/asciinema-player.min.js
+  - js/demo-player.js

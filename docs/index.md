@@ -14,6 +14,13 @@ Agents draft, only you approve.
 
 ![the telescreen dashboard](assets/screenshot.png)
 
+## Demo
+
+Thirty seconds of triage on fictional records: navigate, read, search,
+take, reply, approve-track, and file.
+
+<div id="demo-player" data-cast="assets/demo.cast"></div>
+
 ## How it works
 
 Five components, files as every edge:
