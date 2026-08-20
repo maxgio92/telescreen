@@ -111,18 +111,7 @@ printf 'https://github.com/o/r/pull/7#issuecomment-1\n'
 		t.Errorf("verify exited %d:\n%s", code, out)
 	}
 
-	out, code = s.run(t, "export", "--output", "json")
-	if code != 0 {
-		t.Fatalf("export exited %d:\n%s", code, out)
-	}
-	var records []struct {
-		Drawer string            `json:"drawer"`
-		File   string            `json:"file"`
-		Meta   map[string]string `json:"meta"`
-	}
-	if err := json.Unmarshal([]byte(out), &records); err != nil {
-		t.Fatalf("export output is not JSON: %v\n%s", err, out)
-	}
+	records := export(t, s)
 	found := false
 	for _, r := range records {
 		if r.File == recordName {
@@ -136,7 +125,7 @@ printf 'https://github.com/o/r/pull/7#issuecomment-1\n'
 		}
 	}
 	if !found {
-		t.Errorf("export lacks %s:\n%s", recordName, out)
+		t.Errorf("export lacks %s: %v", recordName, records)
 	}
 }
 
@@ -198,6 +187,91 @@ func TestSlackPublish(t *testing.T) {
 	permalink := "https://acme.slack.com/archives/C0A86EX00GH/p1755000099000200"
 	if !strings.Contains(published, "--- published ") || !strings.Contains(published, permalink) {
 		t.Errorf("no published marker with the permalink:\n%s", published)
+	}
+}
+
+// TestLinearPublish publishes a drafted linear record through an
+// httptest GraphQL endpoint, rerouted with LINEAR_API_BASE. The stub
+// answers both requests linear-issue makes: the issue query by KEY,
+// then commentCreate.
+func TestLinearPublish(t *testing.T) {
+	s := newScratch(t)
+	name := "20260815T113000Z-linear-dana-ticket.md"
+	issueURL := "https://linear.app/acme/issue/ENG-123"
+	body := "[linear] dana: a ticket question\n" +
+		issueURL + "\n" +
+		"seen 2026-08-15T11:30:00Z\n" +
+		"\n" +
+		"a ticket comment\n" +
+		"--- draft 2026-08-15T11:45:00Z\n" +
+		"the linear draft\n"
+	entryPath := s.writeRecord(t, "desk", name, body)
+	s.writeIntent(t, name+".publish", "entry "+entryPath+"\n")
+
+	type gqlRequest struct {
+		Query     string         `json:"query"`
+		Variables map[string]any `json:"variables"`
+	}
+	var mu sync.Mutex
+	var gotAuth string
+	var gotRequests []gqlRequest
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		gotAuth = r.Header.Get("Authorization")
+		var req gqlRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Errorf("request body is not GraphQL JSON: %v", err)
+		}
+		gotRequests = append(gotRequests, req)
+		switch {
+		case strings.Contains(req.Query, "commentCreate"):
+			_, _ = w.Write([]byte(`{"data": {"commentCreate": {"comment": {"id": "cmt-1"}}}}`))
+		default:
+			_, _ = w.Write([]byte(`{"data": {"issue": {"id": "uuid-eng-123"}}}`))
+		}
+	}))
+	defer srv.Close()
+	s.extraEnv = []string{"LINEAR_API_BASE=" + srv.URL, "LINEAR_API_KEY=lin_api_e2e_dummy"}
+
+	out, code := s.run(t, "thinkpol")
+	if code != 0 {
+		t.Fatalf("thinkpol exited %d:\n%s", code, out)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if gotAuth != "lin_api_e2e_dummy" {
+		t.Errorf("Authorization = %q", gotAuth)
+	}
+	if len(gotRequests) != 2 {
+		t.Fatalf("got %d GraphQL requests, want 2: %v", len(gotRequests), gotRequests)
+	}
+	if got := gotRequests[0].Variables["id"]; got != "ENG-123" {
+		t.Errorf("issue query id = %v, want ENG-123", got)
+	}
+	create := gotRequests[1]
+	if !strings.Contains(create.Query, "commentCreate") {
+		t.Errorf("second request is not commentCreate: %q", create.Query)
+	}
+	if got := create.Variables["issueId"]; got != "uuid-eng-123" {
+		t.Errorf("commentCreate issueId = %v, want uuid-eng-123", got)
+	}
+	draft, _ := create.Variables["body"].(string)
+	if !strings.Contains(draft, "the linear draft") {
+		t.Errorf("commentCreate body = %q, want the draft text", draft)
+	}
+	upsubPath := filepath.Join(s.root, "upsub", name)
+	if exists(entryPath) || !exists(upsubPath) {
+		t.Fatalf("record did not move to upsub (desk: %v, upsub: %v)", exists(entryPath), exists(upsubPath))
+	}
+	published := readFile(t, upsubPath)
+	permalink := issueURL + "#comment-cmt-1"
+	if !strings.Contains(published, "--- published ") || !strings.Contains(published, permalink) {
+		t.Errorf("no published marker with the permalink:\n%s", published)
+	}
+	log := readFile(t, filepath.Join(s.root, "publish.log"))
+	if !strings.Contains(log, "published "+name+".publish via linear-issue") {
+		t.Errorf("publish.log does not name the linear publisher:\n%s", log)
 	}
 }
 
@@ -356,10 +430,55 @@ exit 1
 	if strings.Contains(failure, "--- ") {
 		t.Errorf("failure record carries a marker section:\n%s", failure)
 	}
+
+	// The actor's failure record conforms to the grammar and exports
+	// with a record key naming the original.
+	out, code = s.run(t, "verify")
+	if code != 0 {
+		t.Errorf("verify exited %d on a store with a failure record:\n%s", code, out)
+	}
+	failureName := filepath.Base(matches[0])
+	found := false
+	for _, r := range export(t, s) {
+		if r.File != failureName {
+			continue
+		}
+		found = true
+		if r.Drawer != "tube" {
+			t.Errorf("exported drawer = %q, want tube", r.Drawer)
+		}
+		if r.Meta["record"] != name {
+			t.Errorf("exported meta = %v, want record %s", r.Meta, name)
+		}
+	}
+	if !found {
+		t.Errorf("export lacks the failure record %s", failureName)
+	}
 }
 
 // splitLines splits the stub's one-argument-per-line record without
 // mangling arguments that contain spaces.
 func splitLines(s string) []string {
 	return strings.Split(strings.TrimRight(s, "\n"), "\n")
+}
+
+// exportRecord is the slice of the export JSON the tests read.
+type exportRecord struct {
+	Drawer string            `json:"drawer"`
+	File   string            `json:"file"`
+	Meta   map[string]string `json:"meta"`
+}
+
+// export runs <binary> export --output json and decodes the records.
+func export(t *testing.T, s *scratch) []exportRecord {
+	t.Helper()
+	out, code := s.run(t, "export", "--output", "json")
+	if code != 0 {
+		t.Fatalf("export exited %d:\n%s", code, out)
+	}
+	var records []exportRecord
+	if err := json.Unmarshal([]byte(out), &records); err != nil {
+		t.Fatalf("export output is not JSON: %v\n%s", err, out)
+	}
+	return records
 }

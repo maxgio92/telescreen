@@ -94,11 +94,17 @@ func (s *scratch) env() []string {
 	}, s.extraEnv...)
 }
 
-// run executes the binary with args and returns its combined output and
-// exit code.
+// run executes the built binary with args and returns its combined
+// output and exit code.
 func (s *scratch) run(t *testing.T, args ...string) (string, int) {
 	t.Helper()
-	cmd := exec.Command(binPath, args...)
+	return s.runBin(t, binPath, args...)
+}
+
+// runBin executes bin with args in the scratch environment.
+func (s *scratch) runBin(t *testing.T, bin string, args ...string) (string, int) {
+	t.Helper()
+	cmd := exec.Command(bin, args...)
 	cmd.Env = s.env()
 	out, err := cmd.CombinedOutput()
 	code := 0

@@ -27,8 +27,21 @@ import (
 	"github.com/maxgio92/telescreen/pkg/cmd/version"
 )
 
-// apiBase is the release API root; tests point it at a local server.
+// apiBase is the release API root; unit tests point it at a local
+// server.
 var apiBase = "https://api.github.com/repos/maxgio92/telescreen"
+
+// releaseAPIBase resolves the release API root. Precedence: an
+// UPDATE_API_BASE override from the environment (the e2e seam, like
+// SLACK_API_BASE and LINEAR_API_BASE), then the apiBase package var
+// (the unit-test seam). Asset downloads follow the release JSON's
+// browser_download_url, so one override reroutes everything.
+func releaseAPIBase() string {
+	if v := os.Getenv("UPDATE_API_BASE"); v != "" {
+		return v
+	}
+	return apiBase
+}
 
 // maxBinarySize caps the extracted binary at 200 MiB.
 const maxBinarySize = 200 << 20
@@ -127,9 +140,10 @@ func run(out io.Writer, tag, exe, current string) error {
 // resolve fetches the release metadata for tag, or the latest release
 // when tag is empty.
 func resolve(tag string) (*release, error) {
-	url := apiBase + "/releases/latest"
+	base := releaseAPIBase()
+	url := base + "/releases/latest"
 	if tag != "" {
-		url = apiBase + "/releases/tags/" + tag
+		url = base + "/releases/tags/" + tag
 	}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {

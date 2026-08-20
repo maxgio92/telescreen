@@ -145,6 +145,7 @@ holds secrets, so `chmod 600` it.
 | LINEAR_API_KEY | a Linear API key | the linear-issue publisher |
 | SLACK_API_BASE | replaces the Slack Web API root (default `https://slack.com/api`) | testing |
 | LINEAR_API_BASE | replaces the Linear API root (default `https://api.linear.app`) | testing |
+| UPDATE_API_BASE | replaces the release API root `telescreen update` resolves against (default `https://api.github.com/repos/maxgio92/telescreen`) | testing |
 
 The github-pr publisher uses your authenticated `gh` and needs no
 key here. A missing token fails the post gracefully: the draft
